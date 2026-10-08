@@ -1,0 +1,16 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+const isRu = Astro.locals.starlightRoute?.locale === 'ru';
+---
+<Default><slot /></Default>
+<p class="sdp-attribution">
+  {isRu ? (
+    <>Основано на <a href="https://github.com/donnemartin/system-design-primer">The System Design Primer</a> Донна Мартина (CC BY 4.0). Материал переработан, переписан и обновлён; контент сайта распространяется по <a href="https://creativecommons.org/licenses/by/4.0/deed.ru">CC BY 4.0</a>.</>
+  ) : (
+    <>Based on <a href="https://github.com/donnemartin/system-design-primer">The System Design Primer</a> by Donne Martin (CC BY 4.0). Restructured, rewritten and updated; site content is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</>
+  )}
+</p>
+<style>
+  .sdp-attribution { margin-top: 1.5rem; font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); line-height: 1.5; }
+  .sdp-attribution a { color: inherit; }
+</style>
