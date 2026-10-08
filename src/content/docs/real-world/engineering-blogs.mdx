@@ -1,0 +1,116 @@
+---
+title: Engineering blogs
+description: A curated, checked list of engineering blogs and newsletters (big tech, infrastructure, fintech, product) and how to use them before an interview.
+sidebar:
+  order: 3
+---
+import { Aside } from '@astrojs/starlight/components';
+
+Company engineering blogs show what a team actually built, which problems it had and which trade-offs it accepted. Before an interview, they are also the best preview of the questions you are likely to get, because interviewers often draw on problems from their own domain. This page is a short, curated list grouped by theme. Every link was checked in October 2026 and points to the blog's current home.
+
+<Aside type="tip" title="TL;DR">
+- Read the blog of **the company you are interviewing with** first, then two or three companies in the same domain.
+- Choose posts about **migrations, outages and scaling limits**. They show trade-offs better than launch announcements do.
+- For a broad index of hundreds of blogs, use [kilimchoi/engineering-blogs](https://github.com/kilimchoi/engineering-blogs) on GitHub.
+- Add one or two **newsletters** to keep up without checking dozens of sites.
+</Aside>
+
+## Big tech
+
+| Blog | Good for |
+|---|---|
+| [Engineering at Meta](https://engineering.fb.com/) | Data centres, storage, networking, and running very large social products. |
+| [Google Research blog](https://research.google/blog/) | Research results, including systems and infrastructure. Google's classic systems papers are linked from [Foundational papers](/real-world/foundational-papers/). |
+| [All Things Distributed](https://www.allthingsdistributed.com/) | Essays by Amazon's CTO Werner Vogels and guest posts from AWS engineers. |
+| [AWS Architecture Blog](https://aws.amazon.com/blogs/architecture/) | Reference architectures, resilience patterns and well-architected guidance. |
+| [Amazon Builders' Library](https://builder.aws.com/learn/topics/builders-library) | Articles by senior Amazon engineers on timeouts, retries, load shedding, caching and deployments. |
+| [Microsoft Research blog](https://www.microsoft.com/en-us/research/blog/) | Research from Microsoft, including distributed systems and cloud infrastructure. |
+| [Netflix TechBlog](https://netflixtechblog.com/) | Resilience, streaming, data platforms and storage abstractions. |
+| [LinkedIn Engineering](https://engineering.linkedin.com/) | Data infrastructure (the home of Kafka), feeds, search and large-scale data systems. |
+| [Uber Engineering](https://www.uber.com/blog/engineering/) | Geospatial systems, real-time marketplaces, storage, and service meshes with thousands of services. |
+| [Spotify Engineering](https://engineering.atspotify.com/) | Platform engineering, developer experience and experimentation. |
+| [The GitHub Blog: Engineering](https://github.blog/engineering/) | Database scaling, Git storage and site reliability. |
+| [Dropbox Tech](https://dropbox.tech/) | Storage infrastructure, sync engines and moving out of the public cloud. |
+| [X Engineering](https://blog.x.com/engineering/en_us) | Archive of Twitter's engineering posts on timelines, storage and caching. Few new posts since 2023. |
+
+## Infrastructure and databases
+
+| Blog | Good for |
+|---|---|
+| [Cloudflare blog](https://blog.cloudflare.com/) | Edge networking, DNS, DDoS protection, proxies and post-mortems written in detail. |
+| [Marc Brooker's blog](https://brooker.co.za/blog/) | Short essays by an AWS distinguished engineer on retries, queues, tail latency and databases. |
+| [PlanetScale blog](https://planetscale.com/blog) | MySQL and Postgres at scale, sharding, Vitess and database performance. |
+| [Cockroach Labs blog](https://www.cockroachlabs.com/blog/) | Distributed SQL, multi-region data and transactions. |
+| [ScyllaDB blog](https://www.scylladb.com/blog/) | Wide-column stores, low-latency databases and customer migration stories. |
+| [Confluent blog](https://www.confluent.io/blog/) | Kafka, stream processing and event-driven architecture. |
+| [Datadog engineering](https://www.datadoghq.com/blog/engineering/) | Observability pipelines, storage engines for time series, and performance work. |
+| [Fly.io blog](https://fly.io/blog/) | Edge compute, networking and running a small cloud. |
+| [Heroku engineering](https://www.heroku.com/blog/category/engineering/) | Platform-as-a-service operations and managed Postgres. |
+
+## Fintech and trading
+
+| Blog | Good for |
+|---|---|
+| [Stripe developer blog](https://stripe.dev/blog) | Payments APIs, idempotency, migrations and reliability. Stripe's older classics are on [stripe.com/blog](https://stripe.com/blog/idempotency). |
+| [Monzo technology](https://monzo.com/blog/technology) | A bank built on microservices: platform, reliability and fraud. |
+| [Building Nubank](https://building.nu.com/) | A large digital bank on Clojure and Datomic, with data and machine learning platforms. |
+| [Coinbase engineering](https://www.coinbase.com/blog/landing/engineering) | Exchange infrastructure, security and workflow systems. |
+| [Block engineering](https://engineering.block.xyz/) | Payments at Square and Cash App, encryption and machine learning. |
+| [Jane Street blog](https://blog.janestreet.com/) | Low-latency trading systems, OCaml, testing and messaging. |
+| [The PayPal Technology Blog](https://medium.com/paypal-tech) | Payments infrastructure and large-scale platform work. |
+
+## Product companies
+
+| Blog | Good for |
+|---|---|
+| [Airbnb Tech Blog](https://medium.com/airbnb-engineering) | Payments, search ranking, service-oriented architecture and data quality. |
+| [Discord engineering](https://discord.com/category/engineering) | Message storage, real-time gateways, Elixir and Rust services. |
+| [DoorDash engineering](https://careersatdoordash.com/engineering-blog/) | Logistics, dispatch, and migrating a monolith to microservices. |
+| [Etsy Code as Craft](https://www.etsy.com/codeascraft) | Search, experimentation and continuous deployment. |
+| [Figma engineering](https://www.figma.com/blog/engineering/) | Real-time collaboration, Postgres scaling and rendering performance. |
+| [Grab Tech](https://engineering.grab.com/) | Ride-hailing, payments and data platforms in Southeast Asia. |
+| [Lyft Engineering](https://eng.lyft.com/) | Ride-hailing systems. Lyft created the Envoy proxy. |
+| [Notion tech blog](https://www.notion.com/blog/topic/tech) | Sharding Postgres, CRDT-based editing, search and data infrastructure. |
+| [Pinterest Engineering](https://medium.com/pinterest-engineering) | Feeds, recommendations, sharded MySQL and storage. |
+| [Salesforce Engineering](https://engineering.salesforce.com/) | Multi-tenant SaaS, load shedding and large-scale platform engineering. |
+| [Shopify Engineering](https://shopify.engineering/) | The modular Rails monolith, pods, and handling flash-sale peaks. |
+| [Slack engineering](https://slack.engineering/) | Real-time messaging, Vitess, and the infrastructure behind it. |
+| [Yelp Engineering](https://engineeringblog.yelp.com/) | Search, data pipelines and service infrastructure. |
+| [eBay innovation stories](https://innovation.ebayinc.com/stories/) | Marketplace platform work, including an "Engineering eBay" section. |
+
+## Newsletters and aggregators
+
+| Source | What it is |
+|---|---|
+| [kilimchoi/engineering-blogs](https://github.com/kilimchoi/engineering-blogs) | The large index: hundreds of company and personal engineering blogs, with an OPML file to import them all into a feed reader. |
+| [ByteByteGo newsletter](https://blog.bytebytego.com/) | Weekly illustrated explanations of how known systems work, by Alex Xu. |
+| [The Pragmatic Engineer](https://newsletter.pragmaticengineer.com/) | Gergely Orosz on how engineering teams at large companies build and run systems. |
+| [InfoQ: Architecture and design](https://www.infoq.com/architecture-design/) | Conference talks and articles by practitioners, many with transcripts. |
+| [High Scalability](https://highscalability.com/) | The classic archive of architecture write-ups from 2007 to 2024. Few new posts now. |
+| [Murat Demirbas's blog](https://muratbuffalo.blogspot.com/) | Reviews of new distributed systems papers, written for working engineers. |
+| [Micah Lerner](https://www.micahlerner.com/) | Clear summaries of systems papers (no new posts since early 2025). |
+| [The Morning Paper archive](https://blog.acolyer.org/) | Adrian Colyer's summaries of more than a thousand computer science papers (ended in 2021). |
+
+## How to use these before an interview
+
+A week or two before a system design interview, spend a few hours on targeted reading rather than browsing.
+
+1. **Map the company's domain.** Read the target company's blog for the last two or three years. List the systems it describes (feeds, payments, search, messaging, geospatial) and the stack it uses. Interview questions often come from these areas.
+2. **Read two neighbouring companies.** For a fintech, read Stripe and Monzo. For a marketplace, read Uber, DoorDash and Airbnb. You will see which problems are common to the domain and which are specific to one company.
+3. **Prefer posts about change.** Migrations, outages, rewrites and "how we scaled X" posts show the limits of a design and how a team reasons about trade-offs. Launch announcements rarely do.
+4. **Summarise each post in five lines:** the problem, the constraint, the options considered, the choice, and the cost. If you cannot fill in the cost, read the post again.
+5. **Practise retelling one story.** Take one post and explain it as if it were your own design session, with requirements, an estimate, a diagram and the bottleneck. This is good practice for the [interview framework](/start/interview-framework/).
+6. **Prepare questions for the interviewer.** "I read about your move to Vitess. Is sharding by workspace still a constraint for new features?" shows real interest. Keep it brief, and do not claim more expertise than you have.
+
+<Aside type="note" title="In the interview">
+Mentioning a company's own write-up can help, but do not depend on it. Interviewers want to see you reason from the requirements they gave. Use a known design as support ("this is close to how Discord routes requests by channel"), then explain why it fits this problem.
+
+Check the date of anything you cite. A post from 2013 may describe a system the company has since replaced. Saying "they've probably moved on from this since" shows good judgement.
+</Aside>
+
+## Related topics
+
+- [How companies built it](/real-world/company-architectures/): selected posts from these blogs, grouped by company and by question type.
+- [Foundational papers and systems](/real-world/foundational-papers/): the research that many of these posts build on.
+- [Study plan](/start/study-plan/): where blog reading fits into your preparation.
+- [Interview framework](/start/interview-framework/): the structure to use when retelling a case study.

@@ -1,5 +1,74 @@
 ---
 title: System Design Primer
+description: Learn to design large-scale systems and prepare for system design interviews with a restructured, rewritten and updated primer in English and Russian.
 template: splash
+hero:
+  title: System Design Primer
+  tagline: Learn how large-scale systems are built, and how to talk through a design in an interview. A restructured, rewritten and 2026-updated edition of the classic open-source primer.
+  actions:
+    - text: Start learning
+      link: /system-design/start/introduction/
+      icon: right-arrow
+    - text: Latency numbers
+      link: /system-design/reference/latency-numbers/
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/butyavk/system-design
+      variant: minimal
+      icon: github
 ---
-Home
+import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+import LatencyLadder from '~/components/LatencyLadder.astro';
+
+<LatencyLadder />
+
+This site takes [The System Design Primer](https://github.com/donnemartin/system-design-primer) by Donne Martin, one of the most popular open-source study guides on GitHub, and rebuilds it as a course you can study from page by page.
+
+
+## How to use this site
+
+<Steps>
+
+1. **Read the [introduction](/start/introduction/)** to see what is where and how each page is built.
+
+2. **Pick a [study plan](/start/study-plan/)** that fits the time you have before your interview, or your own pace.
+
+3. **Learn the building blocks**: fundamentals first, then traffic, data, caching and messaging. Every topic page ends with what interviewers probe.
+
+4. **Practise out loud** on the case studies, using the [interview framework](/start/interview-framework/) and a 45-minute timer before you read the solution.
+
+5. **Keep the numbers close**: [latency](/reference/latency-numbers/), [powers of two](/reference/powers-of-two/) and [availability](/reference/availability-numbers/) tables power every estimate.
+
+</Steps>
+
+## Core topics
+
+<CardGrid>
+  <LinkCard title="Fundamentals and trade-offs" description="Scalability, latency vs throughput, CAP and PACELC, consistency and availability patterns." href="/fundamentals/performance-vs-scalability/" />
+  <LinkCard title="Networking and traffic" description="DNS, CDNs, load balancers, reverse proxies and API gateways." href="/traffic/dns/" />
+  <LinkCard title="Application architecture" description="Monoliths and microservices, service discovery and service meshes." href="/architecture/monolith-and-microservices/" />
+  <LinkCard title="Databases and storage" description="Relational databases, replication, sharding, NoSQL and object storage." href="/data/relational-databases/" />
+  <LinkCard title="Caching" description="Where to cache and how: cache-aside, write-through, eviction and invalidation." href="/caching/caching-layers/" />
+  <LinkCard title="Asynchronism and messaging" description="Queues, back pressure and event streaming with Kafka-style logs." href="/async/queues-and-back-pressure/" />
+  <LinkCard title="Communication and APIs" description="HTTP up to HTTP/3, TCP and UDP, RPC vs REST, GraphQL and gRPC." href="/communication/http/" />
+  <LinkCard title="Reliability and security" description="Rate limiting, resilience patterns, observability and security basics." href="/reliability/rate-limiting/" />
+</CardGrid>
+
+## Practice and reference
+
+<CardGrid>
+  <LinkCard title="System design case studies" description="URL shortener, Twitter timeline, web crawler, Mint, social graph and more, solved step by step." href="/practice/url-shortener-pastebin/" />
+  <LinkCard title="Object-oriented design" description="Hash map, LRU cache, parking lot, online chat and others in typed Python 3.12." href="/ood/hash-map/" />
+  <LinkCard title="Real-world systems" description="Foundational papers, how large companies built their platforms, and blogs worth following." href="/real-world/foundational-papers/" />
+  <LinkCard title="Numbers and reference" description="Latency numbers, powers of two and availability nines for quick estimates." href="/reference/latency-numbers/" />
+</CardGrid>
+
+## What's new compared to the original
+
+- **Structure.** One README of 1,800+ lines is now 13 sections with a sidebar, search and previous/next navigation.
+- **Fresh, current text.** Every page is rewritten from scratch. Topics the original barely touched now have their own pages: object storage, event streaming, rate limiting, resilience patterns, observability, API styles and service meshes.
+- **One shape everywhere.** Topic pages open with a short summary and close with what interviewers ask; case studies end with how a team would build the system in 2026.
+- **Diagrams as code.** Mermaid diagrams that follow the light or dark theme.
+- **A Russian edition** written as natural technical Russian rather than a literal translation.
+
+The original is © Donne Martin and licensed under CC BY 4.0; see [Credits and license](/about/credits-and-license/). Found a mistake? [Help fix it](/about/contributing/).

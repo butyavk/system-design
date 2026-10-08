@@ -1,0 +1,136 @@
+---
+title: Contributing
+description: How to fix errors, improve pages, add topics or translations, run the site locally, and what a pull request needs before it can be merged.
+sidebar:
+  order: 2
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+This site is open source, and contributions are welcome: a typo fix is as useful as a new page. This page explains what kinds of help are most needed, how to run the site on your machine, how the content is organised and what a pull request needs before it is merged.
+
+<Aside type="tip" title="TL;DR">
+- Small fix? Use the "Edit page" link at the bottom of any page and open a pull request from the browser.
+- Anything larger: read the [content guide](https://github.com/butyavk/system-design/blob/main/CONTENT_GUIDE.md) first.
+- Every change goes into both the English and the Russian page.
+- Run `node scripts/check-mdx.mjs` on your files and `npm run build` before opening the pull request.
+</Aside>
+
+## Ways to help
+
+- **Fix errors.** Factual mistakes, outdated claims, broken links, wrong numbers in an estimate, typos. If you are not sure how to fix something, open an [issue](https://github.com/butyavk/system-design/issues) describing the problem and where you saw it.
+- **Improve a page.** A clearer explanation, a better diagram, a missing trade-off, a sharper "In the interview" box, a better source.
+- **Add a page.** A topic, case study or object-oriented design exercise that is missing. Open an issue first to agree on the scope and the slug, so that work is not duplicated.
+- **Improve translations.** Make the Russian text read more naturally, align terminology with the glossary, or bring a Russian page up to date with its English twin.
+
+## Run the site locally
+
+You need [Node.js](https://nodejs.org/en/download) 22.12 or newer and Git.
+
+<Steps>
+
+1. Fork the repository on GitHub, then clone your fork:
+
+   ```bash
+   git clone https://github.com/<your-username>/system-design.git
+   cd system-design
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Start the development server. It prints a local address (by default `http://localhost:4321/system-design/`) and reloads pages as you edit:
+
+   ```bash
+   npm run dev
+   ```
+
+4. Create a branch for your change:
+
+   ```bash
+   git checkout -b fix/cap-theorem-typo
+   ```
+
+5. When you are done, build the whole site once to make sure nothing is broken. The output goes to `dist/`; `npm run preview` serves it locally:
+
+   ```bash
+   npm run build
+   ```
+
+</Steps>
+
+## How the content is organised
+
+```text
+src/content/docs/
+├── index.mdx                      English home page
+├── start/introduction.mdx         English pages: <section>/<slug>.mdx
+├── fundamentals/cap-theorem.mdx
+├── ...
+└── ru/
+    ├── index.mdx                  Russian home page
+    ├── start/introduction.mdx     Russian twin: same section, same file name
+    └── ...
+scripts/pages.json                 the site map: every section and slug
+scripts/check-mdx.mjs              self-check for content files
+astro.config.mjs                   site config and sidebar groups
+CONTENT_GUIDE.md                   how pages are written
+```
+
+- **English** pages live in `src/content/docs/<section>/<slug>.mdx`.
+- **Russian** pages live in `src/content/docs/ru/<section>/<slug>.mdx`, with exactly the same section and file name.
+- **The sidebar** is generated from the folders. A page's position inside its section comes from `sidebar.order` in its frontmatter.
+- **New pages** need their slug added to `scripts/pages.json`; internal links are only allowed to pages listed there.
+- **Internal links** are written root-relative, without the locale or base path, and end with a slash: `/fundamentals/cap-theorem/`. The build adds `/system-design` and `/ru` automatically.
+- **Diagrams** are Mermaid code blocks; images are not used.
+- **Interactive widgets** in `src/components/` are added by the maintainer; if a page would benefit from one, suggest it in an issue.
+
+The [content guide](https://github.com/butyavk/system-design/blob/main/CONTENT_GUIDE.md) is the reference for everything else: page templates, frontmatter, writing style, the English–Russian glossary, MDX pitfalls and link quality rules. Please read it before writing or rewriting a page.
+
+## Writing and translation rules in short
+
+- **Your own words.** Do not paste text from the original primer or from other sites. Use sources for facts, then explain in your own words and link to them under "Further reading".
+- **Current and accurate.** Prefer official documentation, papers and engineering blogs of the teams that built the thing. Check every external link before adding it.
+- **Both languages in the same pull request.** The Russian page is not a word-for-word translation: keep the same structure, headings, diagrams and code, written in natural technical Russian using the glossary in the content guide.
+- **Can only write one language?** Open the pull request anyway and say so in the description. Someone can add the other half before it is merged.
+
+## Check your changes
+
+The self-check script validates content files without a full build. It reports MDX syntax errors, missing frontmatter, internal links to pages that do not exist, and missing translation twins:
+
+```bash
+node scripts/check-mdx.mjs src/content/docs/fundamentals/cap-theorem.mdx src/content/docs/ru/fundamentals/cap-theorem.mdx
+```
+
+Every file should get a ✓. Fix every ✗ before you open a pull request, then run `npm run build` as the final check.
+
+## Pull request checklist
+
+- [ ] The change is made in **both** the English and the Russian page (or the description says which half is missing).
+- [ ] Frontmatter is complete: `title`, `description` (120–160 characters), `sidebar.order`.
+- [ ] Internal links are root-relative, end with `/` and point to pages in `scripts/pages.json`.
+- [ ] Every new external link was opened and works.
+- [ ] Numbers in estimates were recomputed, and code examples were run.
+- [ ] `node scripts/check-mdx.mjs` passes for every changed file.
+- [ ] `npm run build` completes without errors.
+- [ ] The description says what changed and why, with sources for factual corrections.
+
+If you are new to pull requests, GitHub's guide to [creating a pull request from a fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) walks through it.
+
+## License of contributions
+
+By contributing, you agree that your contribution is published under the same license as the rest of the site, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [Credits and license](/about/credits-and-license/).
+
+## Further reading
+
+- [Content guide](https://github.com/butyavk/system-design/blob/main/CONTENT_GUIDE.md): templates, style, glossary and MDX rules for this site.
+- [Starlight: using components](https://starlight.astro.build/components/using-components/): the components available in pages (asides, steps, tabs, cards).
+- [Mermaid flowchart syntax](https://mermaid.js.org/syntax/flowchart.html): reference for diagrams.
+- [The original primer's contributing guide](https://github.com/donnemartin/system-design-primer/blob/master/CONTRIBUTING.md): how the upstream project handles contributions and translations.
+
+## Related topics
+
+- [Credits and license](/about/credits-and-license/): attribution and the license your contribution falls under.
+- [Introduction](/start/introduction/): how the site and its pages are structured.

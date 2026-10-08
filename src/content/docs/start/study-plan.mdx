@@ -1,0 +1,62 @@
+---
+title: Study plan
+description: Pick a short, medium or long timeline and get a checklist through this guide, with saved progress, advice on what to skip and how to practise.
+sidebar:
+  order: 2
+---
+import { Aside } from '@astrojs/starlight/components';
+import StudyPlan from '~/components/StudyPlan.astro';
+
+You do not need to read this whole guide before an interview, and reading alone will not get you through one. This page turns the material into a plan that fits the time you have: broad coverage first, depth where it pays off, and practice throughout.
+
+<Aside type="tip" title="TL;DR">
+- **Short** (1–2 weeks): breadth across the topics, a few practice questions solved end to end.
+- **Medium** (3–6 weeks): breadth plus some depth, many practice questions.
+- **Long** (2–3 months): breadth plus real depth and most of the practice questions.
+- Practise **out loud and on a timer** from the first week. Interviews test how you reason in a conversation, not what you have read.
+</Aside>
+
+## Choose your plan
+
+Pick a timeline and work down the checklist. Every step links to the page to read or the problem to solve. Ticks are saved in your browser, separately for each timeline, so you can switch plans without losing progress.
+
+<StudyPlan />
+
+The phases are ordered, but they overlap in practice. Once you have done the first phase and a handful of building blocks, start the practice questions and keep reading in parallel. Each practice question will send you back to the pages you need.
+
+## Do I need to know everything here?
+
+No. Design interviews are open-ended conversations, and nobody is expected to know every topic in depth. What you will be asked depends on:
+
+- **Your level.** Senior and staff candidates are expected to go deeper, to drive the conversation and to reason about operations, cost and failure. Junior candidates may get a simpler problem or none at all.
+- **Your background.** A backend engineer will be pushed on databases and consistency; a mobile or front-end engineer more on APIs, caching and client behaviour; a data engineer on pipelines and storage.
+- **The role and the company.** Infrastructure teams probe distributed systems; product teams care more about data models and APIs. Large tech companies often have one or two design rounds; smaller companies may fold design into a general technical interview.
+- **Luck.** The question you get, and the interviewer's own interests, matter more than anyone likes to admit.
+
+The strategy that works for all of them is **breadth first, then depth in a few areas**. Know a little about every major building block, enough to say what it is for and what it costs. Then go deep in the areas closest to your experience and to the job, because that is where follow-up questions will land.
+
+## How to practise
+
+**Attempt before you read.** Set a timer for 45 minutes and solve a question on paper or a whiteboard before looking at the solution. Then compare: which requirements did you miss, which estimate was off, which component did you not consider? Reading a solution first feels productive but teaches much less.
+
+**Talk out loud.** The interview is a conversation. Explain your reasoning as you go, as if someone were listening. Recording yourself is uncomfortable and very effective.
+
+**Use the framework every time.** Follow the same steps on every question: requirements, estimates, API and data model, high-level design, deep dives, bottlenecks. See [how to approach a system design interview](/start/interview-framework/). After a few rounds the structure becomes automatic and frees your attention for the problem.
+
+**Do mock interviews.** Pair with a friend or colleague and take turns as interviewer. Playing the interviewer is surprisingly useful: you see how vague requirements and hand-waving look from the other side.
+
+**Revisit what went badly.** Keep a short list of gaps you found ("I don't know how to shard a timeline", "my storage estimate missed replicas"). Read the relevant page, then redo the question a week later.
+
+**Read about real systems.** Engineering blogs of the companies you are interviewing with show what they care about and give you concrete examples to mention. A few classic papers explain why today's systems are built the way they are.
+
+<Aside type="note" title="In the interview">
+Interviewers do not grade how many topics you have read about. They watch how you clarify an ambiguous problem, whether your numbers support your choices, how you handle a new constraint, and whether you can name the trade-off behind each decision. Plan your preparation around those skills: a dozen questions solved properly beat fifty solutions read.
+</Aside>
+
+## Related topics
+
+- [Introduction](/start/introduction/) — how this guide is organised.
+- [How to approach a system design interview](/start/interview-framework/) — the step-by-step framework to use while practising.
+- [Back-of-the-envelope estimation](/start/estimation/) — the method behind every sizing question.
+- [More interview questions](/practice/more-questions/) — extra problems once you finish the worked ones.
+- [Engineering blogs](/real-world/engineering-blogs/) — where to read about the companies you are interviewing with.

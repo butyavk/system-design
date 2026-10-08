@@ -1,0 +1,286 @@
+---
+/**
+ * Home-page hero figure: nine latency landmarks on a log axis from 1 ns to 1 s.
+ * Values come from the same data as the LatencyExplorer so the two never disagree.
+ */
+import { latencyItems } from '~/data/latency';
+import { formatNs, type Locale } from './lib/format';
+
+const locale: Locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const href = `${base}${locale === 'ru' ? 'ru/' : ''}reference/latency-numbers/`;
+
+// side/tier/dir place each label so neighbours never collide on the wide layout.
+type Mark = { id: string; en: string; ru: string; side: 'above' | 'below'; far?: boolean; left?: boolean };
+const marks: Mark[] = [
+  { id: 'l1', en: 'L1 cache', ru: 'Кэш L1', side: 'above' },
+  { id: 'dram', en: 'RAM', ru: 'Оперативная память', side: 'below' },
+  { id: 'compress1k', en: 'Compress 1 KB', ru: 'Сжать 1 КБ', side: 'above' },
+  { id: 'ssd4k', en: 'NVMe read', ru: 'Чтение с NVMe', side: 'below' },
+  { id: 'rttaz', en: 'Round trip in a zone', ru: 'Запрос внутри зоны', side: 'above' },
+  { id: 'rttxaz', en: 'Across zones', ru: 'Между зонами', side: 'below' },
+  { id: 'hddseek', en: 'Disk seek', ru: 'Поиск на HDD', side: 'above' },
+  { id: 'rttuseu', en: 'US ↔ Europe', ru: 'США ↔ Европа', side: 'below' },
+  { id: 'rttfar', en: 'Other side of the world', ru: 'Другой конец света', side: 'above', far: true, left: true },
+];
+
+const DECADES = 9; // 1 ns … 1 s
+const points = marks
+  .map((m, i) => {
+    const item = latencyItems.find((x) => x.id === m.id);
+    if (!item) return null;
+    const pos = Math.min(100, Math.max(0, (Math.log10(item.value2026) / DECADES) * 100));
+    const cls = [`ladder__mark--${m.side}`, m.far ? 'ladder__mark--far' : '', m.left ? 'ladder__mark--left' : ''].join(' ');
+    return { label: m[locale], value: formatNs(item.value2026, locale, 2), pos, cls, i };
+  })
+  .filter((p): p is NonNullable<typeof p> => p !== null);
+
+const tickLabels = {
+  en: ['1 ns', '10 ns', '100 ns', '1 µs', '10 µs', '100 µs', '1 ms', '10 ms', '100 ms', '1 s'],
+  ru: ['1 нс', '10 нс', '100 нс', '1 мкс', '10 мкс', '100 мкс', '1 мс', '10 мс', '100 мс', '1 с'],
+}[locale];
+
+const t = {
+  en: {
+    caption: 'Every step to the right is ten times slower.',
+    captionV: 'Every step down is ten times slower.',
+    more: 'Typical 2026 numbers — open the full table',
+    aria: 'Latency landmarks on a logarithmic scale from one nanosecond to one second',
+  },
+  ru: {
+    caption: 'Каждый шаг вправо — в десять раз медленнее.',
+    captionV: 'Каждый шаг вниз — в десять раз медленнее.',
+    more: 'Типичные значения 2026 года — открыть полную таблицу',
+    aria: 'Ориентиры задержек на логарифмической шкале от одной наносекунды до одной секунды',
+  },
+}[locale];
+---
+
+<figure class="ladder not-content" aria-label={t.aria}>
+  <div class="ladder__track">
+    <div class="ladder__axis" aria-hidden="true"></div>
+    <ol class="ladder__ticks" aria-hidden="true">
+      {tickLabels.map((label, i) => (
+        <li style={`--pos:${(i / DECADES) * 100}`}><span>{label}</span></li>
+      ))}
+    </ol>
+    <ol class="ladder__marks">
+      {points.map((p) => (
+        <li class={`ladder__mark ${p.cls}`} style={`--pos:${p.pos.toFixed(2)};--i:${p.i}`}>
+          <a href={href}>
+            <span class="ladder__dot" aria-hidden="true"></span>
+            <span class="ladder__label">{p.label}</span>
+            <span class="ladder__value">{p.value}</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </div>
+  <figcaption>
+    <span class="ladder__cap-h">{t.caption}</span><span class="ladder__cap-v">{t.captionV}</span>{' '}
+    <a href={href}>{t.more}</a>
+  </figcaption>
+</figure>
+
+<style>
+  .ladder {
+    --axis-y: 8rem;
+    margin: 0.5rem 0 2.5rem;
+    padding: 0;
+  }
+  .ladder ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .ladder__track {
+    position: relative;
+    height: 13rem;
+    margin-inline: 1.5rem 2.5rem;
+  }
+  .ladder__axis {
+    position: absolute;
+    inset-inline: 0;
+    top: var(--axis-y);
+    height: 2px;
+    margin-top: -1px;
+    background: linear-gradient(90deg, var(--sl-color-accent) 0%, var(--sdp-signal) 100%);
+    transform-origin: left center;
+    animation: ladder-draw 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .ladder__ticks li {
+    position: absolute;
+    top: var(--axis-y);
+    left: calc(var(--pos) * 1%);
+    width: 1px;
+    height: 0.6rem;
+    margin-top: -0.3rem;
+    background: var(--sl-color-gray-5);
+  }
+  .ladder__ticks span {
+    position: absolute;
+    z-index: 1;
+    top: 0.85rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0 0.25rem;
+    background: var(--sl-color-black);
+    white-space: nowrap;
+    font-size: 0.7rem;
+    color: var(--sl-color-gray-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .ladder__mark {
+    position: absolute;
+    top: var(--axis-y);
+    left: calc(var(--pos) * 1%);
+    animation: ladder-pop 420ms ease-out both;
+    animation-delay: calc(300ms + var(--i) * 70ms);
+  }
+  .ladder__mark a {
+    position: absolute;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.05rem;
+    padding-left: 0.55rem;
+    border-left: 1px solid var(--sl-color-gray-5);
+    color: var(--sl-color-white);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .ladder__mark--above a {
+    bottom: 0.15rem;
+    padding-bottom: 1.5rem;
+  }
+  .ladder__mark--below a {
+    top: 0.15rem;
+    padding-top: 2.3rem;
+  }
+  .ladder__mark--far.ladder__mark--above a {
+    padding-bottom: 4.3rem;
+  }
+  .ladder__mark--left a {
+    left: auto;
+    right: 0;
+    align-items: flex-end;
+    padding-left: 0;
+    padding-right: 0.55rem;
+    border-left: none;
+    border-right: 1px solid var(--sl-color-gray-5);
+  }
+  .ladder__dot {
+    position: absolute;
+    left: -0.4rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: var(--sdp-signal);
+    box-shadow: 0 0 0 3px var(--sl-color-black);
+  }
+  .ladder__mark--above .ladder__dot { bottom: -0.55rem; }
+  .ladder__mark--below .ladder__dot { top: -0.55rem; }
+  .ladder__mark--left .ladder__dot { left: auto; right: -0.4rem; }
+  .ladder__label {
+    font-size: var(--sl-text-sm);
+    font-weight: 560;
+    line-height: 1.2;
+  }
+  .ladder__value {
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    color: var(--sdp-signal);
+    font-variant-numeric: tabular-nums;
+  }
+  .ladder__mark a:hover .ladder__label,
+  .ladder__mark a:focus-visible .ladder__label {
+    color: var(--sl-color-accent);
+  }
+  .ladder__mark a:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .ladder figcaption {
+    margin: 0.75rem 1.5rem 0;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .ladder figcaption a {
+    color: var(--sl-color-accent);
+  }
+  .ladder__cap-v { display: none; }
+
+  /* Narrow screens: the ladder stands upright, one label per rung. */
+  @media (max-width: 64rem) {
+    .ladder__track {
+      height: 34rem;
+      margin-inline: 4.4rem 0;
+    }
+    .ladder__axis {
+      inset-inline: auto;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      height: auto;
+      margin: 0 0 0 -1px;
+      background: linear-gradient(180deg, var(--sl-color-accent) 0%, var(--sdp-signal) 100%);
+      transform-origin: center top;
+      animation-name: ladder-draw-y;
+    }
+    .ladder__ticks li {
+      top: calc(var(--pos) * 1%);
+      left: 0;
+      width: 0.6rem;
+      height: 1px;
+      margin: 0 0 0 -0.3rem;
+    }
+    .ladder__ticks span {
+      top: 50%;
+      left: auto;
+      right: 1rem;
+      transform: translateY(-50%);
+    }
+    .ladder .ladder__mark {
+      top: calc(var(--pos) * 1%);
+      left: 0;
+    }
+    .ladder .ladder__mark a {
+      top: 0;
+      bottom: auto;
+      left: 1.1rem;
+      right: auto;
+      transform: translateY(-50%);
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding: 0;
+      border: none;
+    }
+    .ladder .ladder__mark .ladder__dot {
+      top: 50%;
+      bottom: auto;
+      left: -1.5rem;
+      right: auto;
+      transform: translateY(-50%);
+    }
+    .ladder {
+      padding-top: 0.9rem;
+    }
+    .ladder figcaption {
+      margin: 1.25rem 0 0;
+    }
+    .ladder__cap-h { display: none; }
+    .ladder__cap-v { display: inline; }
+  }
+
+  @keyframes ladder-draw { from { transform: scaleX(0); } }
+  @keyframes ladder-draw-y { from { transform: scaleY(0); } }
+  @keyframes ladder-pop { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .ladder__axis,
+    .ladder__mark { animation: none; }
+  }
+</style>

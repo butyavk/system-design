@@ -1,0 +1,247 @@
+---
+title: Denormalization and SQL tuning
+description: "Trading write cost for read speed with denormalization and materialized views, then tuning: EXPLAIN, indexes, N+1, keyset pagination, pooling, myths."
+sidebar:
+  order: 4
+---
+import { Aside } from '@astrojs/starlight/components';
+
+Before adding replicas or shards, get the most out of the database you have. Two levers usually give the biggest wins for the least architecture. **Denormalization** stores data in the shape the reads need. **Tuning** makes each query do less work. Both are measurable, reversible and cheap compared with distributing data. Both are also easy to get wrong when advice is followed from memory instead of from a query plan.
+
+<Aside type="tip" title="TL;DR">
+- Measure first: find the queries that consume the most total time (`pg_stat_statements`, the slow query log), then read their plans with `EXPLAIN ANALYZE`.
+- The right **composite index** often turns a full-table scan into a few page reads. Every index also slows writes and uses memory, so add indexes for real queries only.
+- Kill **N+1 queries**, page with **keysets** instead of `OFFSET`, and put a **connection pooler** in front of PostgreSQL.
+- **Denormalize** when reads vastly outnumber writes and joins are the bottleneck. Decide who keeps the copies in sync: a transaction, a trigger, a materialized view or an event stream.
+- Much classic advice is outdated: `CHAR` is not faster than `VARCHAR` in PostgreSQL, `VARCHAR(255)` is a habit rather than an optimisation, and MySQL's query cache no longer exists.
+</Aside>
+
+## Denormalization
+
+A normalised schema stores each fact once, which keeps writes simple and correct. Reads then reassemble the facts with joins. Denormalization stores some facts **more than once**, or stores **precomputed results**, so that hot reads skip the joins or aggregates.
+
+Why it pays off: many user-facing systems read far more than they write. Feeds, product pages and dashboards commonly see 100 reads per write or more. Suppose a join costs 2 ms per read and keeping a copy costs 1 ms per write. At 10,000 reads/s and 100 writes/s, removing the join saves 20 seconds of database time every second, while the extra write work costs 0.1 seconds. The arithmetic flips for write-heavy tables.
+
+Common forms:
+
+- **Duplicated columns.** Store `author_name` on each `post` so the feed does not join `users`.
+- **Counters and aggregates.** Keep `comment_count` on `posts` instead of running `COUNT(*)` over comments on every page view.
+- **Precomputed views of the data.** Summary tables, search documents, or per-user timelines.
+- **Embedded children.** Store order line items inside the order as JSON when they are always read together.
+
+### Keeping copies consistent
+
+Every copy needs an owner and an update path. In rough order of strength:
+
+| Mechanism | Consistency | Cost and risk |
+|---|---|---|
+| Same transaction updates both copies | Immediate and atomic | Every writer must remember; hot counters cause lock contention |
+| Database trigger | Immediate, cannot be forgotten | Hidden logic; slows every write; harder to debug |
+| Materialized view, refreshed on a schedule | Stale between refreshes | A full refresh recomputes everything |
+| Change data capture or events updating a read model | Eventual, typically seconds | More moving parts; consumers must be idempotent |
+| Periodic reconciliation job | Repairs drift | Detects bugs rather than preventing them |
+
+The transactional version for a comment counter looks like this:
+
+```sql
+BEGIN;
+INSERT INTO comments (post_id, body) VALUES (42, 'Nice post');
+UPDATE posts SET comment_count = comment_count + 1 WHERE id = 42;
+COMMIT;
+```
+
+Add a reconciliation query that finds drift, and run it periodically, whichever mechanism you choose:
+
+```sql
+SELECT p.id, p.comment_count, count(c.id) AS actual
+FROM posts p LEFT JOIN comments c ON c.post_id = p.id
+GROUP BY p.id
+HAVING p.comment_count <> count(c.id);
+```
+
+### Materialized views
+
+A materialized view stores a query's result as a table. PostgreSQL recomputes it on `REFRESH MATERIALIZED VIEW`. With `CONCURRENTLY`, readers are not blocked during the refresh. That option requires a unique index on the view:
+
+```sql
+CREATE MATERIALIZED VIEW daily_revenue AS
+SELECT date_trunc('day', created_at) AS day,
+       sum(total_cents)              AS revenue_cents,
+       count(*)                      AS orders
+FROM orders
+WHERE status <> 'cancelled'
+GROUP BY 1;
+
+CREATE UNIQUE INDEX ON daily_revenue (day);
+REFRESH MATERIALIZED VIEW CONCURRENTLY daily_revenue;   -- e.g. every 5 minutes from a scheduler
+```
+
+PostgreSQL's built-in refresh always recomputes the whole query. Oracle and SQL Server (indexed views) can maintain some views incrementally. At larger scale, the same idea becomes a stream processor or a CDC pipeline maintaining read models. See [event streaming](/async/event-streaming/).
+
+**Costs of denormalization:** more storage, slower and more complex writes, and the permanent risk of copies drifting apart. Under a heavy write load, a denormalised schema can be slower overall than the normalised one. Denormalize specific hot paths, not the whole schema.
+
+## SQL tuning
+
+### 1. Measure before changing anything
+
+- **Profile production.** In PostgreSQL, `pg_stat_statements` ranks normalised queries by total time, calls and rows. In MySQL, use the slow query log (with `long_query_time`) or `performance_schema` statement digests. Optimise the top of the list by **total** time: a 2 ms query called 50,000 times a minute matters more than a 3-second report run once a day.
+- **Benchmark changes** under realistic concurrency and data volume. `pgbench` and `sysbench` drive the database directly. k6 or Locust drive the whole application. A query that is fast on 1,000 rows can be a disaster on 100 million.
+
+### 2. Read the plan
+
+`EXPLAIN` shows the plan the optimizer chose. `EXPLAIN ANALYZE` runs the query and adds real row counts and timings. MySQL has had `EXPLAIN ANALYZE` since 8.0.18. In PostgreSQL, add `BUFFERS` to see pages touched (version 18 includes buffer counts automatically). Because `ANALYZE` executes the statement, wrap writes in `BEGIN; ... ROLLBACK;`.
+
+What to look for:
+
+- **Sequential scans on large tables** where you expected an index.
+- **Estimated vs actual rows** differing by 10× or more. The optimizer is working from bad statistics: run `ANALYZE`, or raise the statistics target for skewed columns.
+- **Sorts and hashes spilling to disk**, and nested loops with a very large outer side.
+
+Here is a real example on a 2-million-row `orders` table (PostgreSQL 16, cost columns removed for brevity). The query fetches one customer's 20 newest orders:
+
+```text
+-- Before: no suitable index
+Limit (actual time=137.024..142.922 rows=16 loops=1)
+  Buffers: shared hit=12691 read=4665
+  ->  Gather Merge ... ->  Sort  (Sort Key: created_at DESC)
+        ->  Parallel Seq Scan on orders (actual time=19.623..127.950 rows=5 loops=3)
+              Filter: (customer_id = 42)
+              Rows Removed by Filter: 666661
+Execution Time: 143.080 ms
+```
+
+```sql
+CREATE INDEX orders_customer_created
+    ON orders (customer_id, created_at DESC) INCLUDE (total_cents);
+```
+
+```text
+-- After: composite covering index
+Limit (actual time=0.047..0.051 rows=16 loops=1)
+  Buffers: shared hit=4 read=3
+  ->  Index Only Scan using orders_customer_created on orders
+        Index Cond: (customer_id = 42)
+        Heap Fetches: 0
+Execution Time: 0.072 ms
+```
+
+The plan went from reading about 17,000 pages (about 135 MB) to 7 pages, and from 143 ms to under 0.1 ms. That is roughly 2,000 times faster, for a 77 MB index that every insert must now maintain.
+
+### 3. Index deliberately
+
+- **Composite order matters.** An index on `(customer_id, created_at)` serves `WHERE customer_id = ?` and `WHERE customer_id = ? ORDER BY created_at`. Put equality columns first, then the range or sort column. Engines can sometimes use an index without its leading column (MySQL's skip scan, PostgreSQL 18's B-tree skip scan), but only efficiently when that column has few distinct values. Do not design around it.
+- **Covering indexes** contain every column the query needs, so the table is never touched (PostgreSQL `INCLUDE`; in InnoDB, secondary indexes always carry the primary key). In PostgreSQL this works only on pages the visibility map marks all-visible, which is why the example ran `VACUUM`.
+- **Selectivity.** An index pays off when it narrows the rows a lot. On our table, `status` has four equally common values. With an index on it, `status = 'paid'` still returns 500,000 rows spread over every one of the 17,242 table pages, so the query takes about 200 ms with or without the index. No index makes a filter that matches a quarter of the table cheap. A **partial index** (`... WHERE status = 'new'`) helps when you query one rare value.
+- **Write cost.** Each index adds work to every `INSERT`, to `UPDATE`s of indexed columns, and to `DELETE`. It also competes for RAM. Find unused indexes (`pg_stat_user_indexes.idx_scan = 0`, `sys.schema_unused_indexes` in MySQL) and drop them.
+- **Bulk loads.** For a big load into a fresh table, load first and build indexes afterwards. The PostgreSQL docs recommend this, and `COPY` beats row-by-row `INSERT`s.
+
+### 4. Avoid N+1 queries
+
+An ORM loop that fetches 50 posts and then each post's author issues 51 queries. At a 0.5 ms round trip that is about 25 ms of pure latency. Two queries cost about 1 ms:
+
+```sql
+SELECT id, author_id, title FROM posts ORDER BY created_at DESC LIMIT 50;
+SELECT id, name FROM users WHERE id = ANY($1);   -- $1 = array of the 50 author ids
+```
+
+Use your ORM's eager loading (`select_related`/`prefetch_related`, `includes`, `JOIN FETCH`), a single join, or a batching layer such as GraphQL DataLoader. Watch per-request query counts in your APM or logs.
+
+### 5. Paginate with keysets, not OFFSET
+
+`OFFSET 1000000 LIMIT 20` makes the database read and throw away a million rows. Pages also shift when rows are inserted between requests. **Keyset** (seek) pagination remembers where the last page ended:
+
+```sql
+-- first page
+SELECT id, created_at, total_cents FROM orders
+ORDER BY created_at DESC, id DESC LIMIT 20;
+
+-- next page: pass the last row's (created_at, id) back
+SELECT id, created_at, total_cents FROM orders
+WHERE (created_at, id) < ($1, $2)
+ORDER BY created_at DESC, id DESC LIMIT 20;
+```
+
+With an index on `(created_at DESC, id DESC)`, our test table served page 50,001 by `OFFSET` in 226 ms and the same page by keyset in 0.18 ms. Keysets cannot jump to "page 37", which is rarely a real requirement. The tie-breaker `id` keeps the order stable when timestamps collide.
+
+### 6. Partition big tables
+
+Declarative **table partitioning** splits one logical table into child tables on the same server, usually by time:
+
+```sql
+CREATE TABLE events (
+  id         bigint      NOT NULL,
+  created_at timestamptz NOT NULL,
+  payload    jsonb
+) PARTITION BY RANGE (created_at);
+
+CREATE TABLE events_2026_10 PARTITION OF events
+  FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');
+```
+
+Queries filtered on `created_at` touch only the matching partitions (**partition pruning**). Retention becomes `DROP TABLE events_2025_10`, which is instant and creates no `VACUUM` debt, instead of a huge `DELETE`. The PostgreSQL docs suggest partitioning pays off mainly when a table is larger than the server's memory. Too many partitions (thousands) slow planning. Primary and unique keys must include the partition key.
+
+### 7. Pool connections
+
+PostgreSQL runs one operating-system process per connection. Thousands of mostly idle connections from autoscaled app servers waste memory and hurt throughput. A pooler such as **PgBouncer** (or a managed one: RDS Proxy, Supavisor, or those built into hosted Postgres) multiplexes many client connections onto a few dozen server connections:
+
+| PgBouncer mode | A server connection is held for | Caveats |
+|---|---|---|
+| Session | The client's whole session | Safe for everything, but saves little |
+| Transaction | One transaction | The usual choice. Breaks session state: `SET`, `LISTEN`, session advisory locks, `WITH HOLD` cursors. Protocol-level prepared statements need `max_prepared_statements` (PgBouncer 1.21+). |
+| Statement | One statement | No multi-statement transactions |
+
+Size the server-side pool near the number of cores times a small factor, not by the number of clients. MySQL's thread-per-connection model copes with more connections, but pooling in the application or with ProxySQL still helps.
+
+### 8. Tighten the schema, sensibly
+
+- Use the right types: integers and `bigint` for IDs (a 32-bit `INT` tops out at 2,147,483,647, which is under 25 days at 1,000 inserts/s), `numeric`/`DECIMAL` for money, `timestamptz` for instants, `boolean` instead of `'Y'/'N'`.
+- Declare `NOT NULL` where a value is required. It is mainly a correctness tool. MySQL notes a small storage and index benefit too.
+- Keep large blobs in [object storage](/data/object-storage/) and store the key in the row.
+- Keep primary keys compact in InnoDB, because every secondary index entry carries the primary key.
+
+## Myths and outdated advice
+
+| Advice you may still read | Status in 2026 | What to do instead |
+|---|---|---|
+| "Use `CHAR` instead of `VARCHAR` for speed" | **Wrong for PostgreSQL.** Its docs say there is no performance difference between `char(n)`, `varchar(n)` and `text`, and that `char(n)` is usually the slowest because of padding. In MySQL InnoDB (DYNAMIC rows, `utf8mb4`), `CHAR(n)` is not truly fixed-width: trailing spaces are trimmed and *n* bytes reserved, and large `CHAR` columns are stored as variable length. | PostgreSQL: use `text` or `varchar(n)` when you need a limit. MySQL: use `CHAR` only for genuinely fixed codes (country codes, hashes in a single-byte charset). |
+| "`VARCHAR(255)` is the efficient maximum" | **A habit.** The 255 boundary in MySQL is in **bytes**: it decides whether the length prefix is 1 or 2 bytes. With the default `utf8mb4` (up to 4 bytes per character), `VARCHAR(64)` already exceeds it. PostgreSQL has no such boundary. | Choose limits from the domain (an email address fits in 254 characters) or use `text` plus a `CHECK`. In MySQL, oversized limits still bite at index time: a key is capped at 3,072 bytes, so a `utf8mb4` `VARCHAR(1000)` (up to 4,000 bytes) cannot be fully indexed. |
+| "Turn on / tune the MySQL query cache" | **Gone.** Deprecated in 5.7.20 and **removed in MySQL 8.0**, because it became a bottleneck under concurrent load on multi-core servers. | Cache in the application or in Redis/Valkey with explicit invalidation; see [cache strategies](/caching/cache-strategies/). |
+| "Disable indexes, load, then re-enable" | Partly true. `ALTER TABLE ... DISABLE KEYS` is documented for MyISAM tables only. | Load into a table without secondary indexes and create them afterwards, use `COPY` or `LOAD DATA`, and batch inserts. |
+| "Use `TEXT` for boolean full-text search" | MyISAM-era advice | Use the engine's full-text index (`tsvector` and GIN in PostgreSQL, `FULLTEXT` in InnoDB) or a search engine. |
+| "Benchmark with `ab`" | Measures HTTP, not the database, and is single-URL | Use `pgbench` or `sysbench` for the database, and k6 or Locust for end-to-end load. |
+
+## Trade-offs
+
+| Technique | Gains | Costs |
+|---|---|---|
+| Denormalized columns and counters | Join-free, cheap hot reads | Write amplification, drift, lock contention on hot rows |
+| Materialized views | Precomputed aggregates with no app code | Stale between refreshes; full recompute in PostgreSQL |
+| More indexes | Faster selective reads, index-only scans | Slower writes, more memory and disk, more `VACUUM` work |
+| Table partitioning | Pruning, instant retention, smaller indexes per partition | Planning overhead; key constraints must include the partition key |
+| Connection pooling (transaction mode) | Many clients on few server connections | Session features break; one more component |
+
+<Aside type="note" title="In the interview">
+- When asked "the database is slow", start with measurement: which query, how often, what plan. Do not jump to sharding or NoSQL.
+- Design an index for a given query out loud: equality columns first, then range or sort, consider covering. Mention the write cost.
+- Know N+1 and keyset pagination; both come up in API design questions.
+- If you denormalize, say who keeps the copies in sync and what happens when they drift.
+- Bonus points for knowing that the MySQL query cache was removed in 8.0 and that `CHAR` is not faster in PostgreSQL.
+</Aside>
+
+## Further reading
+
+- [Use The Index, Luke](https://use-the-index-luke.com/) — Markus Winand's free guide to SQL indexing across major databases.
+- [PostgreSQL: Using EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html) — how to read plans and `EXPLAIN ANALYZE` output.
+- [PostgreSQL: Index-only scans and covering indexes](https://www.postgresql.org/docs/current/indexes-index-only-scans.html) — `INCLUDE` and the visibility map.
+- [PostgreSQL: Table partitioning](https://www.postgresql.org/docs/current/ddl-partitioning.html) — declarative partitioning, pruning and best practices.
+- [PgBouncer features](https://www.pgbouncer.org/features.html) — pooling modes and what each one breaks.
+- [MySQL 8.0: Retiring support for the query cache](https://dev.mysql.com/blog-archive/mysql-8-0-retiring-support-for-the-query-cache/) — why it was removed.
+
+## Related topics
+
+- [Relational databases](/data/relational-databases/) — storage engines and MVCC, which explain much of what tuning does.
+- [Partitioning and sharding](/data/partitioning-and-sharding/) — the next step when one tuned server is not enough.
+- [Replication](/data/replication/) — read replicas for read-heavy workloads.
+- [Caching layers](/caching/caching-layers/) — taking repeated reads off the database entirely.
+- [Event streaming](/async/event-streaming/) — CDC pipelines that maintain denormalized read models.
+- [NoSQL databases](/data/nosql/) — stores designed around denormalized, query-shaped data.

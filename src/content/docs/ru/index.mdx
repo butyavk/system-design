@@ -1,5 +1,74 @@
 ---
 title: System Design Primer
+description: Учимся проектировать крупные системы и готовимся к собеседованию по системному дизайну. Переработанный и обновлённый учебник на русском и английском.
 template: splash
+hero:
+  title: System Design Primer
+  tagline: Как устроены крупные системы и как уверенно рассказать о своём решении на собеседовании. Переработанное, заново написанное и обновлённое к 2026 году издание классического открытого учебника.
+  actions:
+    - text: Начать обучение
+      link: /system-design/ru/start/introduction/
+      icon: right-arrow
+    - text: Цифры задержек
+      link: /system-design/ru/reference/latency-numbers/
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/butyavk/system-design
+      variant: minimal
+      icon: github
 ---
-Home
+import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+import LatencyLadder from '~/components/LatencyLadder.astro';
+
+<LatencyLadder />
+
+Этот сайт берёт за основу [The System Design Primer](https://github.com/donnemartin/system-design-primer) Донна Мартина — одно из самых популярных открытых пособий на GitHub — и превращает его в курс, который удобно проходить страница за страницей.
+
+
+## Как пользоваться сайтом
+
+<Steps>
+
+1. **Прочитайте [введение](/start/introduction/)**: там описано, что где лежит и как устроена каждая страница.
+
+2. **Выберите [план подготовки](/start/study-plan/)** под срок до собеседования или под свой темп.
+
+3. **Изучите базовые блоки**: сначала основы, затем трафик, данные, кэширование и очереди. Каждая тематическая страница заканчивается тем, что спрашивают на собеседовании.
+
+4. **Тренируйтесь вслух** на разборах задач: держитесь [схемы собеседования](/start/interview-framework/) и ставьте таймер на 45 минут, прежде чем открывать решение.
+
+5. **Держите цифры под рукой**: таблицы [задержек](/reference/latency-numbers/), [степеней двойки](/reference/powers-of-two/) и [доступности](/reference/availability-numbers/) нужны в любой прикидке.
+
+</Steps>
+
+## Основные темы
+
+<CardGrid>
+  <LinkCard title="Основы и компромиссы" description="Масштабируемость, задержка и пропускная способность, CAP и PACELC, паттерны согласованности и доступности." href="/fundamentals/performance-vs-scalability/" />
+  <LinkCard title="Сеть и трафик" description="DNS, CDN, балансировщики нагрузки, обратные прокси и API-шлюзы." href="/traffic/dns/" />
+  <LinkCard title="Архитектура приложений" description="Монолит и микросервисы, обнаружение сервисов и service mesh." href="/architecture/monolith-and-microservices/" />
+  <LinkCard title="Базы данных и хранилища" description="Реляционные БД, репликация, шардирование, NoSQL и объектное хранилище." href="/data/relational-databases/" />
+  <LinkCard title="Кэширование" description="Где и как кэшировать: cache-aside, write-through, вытеснение и инвалидация." href="/caching/caching-layers/" />
+  <LinkCard title="Асинхронность и очереди" description="Очереди сообщений, обратное давление и потоковая обработка событий в духе Kafka." href="/async/queues-and-back-pressure/" />
+  <LinkCard title="Коммуникация и API" description="HTTP вплоть до HTTP/3, TCP и UDP, RPC и REST, GraphQL и gRPC." href="/communication/http/" />
+  <LinkCard title="Надёжность и безопасность" description="Ограничение частоты запросов, паттерны отказоустойчивости, наблюдаемость и основы безопасности." href="/reliability/rate-limiting/" />
+</CardGrid>
+
+## Практика и справочник
+
+<CardGrid>
+  <LinkCard title="Разборы задач по системному дизайну" description="Сокращатель ссылок, лента Twitter, веб-краулер, Mint, социальный граф и другие — шаг за шагом." href="/practice/url-shortener-pastebin/" />
+  <LinkCard title="Объектно-ориентированный дизайн" description="Хеш-таблица, LRU-кэш, парковка, онлайн-чат и другие задачи на типизированном Python 3.12." href="/ood/hash-map/" />
+  <LinkCard title="Реальные системы" description="Основополагающие статьи, архитектуры крупных компаний и инженерные блоги, за которыми стоит следить." href="/real-world/foundational-papers/" />
+  <LinkCard title="Цифры и справочник" description="Задержки, степени двойки и «девятки» доступности для быстрых прикидок." href="/reference/latency-numbers/" />
+</CardGrid>
+
+## Что нового по сравнению с оригиналом
+
+- **Структура.** Вместо README на 1800+ строк — 13 разделов с боковым меню, поиском и навигацией «назад/вперёд».
+- **Свежий и актуальный текст.** Все страницы написаны заново. Темы, которых оригинал почти не касался, получили собственные страницы: объектное хранилище, потоковая обработка событий, ограничение частоты запросов, паттерны отказоустойчивости, наблюдаемость, стили API и service mesh.
+- **Единый формат.** Тематическая страница начинается с краткой выжимки и заканчивается вопросами с собеседования; разбор задачи — рассказом о том, как систему построили бы в 2026 году.
+- **Диаграммы как код.** Схемы на Mermaid подстраиваются под светлую и тёмную тему.
+- **Русская версия** написана живым техническим языком, а не переведена дословно.
+
+Оригинал © Донн Мартин, лицензия CC BY 4.0; подробности — на странице [«Авторы и лицензия»](/about/credits-and-license/). Нашли ошибку? [Помогите её исправить](/about/contributing/).

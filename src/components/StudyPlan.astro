@@ -1,0 +1,382 @@
+---
+// Study plan: choose a timeline, tick off steps (saved per timeline in
+// localStorage), see progress. Server-renders the medium plan so it works
+// without JavaScript.
+import { studyPhases, timelines, type Timeline } from '~/data/study-plan';
+
+interface Props {
+  initial?: Timeline;
+}
+
+const { initial = 'medium' } = Astro.props;
+const locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const uid = `sp-${Math.random().toString(36).slice(2, 8)}`;
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+const href = (path: string) => `${base}${locale === 'ru' ? 'ru/' : ''}${path}`;
+
+const T = {
+  en: {
+    choose: 'How much time do you have?',
+    progress: 'Progress',
+    of: 'of',
+    steps: 'steps done',
+    reset: 'Reset progress',
+    confirm: 'Clear all ticks for this timeline?',
+    aim: 'Aim',
+    saved: 'Progress is saved in this browser only.',
+    done: 'All done — now keep practising out loud.',
+  },
+  ru: {
+    choose: 'Сколько у вас времени?',
+    progress: 'Прогресс',
+    of: 'из',
+    steps: 'шагов выполнено',
+    reset: 'Сбросить прогресс',
+    confirm: 'Снять все отметки для этого плана?',
+    aim: 'Цель',
+    saved: 'Прогресс сохраняется только в этом браузере.',
+    done: 'Всё пройдено — теперь продолжайте тренироваться вслух.',
+  },
+}[locale];
+
+const countFor = (tl: Timeline) => studyPhases.reduce((n, p) => n + p.steps.filter((s) => s.timelines.includes(tl)).length, 0);
+const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.done } };
+---
+
+<div class="sp not-content" id={uid} data-sp data-timeline={initial}>
+  <script type="application/json" data-sp-json set:html={JSON.stringify(clientData)} />
+
+  <fieldset class="sp-choose">
+    <legend class="sp-legend">{T.choose}</legend>
+    <div class="sp-options">
+      {timelines.map((tl) => (
+        <label class="sp-option">
+          <input type="radio" name={`${uid}-tl`} value={tl.id} checked={tl.id === initial} />
+          <span class="sp-option-body">
+            <span class="sp-option-name">
+              {tl.name[locale]} <span class="sp-option-dur">· {tl.duration[locale]}</span>
+            </span>
+            <span class="sp-option-sum">{tl.summary[locale]}</span>
+            <span class="sp-option-count">
+              {countFor(tl.id)} {locale === 'ru' ? 'шагов' : 'steps'}
+            </span>
+          </span>
+        </label>
+      ))}
+    </div>
+  </fieldset>
+
+  <div class="sp-progress">
+    <div class="sp-progress-head">
+      <span class="sp-progress-label" id={`${uid}-pl`}>{T.progress}</span>
+      <span class="sp-progress-text" aria-live="polite" data-sp-text>0 {T.of} {countFor(initial)} {T.steps}</span>
+    </div>
+    <div class="sp-bar" role="progressbar" aria-labelledby={`${uid}-pl`} aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-sp-bar>
+      <span class="sp-bar-fill" data-sp-fill></span>
+    </div>
+    <div class="sp-progress-foot">
+      <span class="sp-saved">{T.saved}</span>
+      <button type="button" class="sp-reset" data-sp-reset>{T.reset}</button>
+    </div>
+  </div>
+
+  <ol class="sp-phases">
+    {studyPhases.map((phase, pi) => (
+      <li class="sp-phase" data-phase={phase.id}>
+        <div class="sp-phase-head">
+          <h3 class="sp-phase-title">
+            <span class="sp-phase-num" aria-hidden="true">{pi + 1}</span>
+            {phase.title[locale]}
+          </h3>
+          <span class="sp-phase-count" data-sp-count></span>
+        </div>
+        {timelines.map((tl) => (
+          <p class="sp-aim" data-for={tl.id} hidden={tl.id !== initial}>
+            <span class="sp-aim-label">{T.aim}:</span> {phase.aim[tl.id][locale]}
+          </p>
+        ))}
+        <ul class="sp-steps">
+          {phase.steps.map((step) => (
+            <li class="sp-step" data-step={step.id} data-tl={step.timelines.join(' ')} hidden={!step.timelines.includes(initial)}>
+              <input type="checkbox" id={`${uid}-${step.id}`} aria-labelledby={`${uid}-${step.id}-l`} />
+              <a id={`${uid}-${step.id}-l`} href={href(step.path)}>{step.task[locale]}</a>
+            </li>
+          ))}
+        </ul>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<style>
+  .sp {
+    margin-block: 1.5rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-text);
+    container-type: inline-size;
+  }
+  .sp-choose { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .sp-legend { font-weight: 600; color: var(--sl-color-white); margin-bottom: 0.6rem; padding: 0; font-size: var(--sl-text-base); }
+  .sp-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  .sp-option { position: relative; cursor: pointer; display: block; }
+  .sp-option input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+  }
+  .sp-option-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    height: 100%;
+    padding: 0.75rem 0.85rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    line-height: 1.4;
+  }
+  .sp-option:hover .sp-option-body { border-color: var(--sl-color-gray-3); }
+  .sp-option input:checked + .sp-option-body {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent-low);
+    box-shadow: inset 0 0 0 1px var(--sl-color-accent);
+  }
+  .sp-option input:focus-visible + .sp-option-body { outline: 2px solid var(--sl-color-accent); outline-offset: 2px; }
+  .sp-option-name { font-weight: 700; color: var(--sl-color-white); }
+  .sp-option-dur { font-weight: 400; color: var(--sl-color-gray-2); }
+  .sp-option-sum { font-size: var(--sl-text-xs); color: var(--sl-color-gray-2); }
+  .sp-option-count { margin-top: auto; padding-top: 0.2rem; font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); }
+
+  .sp-progress {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.5rem;
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    position: sticky;
+    top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height, 0rem) + 0.5rem);
+    z-index: 2;
+  }
+  :global(:root[data-theme='dark']) .sp-progress { background: var(--sl-color-gray-6); }
+  .sp-progress-head,
+  .sp-progress-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    flex-wrap: wrap;
+  }
+  .sp-progress-label { font-weight: 600; color: var(--sl-color-white); }
+  .sp-progress-text { font-variant-numeric: tabular-nums; color: var(--sl-color-gray-2); }
+  .sp-bar {
+    margin: 0.5rem 0;
+    height: 0.6rem;
+    border-radius: 999px;
+    background: var(--sl-color-gray-5);
+    overflow: hidden;
+  }
+  .sp-bar-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--sl-color-accent);
+    border-radius: 999px;
+  }
+  .sp-saved { font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); }
+  .sp-reset {
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    cursor: pointer;
+    min-height: 2rem;
+  }
+  .sp-reset:hover { border-color: var(--sl-color-red); }
+  .sp-reset:focus-visible { outline: 2px solid var(--sl-color-accent); outline-offset: 2px; }
+
+  .sp-phases { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: 1.25rem; }
+  .sp-phase { margin: 0; }
+  .sp-phase[hidden] { display: none; }
+  .sp-phase-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    padding-bottom: 0.35rem;
+  }
+  .sp-phase-title {
+    margin: 0;
+    font-size: var(--sl-text-lg);
+    color: var(--sl-color-white);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    line-height: 1.3;
+  }
+  .sp-phase-num {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-text-accent);
+    font-size: var(--sl-text-xs);
+    font-weight: 700;
+  }
+  .sp-phase.is-complete .sp-phase-num { background: var(--sl-color-accent); color: var(--sl-color-text-invert); }
+  .sp-phase-count { flex: none; font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); font-variant-numeric: tabular-nums; }
+  .sp-aim { margin: 0.5rem 0 0.25rem; font-size: var(--sl-text-xs); color: var(--sl-color-gray-2); line-height: 1.5; }
+  .sp-aim-label { font-weight: 600; color: var(--sl-color-white); }
+  .sp-steps { list-style: none; margin: 0; padding: 0; }
+  .sp-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.4rem 0.25rem;
+    margin: 0;
+    border-bottom: 1px solid var(--sl-color-hairline);
+    line-height: 1.45;
+  }
+  .sp-step[hidden] { display: none; }
+  .sp-step input {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0.12rem 0 0;
+    accent-color: var(--sl-color-accent);
+    cursor: pointer;
+  }
+  .sp-step input:focus-visible { outline: 2px solid var(--sl-color-accent); outline-offset: 2px; }
+  .sp-step a { color: var(--sl-color-white); text-decoration-color: var(--sl-color-gray-4); text-underline-offset: 0.2em; }
+  .sp-step a:hover { color: var(--sl-color-text-accent); text-decoration-color: currentColor; }
+  .sp-step.is-done a { color: var(--sl-color-gray-3); text-decoration: line-through; text-decoration-color: var(--sl-color-gray-4); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .sp-bar-fill { transition: width 0.3s ease; }
+  }
+  @container (max-width: 34rem) {
+    .sp-options { grid-template-columns: 1fr; }
+    .sp-option-count { margin-top: 0; }
+    .sp-progress { position: static; }
+  }
+</style>
+
+<script>
+  const KEY = 'sdp-study-plan';
+
+  type Store = { timeline?: string; done?: Record<string, string[]> };
+
+  function load(): Store {
+    try {
+      const v = JSON.parse(localStorage.getItem(KEY) || '{}');
+      return v && typeof v === 'object' ? v : {};
+    } catch {
+      return {};
+    }
+  }
+  function save(s: Store) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(s));
+    } catch {
+      /* storage unavailable: progress lives for this page view only */
+    }
+  }
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const { t } = JSON.parse(root.querySelector('[data-sp-json]')!.textContent || '{}') as { t: Record<string, string> };
+    const radios = [...root.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+    const steps = [...root.querySelectorAll<HTMLLIElement>('.sp-step')];
+    const phases = [...root.querySelectorAll<HTMLLIElement>('.sp-phase')];
+    const text = root.querySelector<HTMLElement>('[data-sp-text]')!;
+    const bar = root.querySelector<HTMLElement>('[data-sp-bar]')!;
+    const fill = root.querySelector<HTMLElement>('[data-sp-fill]')!;
+
+    const store = load();
+    store.done ??= {};
+    let tl = store.timeline && radios.some((r) => r.value === store.timeline) ? store.timeline : root.dataset.timeline!;
+
+    const doneSet = () => new Set(store.done![tl] ?? []);
+
+    function render() {
+      const done = doneSet();
+      root.dataset.timeline = tl;
+      for (const r of radios) r.checked = r.value === tl;
+      let total = 0;
+      let ticked = 0;
+      for (const li of steps) {
+        const inPlan = (li.dataset.tl || '').split(' ').includes(tl);
+        li.hidden = !inPlan;
+        const cb = li.querySelector('input')!;
+        const isDone = done.has(li.dataset.step!);
+        cb.checked = isDone;
+        li.classList.toggle('is-done', isDone);
+        if (inPlan) {
+          total++;
+          if (isDone) ticked++;
+        }
+      }
+      for (const ph of phases) {
+        const visible = [...ph.querySelectorAll<HTMLLIElement>('.sp-step')].filter((s) => !s.hidden);
+        const d = visible.filter((s) => s.classList.contains('is-done')).length;
+        ph.hidden = visible.length === 0;
+        ph.querySelector('[data-sp-count]')!.textContent = `${d} / ${visible.length}`;
+        ph.classList.toggle('is-complete', visible.length > 0 && d === visible.length);
+        ph.querySelectorAll<HTMLElement>('.sp-aim').forEach((a) => (a.hidden = a.dataset.for !== tl));
+      }
+      const pct = total ? Math.round((ticked / total) * 100) : 0;
+      fill.style.width = `${pct}%`;
+      bar.setAttribute('aria-valuenow', String(pct));
+      bar.setAttribute('aria-valuetext', `${pct}%`);
+      text.textContent = ticked === total && total > 0 ? `${ticked} ${t.of} ${total} — ${t.done}` : `${ticked} ${t.of} ${total} ${t.steps}`;
+    }
+
+    for (const r of radios) {
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        tl = r.value;
+        store.timeline = tl;
+        save(store);
+        render();
+      });
+    }
+    for (const li of steps) {
+      const cb = li.querySelector('input')!;
+      cb.addEventListener('change', () => {
+        const done = doneSet();
+        if (cb.checked) done.add(li.dataset.step!);
+        else done.delete(li.dataset.step!);
+        store.done![tl] = [...done];
+        save(store);
+        render();
+      });
+    }
+    root.querySelector('[data-sp-reset]')!.addEventListener('click', () => {
+      if (!window.confirm(t.confirm)) return;
+      store.done![tl] = [];
+      save(store);
+      render();
+    });
+
+    render();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-sp]').forEach(init);
+</script>

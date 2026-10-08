@@ -1,0 +1,113 @@
+---
+title: Introduction
+description: Why system design is worth learning, who this guide is for, how its 13 sections fit together and how to use it to prepare for interviews.
+sidebar:
+  order: 1
+---
+import { Aside } from '@astrojs/starlight/components';
+
+System design is the craft of turning a vague need, such as "let people share short links" or "show each user a feed", into a set of services, data stores and network paths that keeps working when traffic grows a thousandfold and parts of it fail. This guide teaches the building blocks of that craft and a repeatable way to apply them, both at work and in an interview.
+
+<Aside type="tip" title="TL;DR">
+- Learn the building blocks first (fundamentals, traffic, data, caching, messaging), then practise on case studies.
+- Each topic page follows the same shape: summary, mechanism, trade-offs, what interviewers ask.
+- For interviews, combine a [study plan](/start/study-plan/), the [interview framework](/start/interview-framework/) and quick [estimation](/start/estimation/).
+- No design is "correct". Every choice buys something and costs something; your job is to say what.
+</Aside>
+
+## Why learn system design
+
+Most engineers spend their days inside one service, yet the hardest production problems live between services: a cache that hides a slow query until it expires, a retry storm that turns a blip into an outage, a database that was fine at one million rows and not at one billion. Knowing how the pieces behave under load lets you:
+
+- **Make better day-to-day decisions.** Choosing an index, a queue or a timeout is a small design decision with large consequences.
+- **Read other people's architectures critically.** Engineering blog posts and design documents become easier to evaluate when you know the usual trade-offs.
+- **Grow into senior roles.** Beyond a certain level, the work is less about writing code and more about choosing what to build and explaining why.
+- **Pass the interview.** Many tech companies include one or more system design rounds for mid-level and senior candidates, and the round often decides the level of the offer.
+
+## Who this is for
+
+- Engineers who are comfortable with one backend language and SQL but have not yet designed a system end to end.
+- Candidates preparing for system design interviews within a few weeks or months.
+- Experienced engineers who want a compact, up-to-date refresher on a topic before a design review.
+- Russian-speaking readers who prefer to study in Russian: every page has a Russian twin, and the language switcher keeps you on the same page.
+
+You do not need to know everything here. Interviewers expect breadth across the core topics and depth in a few, and what counts as "enough" depends on your level and the role.
+
+## How this site is organised
+
+The material moves from concepts to practice. Each section has its own entry in the sidebar; here is where each one starts.
+
+| Section | What you will learn | Start with |
+|---|---|---|
+| Start here | How to study, the interview framework, estimation | [Study plan](/start/study-plan/) |
+| Fundamentals and trade-offs | Scalability, latency, CAP, consistency, availability | [Performance vs scalability](/fundamentals/performance-vs-scalability/) |
+| Networking and traffic | DNS, CDNs, load balancers, gateways | [DNS](/traffic/dns/) |
+| Application architecture | Monoliths, microservices, service discovery | [Monolith and microservices](/architecture/monolith-and-microservices/) |
+| Databases and storage | SQL, replication, sharding, NoSQL, object storage | [Relational databases](/data/relational-databases/) |
+| Caching | Cache layers, update and eviction strategies | [Caching layers](/caching/caching-layers/) |
+| Asynchronism and messaging | Queues, back pressure, event streaming | [Queues and back pressure](/async/queues-and-back-pressure/) |
+| Communication and APIs | HTTP, TCP and UDP, RPC and REST, API styles | [HTTP](/communication/http/) |
+| Reliability and security | Rate limiting, resilience, observability, security | [Rate limiting](/reliability/rate-limiting/) |
+| Numbers and reference | Latency, powers of two, availability nines | [Latency numbers](/reference/latency-numbers/) |
+| Practice: system design | Nine end-to-end case studies | [URL shortener and Pastebin](/practice/url-shortener-pastebin/) |
+| Practice: object-oriented design | Six class-design exercises in Python | [Hash map](/ood/hash-map/) |
+| Real-world systems | Papers, company architectures, blogs | [Foundational papers](/real-world/foundational-papers/) |
+
+The About section holds the [credits and license](/about/credits-and-license/) and a guide to [contributing](/about/contributing/).
+
+### How a page is built
+
+Topic pages share one layout so you always know where to look:
+
+1. A two- or three-sentence opening and a **TL;DR** box you can memorise.
+2. The mechanism, usually with a diagram and concrete numbers.
+3. A **Trade-offs** section when there is a real choice to make.
+4. An **In the interview** box: what gets probed, typical follow-ups, common mistakes.
+5. **Further reading** (checked links) and **Related topics**.
+
+Case studies follow the interview flow instead: requirements and estimates, high-level design, core components, scaling, and a final section on how a team would build the system in 2026.
+
+## What changed compared to the original
+
+This site is an adaptation of [The System Design Primer](https://github.com/donnemartin/system-design-primer) by Donne Martin, an open-source guide published under CC BY 4.0. The original collected the topics, the case studies and many links into one long README. We kept its map of topics and rebuilt everything else:
+
+- **Restructured** into 13 sections with short pages, a sidebar, search and previous/next navigation.
+- **Rewritten** in new words, with explanations of *why* a mechanism works, not only *what* it is.
+- **Updated for 2026.** The original text mostly dates from 2016 to 2019. Pages now cover what changed since then where it affects design decisions: managed cloud databases and queues, HTTP/3 and QUIC, Kafka-style logs, distributed SQL, Valkey alongside Redis, edge compute, SLOs and error budgets.
+- **Expanded.** New pages on object storage, event streaming, rate limiting, resilience patterns, observability, API styles and service meshes.
+- **Interactive.** Calculators let you change the inputs of an estimate and see the result immediately.
+- **Bilingual.** Every page exists in English and Russian.
+- **Re-checked links.** Many links in the original have rotted; further-reading lists here were verified when written.
+
+See [Credits and license](/about/credits-and-license/) for the full attribution.
+
+## Using this site for interview prep
+
+A design round is a 45 to 60 minute conversation in which you lead an open-ended problem to a reasonable design. Three pages set you up for it:
+
+- **[Study plan](/start/study-plan/)**: what to read in what order, for a timeline of one week, one month or three months.
+- **[How to approach a system design interview](/start/interview-framework/)**: a seven-step framework with a time budget, the questions to ask and a one-screen checklist.
+- **[Back-of-the-envelope estimation](/start/estimation/)**: how to size traffic, storage and bandwidth in two minutes, with the reference tables one click away.
+
+Then practise. Pick a case study, set a timer, talk through your design out loud (or with a friend playing the interviewer), and only then compare it with the written solution. Reading solutions without attempting them first feels productive but transfers poorly to the real thing.
+
+<Aside type="note" title="In the interview">
+Interviewers rarely check whether you reach a specific answer. They watch how you scope the problem, whether your numbers justify your components, how you react to a new constraint, and whether you can name the cost of each decision you make.
+</Aside>
+
+## Everything is a trade-off
+
+If you remember one idea from this guide, make it this one. Adding a cache cuts latency but creates a consistency problem. Sharding a database removes a write bottleneck but makes cross-shard queries and transactions harder. Asynchronous processing absorbs spikes but delays results and complicates error handling. A design is good when its trade-offs match the requirements, and a strong answer says out loud which side of each trade-off it chose and why.
+
+## Further reading
+
+- [The System Design Primer](https://github.com/donnemartin/system-design-primer): the original guide this site adapts.
+- [Designing Data-Intensive Applications](https://dataintensive.net/) by Martin Kleppmann: the standard book-length companion to the data topics here.
+- [Google SRE books](https://sre.google/books/): free online books on running large systems reliably.
+- [Non-Abstract Large System Design](https://sre.google/workbook/non-abstract-design/): Google's worked method for turning requirements into a sized design.
+
+## Related topics
+
+- [Study plan](/start/study-plan/): the next page, choosing a route through the material.
+- [Performance vs scalability](/fundamentals/performance-vs-scalability/): the first concept page.
+- [Latency numbers](/reference/latency-numbers/): the numbers behind every estimate.

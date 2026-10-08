@@ -1,0 +1,76 @@
+---
+title: Powers of two
+description: Powers of two from 2^7 to 2^50 with exact values, decimal approximations and byte units, plus a converter that explains KiB vs KB.
+sidebar:
+  order: 2
+---
+import { Aside } from '@astrojs/starlight/components';
+import PowersOfTwo from '~/components/PowersOfTwo.astro';
+
+Computers count in powers of two, people count in powers of ten, and estimates live in the gap between them. Knowing that 2¹⁰ is about a thousand and 2³² is about four billion lets you size key spaces, memory and storage in your head. It also helps you notice when a "1 TB" disk shows up as 931 "GB".
+
+<Aside type="tip" title="TL;DR">
+- 2¹⁰ ≈ 10³. Every ten powers of two add about three zeros: 2²⁰ ≈ a million, 2³⁰ ≈ a billion, 2⁴⁰ ≈ a trillion.
+- 2³² ≈ 4.3 billion (IPv4 addresses, unsigned 32-bit integers); 2³¹ − 1 ≈ 2.1 billion is the classic signed-integer overflow.
+- **KB, MB, GB** are powers of 1,000. **KiB, MiB, GiB** are powers of 1,024. The gap grows from 2.4% at kilo to 10% at tera.
+- For estimates, round freely: treat 2¹⁰ as 1,000 and say so.
+</Aside>
+
+## The table and a converter
+
+The converter takes an amount in any unit and shows the exact number of bytes, plus the same quantity in decimal (SI) and binary (IEC) units. It accepts decimal commas, digit grouping and suffixes such as `2.5k` or `3M`. The table lists every power from 2⁷ to 2⁵⁰; bold rows are the ones to memorise, and the checkbox hides the rest.
+
+<PowersOfTwo />
+
+## KiB vs KB
+
+Two families of prefixes describe bytes, and they are often mixed up:
+
+| Decimal (SI) | Value | Binary (IEC) | Value | Binary is larger by |
+|---|---|---|---|---|
+| kilobyte, KB | 10³ = 1,000 | kibibyte, KiB | 2¹⁰ = 1,024 | 2.4% |
+| megabyte, MB | 10⁶ | mebibyte, MiB | 2²⁰ = 1,048,576 | 4.9% |
+| gigabyte, GB | 10⁹ | gibibyte, GiB | 2³⁰ | 7.4% |
+| terabyte, TB | 10¹² | tebibyte, TiB | 2⁴⁰ | 10% |
+| petabyte, PB | 10¹⁵ | pebibyte, PiB | 2⁵⁰ | 12.6% |
+
+The IEC introduced the binary names in 1999 to end the ambiguity, but both meanings of "GB" are still in use:
+
+- **Drive makers, network speeds and most cloud storage prices use decimal units.** A "1 TB" drive holds 10¹² bytes, and 1 Gbit/s is 10⁹ bits per second.
+- **Memory is sized in binary units**, even when the label says "GB": a 16 GB DIMM holds 16 GiB.
+- **Operating systems differ.** Windows reports binary sizes with decimal labels, which is why a 1 TB disk appears as "931 GB". macOS and many Linux tools use decimal units or label binary ones correctly (`ls -lh` and `df -h` print powers of 1,024; `df -H` prints powers of 1,000).
+- **Cloud services choose either.** Some bill block storage per GiB-month, others per GB-month; check the docs when a 7% difference matters.
+
+<Aside type="note">
+Bits and bytes are a separate trap: network bandwidth is quoted in **bits** per second, storage in **bytes**. Divide by 8 (or by 10 to leave room for protocol overhead): a 10 Gbit/s link moves about 1 GB/s of payload.
+</Aside>
+
+## Why it matters in a design
+
+| Question | Powers of two at work |
+|---|---|
+| How many IDs fit in a 32-bit or 64-bit integer? | 2³² ≈ 4.3 × 10⁹ runs out at web scale; 2⁶⁴ ≈ 1.8 × 10¹⁹ does not. |
+| How long must a short URL key be? | Base62 with 7 characters gives 62⁷ ≈ 3.5 × 10¹² keys (about 2⁴²), enough for trillions of links. |
+| Will random IDs collide? | The birthday bound: collisions become likely after about `2^(n/2)` random n-bit IDs, so about 4 billion for 64-bit IDs. A random UUID has 122 random bits. |
+| How much memory does an index take? | 100 million entries × 64 bytes = 6.4 × 10⁹ bytes ≈ 6 GiB: one large server, not a cluster. |
+| How many shards or partitions? | Powers of two split evenly: going from 2ᵏ to 2ᵏ⁺¹ shards moves exactly half of each shard's keys. |
+| How big is a page or block? | Memory pages are usually 4 KiB, database pages 8–16 KiB, SSD reads 4 KiB, object-storage multipart parts at least 5 MiB. |
+
+When you estimate, keep units visible all the way through: "10⁸ objects × 1 KB = 10¹¹ bytes = 100 GB". Writing the exponent makes slips of a factor of 1,000 obvious.
+
+<Aside type="note" title="In the interview">
+Interviewers use powers of two to see whether you can size things quickly: "will the key space run out?", "does this fit in RAM?". Say the approximation you use ("I'll treat 2¹⁰ as a thousand"), keep units on every number and round to one significant figure. Confusing bits with bytes, or MB with Mb, is the most common slip; being off by 7% between GB and GiB almost never matters.
+</Aside>
+
+## Further reading
+
+- [Power of two](https://en.wikipedia.org/wiki/Power_of_two) — properties and a longer table.
+- [Binary prefix](https://en.wikipedia.org/wiki/Binary_prefix) — history of the KiB/MiB names and how operating systems display sizes.
+- [Napkin Math](https://github.com/sirupsen/napkin-math) — techniques for keeping units and orders of magnitude straight.
+
+## Related topics
+
+- [Back-of-the-envelope estimation](/start/estimation/) — where these numbers get used.
+- [Latency numbers every programmer should know](/reference/latency-numbers/) — the time-based companion table.
+- [Design Pastebin or a URL shortener](/practice/url-shortener-pastebin/) — sizing a key space in practice.
+- [Partitioning and sharding](/data/partitioning-and-sharding/) — splitting data into a power-of-two number of shards.

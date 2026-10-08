@@ -1,0 +1,123 @@
+---
+title: Ещё вопросы для практики
+description: "Подборка вопросов для собеседований по system design по темам: главная сложность каждого, страницы сайта для повторения и проверенные первоисточники."
+sidebar:
+  order: 9
+---
+import { Aside } from '@astrojs/starlight/components';
+
+Разобранные в этом разделе задачи подробно покрывают несколько классических вопросов. Интервьюеры выбирают из гораздо более широкого набора, но большинство вопросов собирается из одних и тех же нескольких десятков строительных блоков. Здесь собраны распространённые вопросы, сгруппированные по темам: для каждого указана **главная сложность, ради которой его задают**, страницы этого сайта с нужными блоками и один-два первоисточника — статьи и инженерные блоги команд, которые построили настоящую систему.
+
+<Aside type="tip" title="Коротко">
+- У каждого вопроса есть одна **ключевая трудность** (рассылка по подписчикам, порядок сообщений, горячие ключи, exactly-once, география). Найдите её за первые пять минут и проведите там большую часть собеседования.
+- Тренируйтесь по [схеме собеседования](/start/interview-framework/): требования, оценки, высокоуровневый дизайн, углубление, масштабирование.
+- Читайте ссылки после того, как набросали собственный ответ, а не до, и сравнивайте компромиссы, а не копируйте чужую архитектуру.
+</Aside>
+
+## Как работать со списком
+
+1. Выберите вопрос и поставьте таймер на 45 минут.
+2. Запишите требования и [прикидочный расчёт](/start/estimation/), нарисуйте высокоуровневую схему.
+3. Углубитесь в ключевую сложность из таблицы — именно туда будет давить интервьюер.
+4. Прочитайте ссылки и отметьте, что там сделали иначе и почему.
+
+Вопросы, уже разобранные на сайте:
+
+| Вопрос | Разбор |
+|---|---|
+| Сокращатель ссылок / Pastebin (Bitly) | [Сокращатель ссылок и Pastebin](/practice/url-shortener-pastebin/) |
+| Домашняя лента и поиск Twitter/X | [Лента Twitter](/practice/twitter-timeline/) |
+| Поисковый краулер | [Веб-краулер](/practice/web-crawler/) |
+| Агрегатор личных финансов (Mint) | [Личные финансы (Mint)](/practice/personal-finance-mint/) |
+| Социальный граф, степени знакомства | [Социальный граф](/practice/social-graph/) |
+| Кэш поисковых запросов | [Кэш поисковых запросов](/practice/search-query-cache/) |
+| Бестселлеры по категориям (Amazon) | [Рейтинг продаж](/practice/sales-rank/) |
+| Рост веб-приложения до миллионов пользователей | [Масштабирование до миллионов](/practice/scaling-to-millions/) |
+| Сервер чата (объектно-ориентированный дизайн) | [Онлайн-чат (ООД)](/ood/online-chat/) |
+
+## Хранение данных и инфраструктура
+
+| Вопрос | Ключевая сложность | На сайте | Ссылки |
+|---|---|---|---|
+| Key-value хранилище (Redis, DynamoDB) | Партиционирование плюс репликация с настраиваемой согласованностью; членство в кластере и обнаружение отказов | [NoSQL](/data/nosql/), [Шардирование](/data/partitioning-and-sharding/), [Репликация](/data/replication/) | [Dynamo (SOSP 2007)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf), [DynamoDB (USENIX ATC 2022)](https://www.usenix.org/conference/atc22/presentation/elhemali) |
+| Распределённый кэш (Memcached) | Горячие ключи, лавины при промахах, инвалидация между регионами | [Уровни кэширования](/caching/caching-layers/), [Стратегии кэширования](/caching/cache-strategies/) | [Scaling Memcache at Facebook (NSDI 2013)](https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala) |
+| Синхронизация файлов (Dropbox, Google Drive) | Разбиение на блоки и дедупликация, конфликты, клиент, корректно синхронизирующийся после работы офлайн | [Объектное хранилище](/data/object-storage/), [Модели согласованности](/fundamentals/consistency-patterns/) | [Dropbox: rewriting the sync engine](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine), [Inside the Magic Pocket](https://dropbox.tech/infrastructure/inside-the-magic-pocket) |
+| Генератор уникальных ID | 64-битные ID, примерно упорядоченные по времени, без центрального узкого места; рассинхронизация часов | [Шардирование](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
+| Данные в нескольких дата-центрах | Согласованность против задержки между регионами; failover без потери записей | [Репликация](/data/replication/), [Теорема CAP](/fundamentals/cap-theorem/) | [Spanner (OSDI 2012)](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett), [Transactions across datacenters](https://snarfed.org/transactions_across_datacenters_io.html) |
+| Распределённый планировщик задач (cron в масштабе) | Запустить каждую задачу ровно один раз при сбоях; выбор лидера; без пиков ровно в полночь | [Очереди](/async/queues-and-back-pressure/), [Паттерны устойчивости](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
+| Конвейер метрик и логов | Приём миллионов точек в секунду, сжатие, уровни хранения, быстрые запросы | [Наблюдаемость](/reliability/observability/), [Потоки событий](/async/event-streaming/) | [Gorilla (VLDB 2015)](https://www.vldb.org/pvldb/vol8/p1816-teller.pdf), [Monarch (VLDB 2020)](https://research.google/pubs/monarch-googles-planet-scale-in-memory-time-series-database/) |
+
+## Социальные и контентные платформы
+
+| Вопрос | Ключевая сложность | На сайте | Ссылки |
+|---|---|---|---|
+| Лента новостей (Facebook, Instagram) | Рассылка при записи или сборка при чтении; знаменитости; ранжирование | [Лента Twitter](/practice/twitter-timeline/), [Социальный граф](/practice/social-graph/) | [Timelines at Scale (QCon 2012)](https://www.infoq.com/presentations/Twitter-Timeline-Scalability/), [TAO (USENIX ATC 2013)](https://www.usenix.org/conference/atc13/technical-sessions/presentation/bronson) |
+| Фотосервис (Instagram) | Конвейер загрузки, хранение медиа и CDN, формирование ленты | [Объектное хранилище](/data/object-storage/), [CDN](/traffic/cdn/) | [What Powers Instagram](https://instagram-engineering.com/what-powers-instagram-hundreds-of-instances-dozens-of-technologies-adf2e22da2ad) |
+| Мессенджер (WhatsApp, Slack, Discord) | Постоянные соединения, порядок внутри диалога, статусы доставки, синхронизация после офлайна | [Онлайн-чат (ООД)](/ood/online-chat/), [Стили API](/communication/api-styles/) | [Slack: real-time messaging](https://slack.engineering/real-time-messaging/), [Discord: storing trillions of messages](https://discord.com/blog/how-discord-stores-trillions-of-messages) |
+| Система уведомлений (push, email, SMS) | Рассылка на миллионы устройств, приоритеты, дедупликация, лимиты на пользователя и на провайдера | [Очереди](/async/queues-and-back-pressure/), [Rate limiting](/reliability/rate-limiting/) | [Netflix: Rapid Event Notification System](https://netflixtechblog.com/rapid-event-notification-system-at-netflix-6deb1d2b57d1) |
+| Видеоплатформа (YouTube, Netflix) | Конвейер транскодирования, адаптивный битрейт, кэширование огромного каталога на периферии | [CDN](/traffic/cdn/), [Объектное хранилище](/data/object-storage/) | [Netflix: per-title encoding](https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2), [Netflix Open Connect](https://openconnect.netflix.com/en/) |
+| Совместный редактор (Google Docs, Figma) | Сходимость одновременных правок (OT или CRDT); присутствие; редактирование офлайн | [Модели согласованности](/fundamentals/consistency-patterns/) | [How Figma's multiplayer works](https://www.figma.com/blog/how-figmas-multiplayer-technology-works/), [Local-first software](https://www.inkandswitch.com/essay/local-first/) |
+| Рекомендательная система (Amazon, YouTube) | Отбор кандидатов, затем ранжирование; свежие признаки; офлайн-обучение и онлайн-отдача | [Потоки событий](/async/event-streaming/), [Уровни кэширования](/caching/caching-layers/) | [Deep Neural Networks for YouTube Recommendations](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/) |
+| Сеть доставки контента (Cloudflare, CloudFront) | Маршрутизация запроса к ближайшему здоровому узлу, заполнение кэша, сброс | [CDN](/traffic/cdn/), [DNS](/traffic/dns/) | [Netflix Open Connect](https://openconnect.netflix.com/en/) |
+
+## Поиск
+
+| Вопрос | Ключевая сложность | На сайте | Ссылки |
+|---|---|---|---|
+| Поисковая система (Google) | Обход веба, шардирование инвертированного индекса, ранжирование, ответ меньше чем за секунду при веерных запросах | [Веб-краулер](/practice/web-crawler/), [Кэш поисковых запросов](/practice/search-query-cache/) | [The Anatomy of a Large-Scale Hypertextual Web Search Engine](https://infolab.stanford.edu/~backrub/google.html) |
+| Подсказки при вводе (typeahead, autocomplete) | Поиск по префиксу за десятки миллисекунд; обновление популярности; персональные результаты | [Кэш поисковых запросов](/practice/search-query-cache/), [Уровни кэширования](/caching/caching-layers/) | [The Life of a Typeahead Query](https://engineering.fb.com/2010/05/17/web/the-life-of-a-typeahead-query/) |
+| Поиск поблизости (Yelp, друзья рядом) | Пространственные индексы (geohash, S2, H3) и частые обновления координат | [Шардирование](/data/partitioning-and-sharding/), [NoSQL](/data/nosql/) | [S2 Geometry](https://s2geometry.io/), [Документация H3](https://h3geo.org/docs/) |
+
+## Аналитика и подсчёт в реальном времени
+
+| Вопрос | Ключевая сложность | На сайте | Ссылки |
+|---|---|---|---|
+| Тренды (Twitter/X) | Скользящие окна, ранжирование по росту, а не по объёму, спам | [Рейтинг продаж](/practice/sales-rank/), [Потоки событий](/async/event-streaming/) | [Real-time trending topics in Storm](https://www.michael-noll.com/blog/2013/01/18/implementing-real-time-trending-topics-in-storm/) |
+| Top-K запросов за интервал времени | Тяжёлые игроки в ограниченной памяти; слияние частичных результатов | [Рейтинг продаж](/practice/sales-rank/) | [Space-Saving (Metwally и др.)](https://www.cs.ucsb.edu/sites/default/files/documents/2005-23.pdf), [Count-Min Sketch](https://dsf.berkeley.edu/cs286/papers/countmin-latin2004.pdf) |
+| Агрегация кликов по рекламе | Подсчёт ровно один раз, опоздавшие события, сверка для биллинга | [Потоки событий](/async/event-streaming/) | [Uber: exactly-once ad event processing](https://www.uber.com/blog/real-time-exactly-once-ad-event-processing/) |
+| Ограничитель частоты запросов к API | Точные лимиты на множестве серверов без добавления задержки | [Rate limiting](/reliability/rate-limiting/) | [Stripe: scaling your API with rate limiters](https://stripe.com/blog/rate-limiters), [Cloudflare: rate limiting millions of domains](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/) |
+
+## Геолокация, маркетплейсы и деньги
+
+| Вопрос | Ключевая сложность | На сайте | Ссылки |
+|---|---|---|---|
+| Диспетчеризация такси (Uber, Lyft) | Сопоставление спроса и предложения в реальном времени на постоянно движущемся геоиндексе | [Шардирование](/data/partitioning-and-sharding/), [Паттерны доступности](/fundamentals/availability-patterns/) | [Uber H3 hexagonal index](https://www.uber.com/blog/h3/), [How Uber scales its real-time market platform](https://highscalability.com/how-uber-scales-their-real-time-market-platform/) |
+| Платёжная система | Никогда не списать дважды: ключи идемпотентности, бухгалтерский журнал (ledger), сверка с внешними провайдерами | [Паттерны устойчивости](/reliability/resilience-patterns/), [Реляционные БД](/data/relational-databases/) | [Airbnb: avoiding double payments](https://medium.com/airbnb-engineering/avoiding-double-payments-in-a-distributed-payments-system-2981f6b070bb), [Stripe: idempotency](https://stripe.com/blog/idempotency) |
+| Биржа (NASDAQ, криптобиржа) | Детерминированное сведение заявок с низкой задержкой; упорядочивание; воспроизведение для восстановления | [Задержка и пропускная способность](/fundamentals/latency-vs-throughput/) | [The LMAX Architecture](https://martinfowler.com/articles/lmax.html) |
+| Многопользовательская онлайн-игра | Авторитетный сервер, маскировка задержки (предсказание, интерполяция), подбор игроков | [TCP и UDP](/communication/tcp-and-udp/) | [Fast-Paced Multiplayer: client-server architecture](https://www.gabrielgambetta.com/client-server-game-architecture.html) |
+
+## Системы эпохи ИИ
+
+| Вопрос | Ключевая сложность | На сайте | Ссылки |
+|---|---|---|---|
+| Сервис LLM-ассистента | Мощность GPU и батчинг, память под KV-кэш, потоковая выдача токенов, квоты токенов на пользователя | [Rate limiting](/reliability/rate-limiting/), [HTTP](/communication/http/), [Очереди](/async/queues-and-back-pressure/) | [PagedAttention / vLLM (SOSP 2023)](https://arxiv.org/abs/2309.06180), [Orca (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu) |
+
+<Aside type="caution" title="Ссылки — не готовые ответы">
+Статьи компаний описывают ограничения одной команды в один момент времени. Discord ушёл с Cassandra на ScyllaDB, Dropbox переписал движок синхронизации после многих лет в продакшене, а доклад Twitter о лентах 2012 года старше большинства нынешних инструментов. Используйте их, чтобы понять, какие компромиссы были важны, а решения принимайте под свои требования.
+</Aside>
+
+## Что изменилось по сравнению с исходным списком
+
+- **Убрано:** «спроектируйте сборщик мусора» (вопрос про рантайм языка, а не про system design) и поиск по графу Facebook (продукт давно свёрнут; суть покрывает разбор [социального графа](/practice/social-graph/)).
+- **Объединено:** чат Facebook — с общим вопросом о мессенджере; хроника Facebook — с лентой новостей.
+- **Добавлено:** система уведомлений, видеоплатформа, диспетчеризация такси, поиск поблизости, подсказки при вводе, распределённый планировщик задач, платёжная система, конвейер метрик и логов, агрегация рекламных кликов и обслуживание LLM — всё это теперь частые вопросы.
+- **Заменены ссылки:** большинство исходных ссылок (ветки Quora, презентации на Slideshare, старые посты highscalability.com) умерли или были слабыми; в этом списке предпочтение отдано статьям и постам команд, построивших эти системы.
+
+<Aside type="note" title="На собеседовании">
+- Интервьюеру редко нужна точная архитектура известной компании. Ему важно увидеть, что вы **нашли ключевую трудность** (например, рассылку для лент, порядок для чата, exactly-once для платежей и кликов) и рассуждаете о вариантах.
+- Ждите поворота на середине: «а теперь пишет знаменитость со 100 млн подписчиков», «а теперь отказал регион», «а теперь нужно в реальном времени». Оставьте в дизайне место для этого шага.
+- Типичные ошибки: потратить половину времени на шаблонные блоки (балансировщик, кэш) и так и не дойти до сложной части; выбирать технологию по названию, не объясняя, какое её свойство вам нужно.
+</Aside>
+
+## Что почитать
+
+- [Designing Data-Intensive Applications](https://dataintensive.net/) — книга Мартина Клеппмана о строительных блоках почти всех вопросов с этой страницы (на русском выходила под названием «Высоконагруженные приложения»).
+- [Основополагающие статьи](/real-world/foundational-papers/) — статьи, от которых происходит большинство этих систем.
+- [Архитектуры компаний](/real-world/company-architectures/) — как устроены известные продукты.
+- [Инженерные блоги](/real-world/engineering-blogs/) — где следить за текущей практикой.
+
+## Связанные темы
+
+- [Схема собеседования](/start/interview-framework/) — четыре шага для каждого вопроса.
+- [Прикидочные расчёты](/start/estimation/) — цифры, которые определяют любой дизайн.
+- [План подготовки](/start/study-plan/) — сколько таких вопросов прорешать под ваш срок.

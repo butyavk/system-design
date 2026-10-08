@@ -1,0 +1,142 @@
+---
+title: Back-of-the-envelope estimation
+description: A step-by-step method for sizing traffic, bandwidth and storage in minutes, the numbers worth memorising, two worked examples and a calculator.
+sidebar:
+  order: 4
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+import EstimationCalculator from '~/components/EstimationCalculator.astro';
+
+A back-of-the-envelope estimate is a quick calculation, done with round numbers, that tells you which design is even possible. Will the data fit on one machine? Can one database take the writes? Is bandwidth or storage the real cost? Two or three minutes of arithmetic answer these questions and keep you from building a sharded cluster for 12 requests a second, or a single server for 100,000.
+
+<Aside type="tip" title="TL;DR">
+- Start from users and actions, then derive **QPS, bandwidth and storage**, in that order.
+- One day ≈ 10⁵ seconds, so **1 million per day ≈ 12 per second**. Multiply the average by 2–10 for the peak.
+- Round to one significant figure and keep the units on every number.
+- An estimate is worth nothing until you say what it means: "fits in one database", "needs a CDN", "storage is the cost driver".
+</Aside>
+
+## The method
+
+<Steps>
+
+1. **Write down the assumptions.** Daily active users, actions per user per day, read-to-write ratio, average object size, how long data is kept. If the interviewer does not give them, propose round numbers and say them out loud.
+
+2. **Turn daily counts into rates.** Divide by 86,400 s, or by 10⁵ for a quick estimate (that underestimates by about 15%, which rarely matters). Do it separately for writes and reads.
+
+3. **Find the peak.** Traffic is not flat: a daily peak is typically 2–3× the average, and launches or events can reach 10×. Size the servers for the peak, and the storage for the average.
+
+4. **Compute bandwidth.** Requests per second × bytes per request, for ingress (writes) and egress (reads). Convert to bits when you compare with network links: bytes × 8.
+
+5. **Compute storage.** Writes per day × object size × 365 × years of retention. Then multiply by the replication factor and add room for indexes, metadata and growth.
+
+6. **Compare with what one machine can do and draw a conclusion.** This is the step that matters. See the capacity table below.
+
+</Steps>
+
+## Numbers worth memorising
+
+**Time and rates**
+
+| Quantity | Exact | For estimates |
+|---|---|---|
+| Seconds per day | 86,400 | ≈ 10⁵ |
+| Seconds per month | ≈ 2.6 million | ≈ 2.5 × 10⁶ |
+| Seconds per year | ≈ 31.6 million | ≈ 3 × 10⁷ |
+| 1 million requests per day | 11.6/s | ≈ 12/s |
+| 100 million requests per day | 1,157/s | ≈ 1,000/s |
+| 1 billion requests per day | 11,574/s | ≈ 12,000/s |
+
+**Sizes**
+
+| Item | Typical size |
+|---|---|
+| ID (integer, timestamp) | 8 bytes |
+| UUID | 16 bytes |
+| Short text (tweet, URL, chat message) with metadata | 100 bytes – 1 KB |
+| JSON API response | 1–10 KB |
+| Compressed photo | 200 KB – 3 MB |
+| One minute of HD video | 10–50 MB |
+
+Handy products: 1 KB × 1 million = 1 GB, 1 MB × 1 million = 1 TB, 1 GB × 1,000 = 1 TB. For powers of two and KiB vs KB, see [powers of two](/reference/powers-of-two/).
+
+**What one machine can do (order of magnitude, 2026)**
+
+| Component | Rough capacity |
+|---|---|
+| Stateless web or API server | 1,000–10,000 requests/s, depending on work per request |
+| PostgreSQL or MySQL primary on a large instance | 10,000+ simple writes/s, 50,000+ indexed reads/s; tens of TB of data |
+| Valkey or Redis node | 100,000+ operations/s (more with I/O threads); dataset limited by RAM |
+| Kafka-style broker | Hundreds of MB/s of writes |
+| Server memory | 256 GB – 2 TB |
+| Local NVMe | 1–30 TB per drive, about a million random reads/s |
+| Network port | 25–100 Gbit/s |
+
+These figures vary a lot with the workload, but they tell you whether you need one machine, ten or a thousand. For the time each operation takes, see [latency numbers](/reference/latency-numbers/).
+
+## Worked example 1: a URL shortener
+
+Assumptions: 10 million daily users, of whom one in ten creates a short link each day; each link is read 100 times; a stored link takes about 500 bytes; links are kept for five years; peak traffic is three times the average; data is stored three times.
+
+| Quantity | Calculation | Result |
+|---|---|---|
+| New links per day | 10 M × 0.1 | 1 M |
+| Write QPS | 1 M ÷ 86,400 | ≈ 12/s average, ≈ 35/s peak |
+| Read QPS | 12 × 100 | ≈ 1,200/s average, ≈ 3,500/s peak |
+| Read bandwidth | 1,200/s × 500 B | ≈ 600 KB/s ≈ 5 Mbit/s |
+| Storage per year | 1 M × 500 B × 365 | ≈ 180 GB |
+| Storage for 5 years, 3 copies | 180 GB × 5 × 3 | ≈ 2.7 TB |
+| Links stored after 5 years | 1 M × 365 × 5 | ≈ 1.8 billion |
+
+**What it means.** The write rate is tiny and the whole dataset fits on one database server with replicas. Reads are where the load is, and they are highly cacheable: the hot set of recent links fits in a few gigabytes of cache memory. Short keys need to cover about 2 billion links, which 7 Base62 characters do with room to spare. A sharded NoSQL cluster is not needed here; a CDN or cache in front of a replicated relational database is. The full design is in [Design Pastebin or a URL shortener](/practice/url-shortener-pastebin/).
+
+## Worked example 2: photo sharing
+
+Assumptions: 20 million daily users, each uploading a photo every other day; average stored size 2 MB (with a few resized versions); 50 views per photo; peak is four times the average; photos kept for ten years; three copies.
+
+| Quantity | Calculation | Result |
+|---|---|---|
+| Uploads per day | 20 M × 0.5 | 10 M |
+| Upload QPS | 10 M ÷ 86,400 | ≈ 120/s average, ≈ 460/s peak |
+| View QPS | 120 × 50 | ≈ 6,000/s average, ≈ 23,000/s peak |
+| Upload bandwidth | 120/s × 2 MB | ≈ 230 MB/s ≈ 2 Gbit/s |
+| View bandwidth | 6,000/s × 2 MB | ≈ 12 GB/s ≈ 90 Gbit/s; ≈ 370 Gbit/s at peak |
+| New data per day | 10 M × 2 MB | 20 TB |
+| Per year | 20 TB × 365 | ≈ 7 PB |
+| 10 years, 3 copies | 7.3 PB × 10 × 3 | ≈ 220 PB |
+
+**What it means.** Request rates are modest, but **egress bandwidth and storage dominate**. Serving 90–370 Gbit/s from origin servers is impractical, so images go through a CDN, and the origin sees only cache misses. Hundreds of petabytes belong in object storage. Erasure coding (about 1.5× overhead instead of 3×) and moving old photos to colder storage classes cut the bill roughly in half. Metadata is a separate, much smaller problem: 3.7 billion rows a year at about 1 KB each is under 4 TB a year, a job for a sharded database or a managed key-value store.
+
+## Calculator
+
+The calculator below starts from the URL shortener and can switch to a chat app or photo sharing. Change any assumption and the results update; open **Show the arithmetic** to see each step, in the same order as the method above.
+
+<EstimationCalculator />
+
+## Common mistakes
+
+- **No conclusion.** A table of numbers without "so we need X" is half an answer. Every estimate should end in a design decision.
+- **Bits vs bytes.** Network links are quoted in bits per second, storage in bytes. A 10 Gbit/s link carries about 1 GB/s.
+- **Average instead of peak.** Servers and databases must survive the busiest minute, not the average one. Storage, on the other hand, grows with the average.
+- **Forgetting replicas and overhead.** Three copies, indexes, metadata and free-space headroom easily turn 1 TB of payload into 4–5 TB of disk.
+- **Too much precision.** "11,574.07 QPS" wastes time and suggests the inputs are precise. "About 12,000" is the right answer.
+- **Silent assumptions.** If the interviewer cannot see where a number came from, they cannot correct you. State each assumption before using it.
+- **Mixing time units.** Monthly figures divided by 86,400, or yearly storage multiplied by 30, are easy slips. Write the units next to every number.
+- **Ignoring growth.** If usage doubles every year, five-year storage is far more than five times this year's.
+
+<Aside type="note" title="In the interview">
+Estimation usually comes right after requirements and takes two or three minutes. Interviewers watch whether you choose sensible assumptions, keep units straight and, above all, **use the result**: "about 3,500 reads a second at peak, so one database with a cache is enough", "220 PB, so object storage with tiering". If you are unsure of a number, say so, pick a round value and move on; you can revisit it if the design depends on it.
+</Aside>
+
+## Further reading
+
+- [Software Engineering Advice from Building Large-Scale Distributed Systems](https://static.googleusercontent.com/media/research.google.com/en//people/jeff/stanford-295-talk.pdf) — Jeff Dean's talk that popularised back-of-the-envelope design, with a worked thumbnail example.
+- [Google Pro Tip: Use Back-of-the-envelope Calculations to Choose the Best Design](https://highscalability.com/google-pro-tip-use-back-of-the-envelope-calculations-to-choo/) — a written summary of that example.
+- [Napkin Math](https://github.com/sirupsen/napkin-math) — a maintained table of numbers and estimation techniques.
+
+## Related topics
+
+- [Latency numbers every programmer should know](/reference/latency-numbers/) — how long each operation takes.
+- [Powers of two](/reference/powers-of-two/) — byte units and key-space sizes.
+- [Availability numbers](/reference/availability-numbers/) — turning availability targets into downtime.
+- [How to approach a system design interview](/start/interview-framework/) — where estimation fits in the interview.

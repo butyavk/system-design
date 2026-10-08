@@ -1,0 +1,123 @@
+---
+title: More interview questions
+description: "A curated, themed list of system design interview questions, each with its key challenge, pages on this site to review and verified primary references."
+sidebar:
+  order: 9
+---
+import { Aside } from '@astrojs/starlight/components';
+
+The worked case studies in this section cover a handful of classic problems in depth. Interviewers draw from a much wider pool, but most questions reuse the same few dozen building blocks. This page lists the common ones, grouped by theme, with the **one challenge that makes each question interesting**, the pages on this site that give you the building blocks, and one or two primary sources: papers and engineering posts from the teams that built the real thing.
+
+<Aside type="tip" title="TL;DR">
+- Every question has one **core difficulty** (fan-out, ordering, hot keys, exactly-once, geography). Find it in the first five minutes and spend most of the interview there.
+- Practise with the [interview framework](/start/interview-framework/): requirements, estimates, high-level design, deep dive, scaling.
+- Use the references after you have sketched your own answer, not before, and compare trade-offs rather than copying a company's architecture.
+</Aside>
+
+## How to use this list
+
+1. Pick a question and set a 45-minute timer.
+2. Write requirements and a [back-of-the-envelope estimate](/start/estimation/), then draw the high-level design.
+3. Go deep on the key challenge listed in the table. That is where interviewers push.
+4. Read the references and note what they did differently, and why.
+
+Questions already worked through on this site:
+
+| Question | Case study |
+|---|---|
+| URL shortener / Pastebin (Bitly) | [URL shortener and Pastebin](/practice/url-shortener-pastebin/) |
+| Twitter/X home timeline and search | [Twitter timeline](/practice/twitter-timeline/) |
+| Web crawler | [Web crawler](/practice/web-crawler/) |
+| Personal finance aggregator (Mint) | [Personal finance (Mint)](/practice/personal-finance-mint/) |
+| Social graph, degrees of separation | [Social graph](/practice/social-graph/) |
+| Search query cache | [Search query cache](/practice/search-query-cache/) |
+| Best sellers by category (Amazon) | [Sales rank](/practice/sales-rank/) |
+| Growing a web app to millions of users | [Scaling to millions](/practice/scaling-to-millions/) |
+| Chat server (object-oriented design) | [Online chat (OOD)](/ood/online-chat/) |
+
+## Storage and data infrastructure
+
+| Question | Key challenge | On this site | References |
+|---|---|---|---|
+| Key-value store (Redis, DynamoDB) | Partitioning plus replication with tunable consistency; membership and failure detection | [NoSQL](/data/nosql/), [Partitioning](/data/partitioning-and-sharding/), [Replication](/data/replication/) | [Dynamo (SOSP 2007)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf), [DynamoDB (USENIX ATC 2022)](https://www.usenix.org/conference/atc22/presentation/elhemali) |
+| Distributed cache (Memcached) | Hot keys, stampedes on miss, invalidation across regions | [Caching layers](/caching/caching-layers/), [Cache strategies](/caching/cache-strategies/) | [Scaling Memcache at Facebook (NSDI 2013)](https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala) |
+| File sync service (Dropbox, Google Drive) | Chunking and dedup, conflict handling, a client that syncs correctly offline | [Object storage](/data/object-storage/), [Consistency patterns](/fundamentals/consistency-patterns/) | [Dropbox: rewriting the sync engine](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine), [Inside the Magic Pocket](https://dropbox.tech/infrastructure/inside-the-magic-pocket) |
+| Unique ID generator | Roughly time-ordered 64-bit IDs with no central bottleneck; clock skew | [Partitioning](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
+| Serving data from multiple data centers | Consistency vs latency across regions; failover without losing writes | [Replication](/data/replication/), [CAP theorem](/fundamentals/cap-theorem/) | [Spanner (OSDI 2012)](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett), [Transactions across datacenters](https://snarfed.org/transactions_across_datacenters_io.html) |
+| Distributed job scheduler (cron at scale) | Run each job exactly once despite failures; leader election; avoiding midnight spikes | [Queues](/async/queues-and-back-pressure/), [Resilience patterns](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
+| Metrics and logging pipeline | Ingesting millions of points per second, compression, retention tiers, fast queries | [Observability](/reliability/observability/), [Event streaming](/async/event-streaming/) | [Gorilla (VLDB 2015)](https://www.vldb.org/pvldb/vol8/p1816-teller.pdf), [Monarch (VLDB 2020)](https://research.google/pubs/monarch-googles-planet-scale-in-memory-time-series-database/) |
+
+## Social and content platforms
+
+| Question | Key challenge | On this site | References |
+|---|---|---|---|
+| News feed (Facebook, Instagram) | Fan-out on write vs on read; celebrities; ranking | [Twitter timeline](/practice/twitter-timeline/), [Social graph](/practice/social-graph/) | [Timelines at Scale (QCon 2012)](https://www.infoq.com/presentations/Twitter-Timeline-Scalability/), [TAO (USENIX ATC 2013)](https://www.usenix.org/conference/atc13/technical-sessions/presentation/bronson) |
+| Photo sharing (Instagram) | Upload pipeline, media storage and CDN, feed generation | [Object storage](/data/object-storage/), [CDN](/traffic/cdn/) | [What Powers Instagram](https://instagram-engineering.com/what-powers-instagram-hundreds-of-instances-dozens-of-technologies-adf2e22da2ad) |
+| Chat app (WhatsApp, Slack, Discord) | Persistent connections, per-conversation ordering, delivery receipts, offline sync | [Online chat (OOD)](/ood/online-chat/), [API styles](/communication/api-styles/) | [Slack: real-time messaging](https://slack.engineering/real-time-messaging/), [Discord: storing trillions of messages](https://discord.com/blog/how-discord-stores-trillions-of-messages) |
+| Notification system (push, email, SMS) | Fan-out to millions of devices, priorities, dedup, rate limits per user and per provider | [Queues](/async/queues-and-back-pressure/), [Rate limiting](/reliability/rate-limiting/) | [Netflix: Rapid Event Notification System](https://netflixtechblog.com/rapid-event-notification-system-at-netflix-6deb1d2b57d1) |
+| Video streaming platform (YouTube, Netflix) | Transcoding pipeline, adaptive bitrate, edge caching of a huge catalogue | [CDN](/traffic/cdn/), [Object storage](/data/object-storage/) | [Netflix: per-title encoding](https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2), [Netflix Open Connect](https://openconnect.netflix.com/en/) |
+| Collaborative editor (Google Docs, Figma) | Concurrent edits converge (OT or CRDTs); presence; offline editing | [Consistency patterns](/fundamentals/consistency-patterns/) | [How Figma's multiplayer works](https://www.figma.com/blog/how-figmas-multiplayer-technology-works/), [Local-first software](https://www.inkandswitch.com/essay/local-first/) |
+| Recommendation system (Amazon, YouTube) | Candidate generation then ranking; fresh features; offline training vs online serving | [Event streaming](/async/event-streaming/), [Caching layers](/caching/caching-layers/) | [Deep Neural Networks for YouTube Recommendations](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/) |
+| Content delivery network (Cloudflare, CloudFront) | Request routing to the nearest healthy edge, cache fill, purge | [CDN](/traffic/cdn/), [DNS](/traffic/dns/) | [Netflix Open Connect](https://openconnect.netflix.com/en/) |
+
+## Search and discovery
+
+| Question | Key challenge | On this site | References |
+|---|---|---|---|
+| Web search engine (Google) | Crawling, inverted index sharding, ranking, sub-second fan-out queries | [Web crawler](/practice/web-crawler/), [Search query cache](/practice/search-query-cache/) | [The Anatomy of a Large-Scale Hypertextual Web Search Engine](https://infolab.stanford.edu/~backrub/google.html) |
+| Typeahead / autocomplete | Prefix lookup in tens of milliseconds; popularity updates; per-user results | [Search query cache](/practice/search-query-cache/), [Caching layers](/caching/caching-layers/) | [The Life of a Typeahead Query](https://engineering.fb.com/2010/05/17/web/the-life-of-a-typeahead-query/) |
+| Proximity search (Yelp, nearby friends) | Spatial indexing (geohash, S2, H3) and frequent location updates | [Partitioning](/data/partitioning-and-sharding/), [NoSQL](/data/nosql/) | [S2 Geometry](https://s2geometry.io/), [H3 documentation](https://h3geo.org/docs/) |
+
+## Real-time analytics and counting
+
+| Question | Key challenge | On this site | References |
+|---|---|---|---|
+| Trending topics (Twitter/X) | Sliding windows, ranking by growth rather than volume, spam | [Sales rank](/practice/sales-rank/), [Event streaming](/async/event-streaming/) | [Real-time trending topics in Storm](https://www.michael-noll.com/blog/2013/01/18/implementing-real-time-trending-topics-in-storm/) |
+| Top-K requests in a time interval | Heavy hitters in bounded memory; merging partial results | [Sales rank](/practice/sales-rank/) | [Space-Saving (Metwally et al.)](https://www.cs.ucsb.edu/sites/default/files/documents/2005-23.pdf), [Count-Min Sketch](https://dsf.berkeley.edu/cs286/papers/countmin-latin2004.pdf) |
+| Ad click aggregation | Exactly-once counting, late events, reconciliation for billing | [Event streaming](/async/event-streaming/) | [Uber: exactly-once ad event processing](https://www.uber.com/blog/real-time-exactly-once-ad-event-processing/) |
+| API rate limiter | Accurate limits across many servers without adding latency | [Rate limiting](/reliability/rate-limiting/) | [Stripe: scaling your API with rate limiters](https://stripe.com/blog/rate-limiters), [Cloudflare: rate limiting millions of domains](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/) |
+
+## Location, marketplaces and money
+
+| Question | Key challenge | On this site | References |
+|---|---|---|---|
+| Ride-hailing dispatch (Uber, Lyft) | Matching supply and demand in real time on a constantly moving geo index | [Partitioning](/data/partitioning-and-sharding/), [Availability patterns](/fundamentals/availability-patterns/) | [Uber H3 hexagonal index](https://www.uber.com/blog/h3/), [How Uber scales its real-time market platform](https://highscalability.com/how-uber-scales-their-real-time-market-platform/) |
+| Payment system | Never charge twice: idempotency keys, ledgers, reconciliation with external providers | [Resilience patterns](/reliability/resilience-patterns/), [Relational databases](/data/relational-databases/) | [Airbnb: avoiding double payments](https://medium.com/airbnb-engineering/avoiding-double-payments-in-a-distributed-payments-system-2981f6b070bb), [Stripe: idempotency](https://stripe.com/blog/idempotency) |
+| Stock exchange (NASDAQ, a crypto exchange) | Deterministic, low-latency order matching; sequencing; replay for recovery | [Latency vs throughput](/fundamentals/latency-vs-throughput/) | [The LMAX Architecture](https://martinfowler.com/articles/lmax.html) |
+| Online multiplayer game | Authoritative server, latency hiding (prediction, interpolation), matchmaking | [TCP and UDP](/communication/tcp-and-udp/) | [Fast-Paced Multiplayer: client-server architecture](https://www.gabrielgambetta.com/client-server-game-architecture.html) |
+
+## AI-era systems
+
+| Question | Key challenge | On this site | References |
+|---|---|---|---|
+| LLM chat assistant serving | GPU capacity and batching, KV-cache memory, streaming tokens, per-user token quotas | [Rate limiting](/reliability/rate-limiting/), [HTTP](/communication/http/), [Queues](/async/queues-and-back-pressure/) | [PagedAttention / vLLM (SOSP 2023)](https://arxiv.org/abs/2309.06180), [Orca (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu) |
+
+<Aside type="caution" title="References are not answers">
+Company write-ups describe one team's constraints at one point in time. Discord moved from Cassandra to ScyllaDB, Dropbox rewrote its sync engine after years in production, and Twitter's 2012 timeline talk predates most of today's tooling. Use them to see which trade-offs mattered, then make your own choices for the requirements in front of you.
+</Aside>
+
+## What changed since the original list
+
+- **Dropped:** "design a garbage collector" (a language-runtime question, not system design) and Facebook graph search (the product was wound down long ago; the [social graph](/practice/social-graph/) case study covers the core).
+- **Merged:** Facebook chat into the general chat app question; Facebook timeline into news feed.
+- **Added:** notification system, video streaming, ride-hailing dispatch, proximity search, typeahead, distributed job scheduler, payment system, metrics and logging pipeline, ad click aggregation and LLM serving — all now common in interviews.
+- **References replaced:** most of the original links (Quora threads, Slideshare decks, old highscalability.com posts) were dead or low quality; this list prefers papers and posts by the teams that built the systems.
+
+<Aside type="note" title="In the interview">
+- Interviewers rarely want the famous company's exact architecture. They want to see you **find the core difficulty** (for example, fan-out for feeds, ordering for chat, exactly-once for payments and ad clicks) and reason about the options.
+- Expect a twist halfway through: "now a celebrity with 100 million followers posts", "now the region fails", "now we need it in real time". Leave room in the design for that step.
+- Common mistakes: spending half the time on boilerplate (load balancer, cache) and never reaching the hard part; picking a technology by name without saying what property you need from it.
+</Aside>
+
+## Further reading
+
+- [Designing Data-Intensive Applications](https://dataintensive.net/) — Martin Kleppmann's book covers the building blocks behind almost every question on this page.
+- [Foundational papers](/real-world/foundational-papers/) — the papers that most of these systems descend from.
+- [Company architectures](/real-world/company-architectures/) — how well-known products are built.
+- [Engineering blogs](/real-world/engineering-blogs/) — where to follow current practice.
+
+## Related topics
+
+- [Interview framework](/start/interview-framework/) — the four steps to follow for each question.
+- [Back-of-the-envelope estimation](/start/estimation/) — the numbers that shape every design.
+- [Study plan](/start/study-plan/) — how many of these questions to practise for your timeline.

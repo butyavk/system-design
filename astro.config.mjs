@@ -46,7 +46,11 @@ export default defineConfig({
         baseUrl: 'https://github.com/butyavk/system-design/edit/main/',
       },
       lastUpdated: true,
-      customCss: ['./src/styles/theme.css'],
+      customCss: [
+        '@fontsource-variable/onest',
+        '@fontsource-variable/jetbrains-mono',
+        './src/styles/theme.css',
+      ],
       components: {
         Footer: './src/components/overrides/Footer.astro',
       },

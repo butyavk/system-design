@@ -1,0 +1,479 @@
+---
+// Back-of-the-envelope estimator: traffic, bandwidth and storage from a few
+// assumptions, with every step of the arithmetic shown.
+import type { Locale } from './lib/format';
+
+const locale: Locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const uid = `est-${Math.random().toString(36).slice(2, 8)}`;
+
+const T = {
+  en: {
+    inputs: 'Assumptions',
+    presets: 'Start from an example',
+    presetNames: { shortener: 'URL shortener', chat: 'Chat app', photos: 'Photo sharing' },
+    dau: 'Daily active users',
+    actions: 'Writes per user per day',
+    actionsHint: 'new objects created',
+    ratio: 'Reads per write',
+    ratioHint: 'read:write ratio N:1',
+    size: 'Average object size',
+    retention: 'Retention, years',
+    peak: 'Peak-to-average factor',
+    replication: 'Replication factor',
+    results: 'Results',
+    steps: 'Show the arithmetic',
+    rules: 'Rules of thumb',
+    rule1: '1 day = 86,400 s ≈ 10⁵ s — divide a daily count by 10⁵ to get an average per second (the true value is ~15% higher).',
+    rule2: '1 million requests/day ≈ 12 per second; 1 billion/day ≈ 12,000 per second.',
+    rule3: '1 year ≈ 3 × 10⁷ s; 1 KB × 1 million = 1 GB; 1 MB × 1 million = 1 TB.',
+    rule4: 'Round aggressively: the goal is the order of magnitude, not three significant digits.',
+    out: {
+      writeAvg: 'Writes, average',
+      writePeak: 'Writes, peak',
+      readAvg: 'Reads, average',
+      readPeak: 'Reads, peak',
+      ingest: 'Ingest bandwidth',
+      egress: 'Read bandwidth (egress)',
+      day: 'New data per day',
+      year: 'New data per year',
+      total: 'Total stored (with replicas)',
+      objects: 'Objects stored',
+    },
+    qps: 'QPS',
+    perSec: '/s',
+    invalid: 'Enter a positive number.',
+  },
+  ru: {
+    inputs: 'Допущения',
+    presets: 'Начать с примера',
+    presetNames: { shortener: 'Сокращатель ссылок', chat: 'Мессенджер', photos: 'Фотохостинг' },
+    dau: 'Активных пользователей в день (DAU)',
+    actions: 'Записей на пользователя в день',
+    actionsHint: 'сколько новых объектов создаётся',
+    ratio: 'Чтений на одну запись',
+    ratioHint: 'соотношение чтение:запись N:1',
+    size: 'Средний размер объекта',
+    retention: 'Срок хранения, лет',
+    peak: 'Пиковый коэффициент',
+    replication: 'Коэффициент репликации',
+    results: 'Результаты',
+    steps: 'Показать вычисления',
+    rules: 'Эмпирические правила',
+    rule1: '1 сутки = 86 400 с ≈ 10⁵ с — делим дневное количество на 10⁵ и получаем среднее в секунду (точное значение на ~15% больше).',
+    rule2: '1 млн запросов в сутки ≈ 12 в секунду; 1 млрд в сутки ≈ 12 000 в секунду.',
+    rule3: '1 год ≈ 3 × 10⁷ с; 1 КБ × 1 млн = 1 ГБ; 1 МБ × 1 млн = 1 ТБ.',
+    rule4: 'Округляйте смело: важен порядок величины, а не три значащие цифры.',
+    out: {
+      writeAvg: 'Запись, в среднем',
+      writePeak: 'Запись, в пике',
+      readAvg: 'Чтение, в среднем',
+      readPeak: 'Чтение, в пике',
+      ingest: 'Входящий трафик',
+      egress: 'Исходящий трафик (чтение)',
+      day: 'Новых данных в сутки',
+      year: 'Новых данных в год',
+      total: 'Всего хранить (с репликами)',
+      objects: 'Объектов в хранилище',
+    },
+    qps: 'QPS',
+    perSec: '/с',
+    invalid: 'Введите положительное число.',
+  },
+}[locale];
+
+const sizeUnits = locale === 'ru' ? ['Б', 'КБ', 'МБ'] : ['B', 'KB', 'MB'];
+
+// URL shortener defaults (see the estimation page): 100M DAU... kept modest:
+const presets = {
+  shortener: { dau: 10_000_000, actions: 0.1, ratio: 100, size: 500, sizeUnit: 0, retention: 5, peak: 3, replication: 3 },
+  chat: { dau: 50_000_000, actions: 40, ratio: 1, size: 200, sizeUnit: 0, retention: 2, peak: 3, replication: 3 },
+  photos: { dau: 20_000_000, actions: 0.5, ratio: 50, size: 2, sizeUnit: 2, retention: 10, peak: 4, replication: 3 },
+} as const;
+const d = presets.shortener;
+
+const fields = [
+  { key: 'dau', label: T.dau, value: d.dau, mode: 'numeric' },
+  { key: 'actions', label: T.actions, hint: T.actionsHint, value: d.actions, mode: 'decimal' },
+  { key: 'ratio', label: T.ratio, hint: T.ratioHint, value: d.ratio, mode: 'decimal' },
+  { key: 'size', label: T.size, value: d.size, mode: 'decimal', unit: true },
+  { key: 'retention', label: T.retention, value: d.retention, mode: 'decimal' },
+  { key: 'peak', label: T.peak, value: d.peak, mode: 'decimal' },
+  { key: 'replication', label: T.replication, value: d.replication, mode: 'decimal' },
+] as const;
+
+const fmtIn = (v: number) => {
+  const s = new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 3 }).format(v);
+  return s;
+};
+
+const outputs = [
+  ['writeAvg', 'writePeak'],
+  ['readAvg', 'readPeak'],
+  ['ingest', 'egress'],
+  ['day', 'year'],
+  ['total', 'objects'],
+] as const;
+
+const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid: T.invalid } };
+---
+
+<div class="est not-content" id={uid} data-est>
+  <script type="application/json" data-est-json set:html={JSON.stringify(clientData)} />
+
+  <div class="est-presets" role="group" aria-label={T.presets}>
+    <span class="est-presets-label" aria-hidden="true">{T.presets}:</span>
+    {Object.entries(T.presetNames).map(([k, name]) => (
+      <button type="button" class="est-chip" data-preset={k} aria-pressed={String(k === 'shortener')}>{name}</button>
+    ))}
+  </div>
+
+  <div class="est-grid">
+    <fieldset class="est-inputs">
+      <legend class="est-h">{T.inputs}</legend>
+      {fields.map((f) => (
+        <div class="est-field">
+          <label for={`${uid}-${f.key}`}>
+            {f.label}
+            {'hint' in f && f.hint && <span class="est-hint">{f.hint}</span>}
+          </label>
+          <div class="est-input-wrap">
+            <input
+              id={`${uid}-${f.key}`}
+              class="est-input"
+              type="text"
+              inputmode={f.mode}
+              autocomplete="off"
+              value={fmtIn(f.value)}
+              data-key={f.key}
+            />
+            {'unit' in f && f.unit && (
+              <select class="est-unit" data-key="sizeUnit" aria-label={`${f.label}: ${locale === 'ru' ? 'единица' : 'unit'}`}>
+                {sizeUnits.map((u, i) => <option value={i} selected={i === d.sizeUnit}>{u}</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+      ))}
+    </fieldset>
+
+    <section class="est-results" aria-labelledby={`${uid}-res`}>
+      <h3 class="est-h" id={`${uid}-res`}>{T.results}</h3>
+      <dl class="est-out" aria-live="polite">
+        {outputs.map((pair) => (
+          <div class="est-out-row">
+            {pair.map((k) => (
+              <div class="est-out-cell">
+                <dt>{T.out[k]}</dt>
+                <dd data-out={k}>—</dd>
+              </div>
+            ))}
+          </div>
+        ))}
+      </dl>
+    </section>
+  </div>
+
+  <details class="est-steps">
+    <summary>{T.steps}</summary>
+    <ol class="est-steps-list" data-est-steps></ol>
+  </details>
+
+  <aside class="est-rules" aria-label={T.rules}>
+    <p class="est-rules-h">{T.rules}</p>
+    <ul>
+      <li>{T.rule1}</li>
+      <li>{T.rule2}</li>
+      <li>{T.rule3}</li>
+      <li>{T.rule4}</li>
+    </ul>
+  </aside>
+</div>
+
+<style>
+  .est {
+    margin-block: 1.5rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-text);
+    container-type: inline-size;
+  }
+  .est-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .est-presets-label { font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); margin-right: 0.2rem; }
+  .est-chip {
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--sl-color-gray-5);
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+    min-height: 2rem;
+  }
+  .est-chip:hover { border-color: var(--sl-color-gray-3); color: var(--sl-color-white); }
+  .est-chip[aria-pressed='true'] {
+    background: var(--sl-color-accent-low);
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
+  }
+  .est-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  .est-inputs,
+  .est-results {
+    margin: 0;
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.5rem;
+    padding: 1rem;
+    min-width: 0;
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+  }
+  :global(:root[data-theme='dark']) :is(.est-inputs, .est-results, .est-steps) { background: var(--sl-color-gray-6); }
+  .est-h {
+    font-size: var(--sl-text-base);
+    font-weight: 600;
+    color: var(--sl-color-white);
+    margin: 0 0 0.6rem;
+    padding: 0;
+    line-height: 1.3;
+  }
+  .est-inputs .est-h { float: left; width: 100%; }
+  .est-field { clear: both; display: grid; gap: 0.25rem; margin-bottom: 0.65rem; }
+  .est-field:last-child { margin-bottom: 0; }
+  .est-field label { font-size: var(--sl-text-xs); color: var(--sl-color-gray-2); line-height: 1.35; }
+  .est-hint { display: block; color: var(--sl-color-gray-3); font-size: var(--sl-text-2xs); }
+  .est-input-wrap { display: flex; gap: 0.35rem; }
+  .est-input,
+  .est-unit {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    min-height: 2.25rem;
+    min-width: 0;
+  }
+  .est-input { flex: 1 1 auto; width: 100%; }
+  .est-unit { flex: none; width: 4.5rem; }
+  .est-input[aria-invalid='true'] { border-color: var(--sl-color-red); }
+
+  .est-out { margin: 0; display: grid; gap: 0; }
+  .est-out-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  .est-out-row:first-child { padding-top: 0; }
+  .est-out-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .est-out-cell { min-width: 0; }
+  .est-out dt { font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); font-weight: 400; margin: 0; }
+  .est-out dd {
+    margin: 0.1rem 0 0;
+    font-size: var(--sl-text-xl);
+    font-weight: 700;
+    color: var(--sl-color-white);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .est-out dd :global(small) {
+    display: block;
+    font-size: var(--sl-text-2xs);
+    font-weight: 400;
+    color: var(--sl-color-gray-3);
+  }
+
+  .est-steps {
+    margin-top: 1rem;
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.5rem;
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+  }
+  .est-steps summary {
+    cursor: pointer;
+    padding: 0.7rem 1rem;
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  .est-steps-list {
+    margin: 0;
+    padding: 0 1rem 1rem 2.25rem;
+    font-size: var(--sl-text-xs);
+    line-height: 1.6;
+    color: var(--sl-color-gray-2);
+  }
+  .est-steps-list :global(li) { margin: 0.3rem 0 0; }
+  .est-steps-list :global(b) { color: var(--sl-color-white); font-weight: 600; }
+  .est-steps-list :global(code) {
+    font-size: var(--sl-text-xs);
+    background: var(--sl-color-bg);
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.25rem;
+    overflow-wrap: anywhere;
+    color: var(--sl-color-white);
+  }
+  .est-rules {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--sl-color-accent);
+    background: var(--sl-color-accent-low);
+    border-radius: 0 0.5rem 0.5rem 0;
+    color: var(--sl-color-white);
+  }
+  .est-rules-h { margin: 0 0 0.3rem; font-weight: 600; }
+  .est-rules ul { margin: 0; padding-left: 1.1rem; font-size: var(--sl-text-xs); line-height: 1.6; }
+  .est-rules li { margin: 0.15rem 0 0; }
+
+  .est :is(button, input, select, summary):focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  @container (max-width: 36rem) {
+    .est-grid { grid-template-columns: 1fr; }
+  }
+  @container (max-width: 22rem) {
+    .est-out-row { grid-template-columns: 1fr; gap: 0.4rem; }
+  }
+</style>
+
+<script>
+  import { parseNum, sig, int, formatBytes, nf, type Locale } from './lib/format';
+
+  interface ClientData {
+    locale: Locale;
+    presets: Record<string, Record<string, number>>;
+    t: Record<string, string>;
+  }
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const data: ClientData = JSON.parse(root.querySelector('[data-est-json]')!.textContent || '{}');
+    const { locale, t } = data;
+    const ru = locale === 'ru';
+    const inputs = [...root.querySelectorAll<HTMLInputElement>('input[data-key]')];
+    const unitSel = root.querySelector<HTMLSelectElement>('select[data-key="sizeUnit"]')!;
+    const steps = root.querySelector<HTMLOListElement>('[data-est-steps]')!;
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('[data-preset]')];
+    const out = (k: string) => root.querySelector<HTMLElement>(`[data-out="${k}"]`)!;
+
+    const fmtIn = (v: number) => nf(locale, { maximumFractionDigits: 3 }).format(v);
+    const S = (v: number, d = 3) => sig(v, locale, d);
+    const qps = (v: number) => {
+      if (v >= 1e6) return `${S(v / 1e6, 2)}${ru ? ' млн' : 'M'}`;
+      if (v >= 1e4) return `${S(v / 1e3, 3)}${ru ? ' тыс.' : 'K'}`;
+      return v >= 10 ? int(v, locale) : S(v, 2);
+    };
+    const bytes = (b: number) => formatBytes(b, locale, 'si');
+    const rate = (bps: number) => {
+      const bits = bps * 8;
+      const units = ru ? ['бит/с', 'Кбит/с', 'Мбит/с', 'Гбит/с', 'Тбит/с'] : ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s', 'Tbit/s'];
+      let i = 0;
+      let v = bits;
+      while (v >= 999.5 && i < units.length - 1) { v /= 1000; i++; }
+      return `${bytes(bps)}${t.perSec} <small>≈ ${S(v, 3)} ${units[i]}</small>`;
+    };
+    const big = (v: number) => {
+      if (v >= 1e12) return `${S(v / 1e12)}${ru ? ' трлн' : ' trillion'}`;
+      if (v >= 1e9) return `${S(v / 1e9)}${ru ? ' млрд' : ' billion'}`;
+      if (v >= 1e6) return `${S(v / 1e6)}${ru ? ' млн' : ' million'}`;
+      return int(v, locale);
+    };
+
+    const read = (): Record<string, number> | null => {
+      const v: Record<string, number> = {};
+      let ok = true;
+      for (const inp of inputs) {
+        const n = parseNum(inp.value, locale);
+        const valid = Number.isFinite(n) && n >= 0 && !(inp.dataset.key === 'peak' && n < 1) && !(inp.dataset.key === 'replication' && n < 1);
+        inp.setAttribute('aria-invalid', String(!valid));
+        if (!valid) ok = false;
+        v[inp.dataset.key!] = n;
+      }
+      v.sizeUnit = Number(unitSel.value);
+      return ok ? v : null;
+    };
+
+    function compute() {
+      const v = read();
+      if (!v) return;
+      const sizeB = v.size * 1000 ** v.sizeUnit;
+      const DAY = 86_400;
+      const writesDay = v.dau * v.actions;
+      const readsDay = writesDay * v.ratio;
+      const wAvg = writesDay / DAY;
+      const rAvg = readsDay / DAY;
+      const wPeak = wAvg * v.peak;
+      const rPeak = rAvg * v.peak;
+      const ingest = wAvg * sizeB;
+      const egress = rAvg * sizeB;
+      const perDay = writesDay * sizeB;
+      const perYear = perDay * 365;
+      const objects = writesDay * 365 * v.retention;
+      const total = perYear * v.retention * v.replication;
+
+      out('writeAvg').innerHTML = `${qps(wAvg)} <small>${t.qps}</small>`;
+      out('writePeak').innerHTML = `${qps(wPeak)} <small>${t.qps}</small>`;
+      out('readAvg').innerHTML = `${qps(rAvg)} <small>${t.qps}</small>`;
+      out('readPeak').innerHTML = `${qps(rPeak)} <small>${t.qps}</small>`;
+      out('ingest').innerHTML = rate(ingest);
+      out('egress').innerHTML = rate(egress);
+      out('day').textContent = bytes(perDay);
+      out('year').textContent = bytes(perYear);
+      out('total').textContent = bytes(total);
+      out('objects').textContent = big(objects);
+
+      const x = '×';
+      const lines = ru
+        ? [
+            `<b>Записей в сутки:</b> <code>${big(v.dau)} ${x} ${S(v.actions)} = ${big(writesDay)}</code>`,
+            `<b>Чтений в сутки:</b> <code>${big(writesDay)} ${x} ${S(v.ratio)} = ${big(readsDay)}</code>`,
+            `<b>Средний QPS записи:</b> <code>${big(writesDay)} ÷ 86 400 ≈ ${qps(wAvg)}</code> (прикидка: ÷ 10⁵ → ${qps(writesDay / 1e5)})`,
+            `<b>Средний QPS чтения:</b> <code>${big(readsDay)} ÷ 86 400 ≈ ${qps(rAvg)}</code>`,
+            `<b>Пик:</b> <code>${qps(wAvg)} ${x} ${S(v.peak)} ≈ ${qps(wPeak)}</code> записей/с, <code>${qps(rAvg)} ${x} ${S(v.peak)} ≈ ${qps(rPeak)}</code> чтений/с`,
+            `<b>Входящий трафик:</b> <code>${qps(wAvg)}/с ${x} ${bytes(sizeB)} ≈ ${bytes(ingest)}/с</code>; исходящий: <code>${qps(rAvg)}/с ${x} ${bytes(sizeB)} ≈ ${bytes(egress)}/с</code> (в пике умножьте на ${S(v.peak)})`,
+            `<b>Данных в сутки:</b> <code>${big(writesDay)} ${x} ${bytes(sizeB)} = ${bytes(perDay)}</code>; в год: <code>${bytes(perDay)} ${x} 365 ≈ ${bytes(perYear)}</code>`,
+            `<b>Всего:</b> <code>${bytes(perYear)} ${x} ${S(v.retention)} г. ${x} ${S(v.replication)} реплики ≈ ${bytes(total)}</code> — без индексов, метаданных и запаса на рост`,
+          ]
+        : [
+            `<b>Writes per day:</b> <code>${big(v.dau)} ${x} ${S(v.actions)} = ${big(writesDay)}</code>`,
+            `<b>Reads per day:</b> <code>${big(writesDay)} ${x} ${S(v.ratio)} = ${big(readsDay)}</code>`,
+            `<b>Average write QPS:</b> <code>${big(writesDay)} ÷ 86,400 ≈ ${qps(wAvg)}</code> (shortcut: ÷ 10⁵ → ${qps(writesDay / 1e5)})`,
+            `<b>Average read QPS:</b> <code>${big(readsDay)} ÷ 86,400 ≈ ${qps(rAvg)}</code>`,
+            `<b>Peak:</b> <code>${qps(wAvg)} ${x} ${S(v.peak)} ≈ ${qps(wPeak)}</code> writes/s, <code>${qps(rAvg)} ${x} ${S(v.peak)} ≈ ${qps(rPeak)}</code> reads/s`,
+            `<b>Ingest:</b> <code>${qps(wAvg)}/s ${x} ${bytes(sizeB)} ≈ ${bytes(ingest)}/s</code>; egress: <code>${qps(rAvg)}/s ${x} ${bytes(sizeB)} ≈ ${bytes(egress)}/s</code> (multiply by ${S(v.peak)} for peak)`,
+            `<b>Data per day:</b> <code>${big(writesDay)} ${x} ${bytes(sizeB)} = ${bytes(perDay)}</code>; per year: <code>${bytes(perDay)} ${x} 365 ≈ ${bytes(perYear)}</code>`,
+            `<b>Total:</b> <code>${bytes(perYear)} ${x} ${S(v.retention)} y ${x} ${S(v.replication)} replicas ≈ ${bytes(total)}</code> — before indexes, metadata and growth headroom`,
+          ];
+      steps.innerHTML = lines.map((l) => `<li>${l}</li>`).join('');
+    }
+
+    const markPreset = (key: string | null) => chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.preset === key)));
+    for (const inp of inputs) inp.addEventListener('input', () => { markPreset(null); compute(); });
+    unitSel.addEventListener('change', () => { markPreset(null); compute(); });
+    for (const chip of chips) {
+      chip.addEventListener('click', () => {
+        const p = data.presets[chip.dataset.preset!];
+        for (const inp of inputs) inp.value = fmtIn(p[inp.dataset.key!]);
+        unitSel.value = String(p.sizeUnit);
+        markPreset(chip.dataset.preset!);
+        compute();
+      });
+    }
+    compute();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-est]').forEach(init);
+</script>

@@ -1,0 +1,156 @@
+---
+title: Latency numbers every programmer should know
+description: Typical 2026 latencies for CPU caches, memory, NVMe, disks, networks and cloud services, compared with the classic 2012 table in an interactive explorer.
+sidebar:
+  order: 1
+---
+import { Aside } from '@astrojs/starlight/components';
+import LatencyExplorer from '~/components/LatencyExplorer.astro';
+import LatencySources from '~/components/LatencySources.astro';
+
+How long does it take to read a cache line, a row from a database in the same zone, or a file from object storage? A designer who knows these costs to within a factor of ten can rule designs in or out before writing any code. This page updates the famous table that Jeff Dean and Peter Norvig popularised around 2012 with measurements from current CPUs, NVMe drives and public clouds.
+
+<Aside type="tip" title="TL;DR">
+- Learn **orders of magnitude**, not digits: about 1 ns for an L1 hit, 100 ns for memory, 50 µs for an NVMe read, 200 µs for a round trip inside a zone, 1 ms across zones, 10 ms for a disk seek, 80–150 ms across an ocean.
+- CPU caches and DRAM barely got faster since 2012 because clock speeds stopped rising. **Storage** and **network bandwidth** improved ten to a hundred times.
+- A local NVMe read is now **cheaper than a network round trip**. A remote cache pays off when it saves work, not just a disk read.
+- The speed of light did not change: **round trips across continents** cost the same as in 2012, so sequential cross-region calls are the most expensive thing in most requests.
+</Aside>
+
+## How to read the numbers
+
+Every value below is a **typical figure for 2026 hardware, rounded to an order of magnitude**. Real systems vary. A laptop, a 192-core server and a small cloud VM can differ by two to three times on the same row, and a busy system adds queueing on top of everything. Each row has a typical value and a lighter band showing the range you are likely to meet. Expand a row to see the range, the note and the sources.
+
+Some conventions:
+
+- **Latency** here means the time for one operation with nothing else in the queue: one memory load, one 4 KB read at queue depth 1, one network round trip. Throughput is a separate question; see [latency vs throughput](/fundamentals/latency-vs-throughput/).
+- **Round trip** means there and back. A one-way trip is about half of it.
+- Units: 1 µs = 1,000 ns, 1 ms = 1,000 µs. The chart uses a **logarithmic scale**: each gridline is ten times the previous one.
+- The **human scale** toggle stretches time so that 1 ns lasts 1 second. Then a memory access takes almost two minutes, a round trip inside a zone takes two days, and a request across the Atlantic takes two and a half years.
+
+<LatencyExplorer />
+
+Use **compare** to put two operations side by side. For example, set A to "Round trip within an availability zone" and B to "Main memory reference": one network hop costs as much as about two thousand memory reads.
+
+## The ladder to memorise
+
+Most design questions only need you to place an operation on the right rung of this ladder. Each rung is roughly ten to a hundred times slower than the previous one.
+
+| Rung | Typical operations |
+|---|---|
+| ~1 ns | L1 cache hit, branch mispredict, simple arithmetic |
+| ~10 ns | L2/L3 cache hit, uncontended mutex |
+| ~100 ns | Main memory (DRAM) access |
+| ~1–10 µs | Compressing 1 KB, waking a blocked thread, a system call with real work |
+| ~50–100 µs | Random 4 KB read from NVMe, reading 1 MB from memory or NVMe |
+| ~200–500 µs | Round trip inside an availability zone; a cache or primary-key lookup over the network |
+| ~1 ms | Round trip between zones; TLS handshake inside a region; cloud block-volume I/O |
+| ~10 ms | Disk seek; DNS answered by a resolver cache; object storage first byte with a fast tier |
+| ~100 ms | Cross-continent round trip; uncached DNS; object storage first byte at the tail |
+
+## What changed since 2012 and why
+
+### CPUs stopped getting faster per operation
+
+Clock speeds have been stuck at 3–6 GHz for almost twenty years. Cache latency is a fixed number of cycles (4–5 for L1, 11–16 for L2), so in nanoseconds it has not moved. The classic 0.5 ns for L1 was a rounded figure even in 2012; about 1 ns is a better rule today. The real progress went elsewhere: **more cores**, larger caches (1–3 MB of L2 per core, hundreds of MB of L3 on server chips) and wider execution units.
+
+**DRAM latency** is flat at about 100 ns. A desktop with DDR5 measures around 70 ns; big server chips with many memory channels and a mesh between cores sit at 110–130 ns. Memory **bandwidth** grew a lot, so streaming 1 MB now takes tens of microseconds instead of 250.
+
+### Storage changed the most
+
+In 2012, an SSD was a SATA device doing about 1 GB/s at best, and many servers still used spinning disks. Today local storage is NVMe on PCIe 4 or 5:
+
+- A random 4 KB read takes about **50 µs** at queue depth 1 (20–100 µs depending on the drive). With deep queues a single drive serves a million or more IOPS.
+- Sequential reads run at **7 GB/s (PCIe 4) to 14 GB/s (PCIe 5)**, ten times the classic SSD row.
+- **Hard disks** kept the same mechanics: about 10 ms per random read and 100–200 random IOPS per drive. Denser platters raised sequential speed to about 250 MB/s, so they remain good for large sequential data and bad for anything random.
+
+In the cloud, many volumes are **network-attached** (EBS, Persistent Disk). Each I/O crosses the network, which puts them around 0.5–2 ms, ten times slower than a local NVMe drive. Instance-store NVMe is fast but disappears with the instance.
+
+### Networks got wider, not much closer
+
+Server ports moved from 1 Gbit/s to 25–100 Gbit/s, so **putting bytes on the wire** is 25–100 times faster: 1 KB takes about 330 ns at 25 GbE. A **round trip** inside a data centre improved less, because most of it is spent in the kernel, the virtual network and the NIC rather than in the cable. Typical cloud figures are 50–500 µs within a zone and about 1 ms between zones. Kernel-bypass stacks and HPC fabrics get to 10 µs or less, but ordinary services rarely use them.
+
+**Wide-area latency is bound by physics.** Light in fibre covers about 200 km per millisecond, and cables do not follow great circles. California to the Netherlands and back is still about 145 ms, just as the classic table says.
+
+### New rows for cloud building blocks
+
+The classic table predates managed services, so this version adds the costs you meet in a typical design today: a GET from Redis or Valkey, an indexed PostgreSQL query, a TLS 1.3 handshake, DNS with and without a cache hit, and the first byte from object storage. Almost all of them are **dominated by the network round trip**, not by the work the server does.
+
+## Rules of thumb you can derive
+
+**Round trips per second, one after another** (one connection, no parallelism):
+
+| Path | Round trip | Sequential trips per second |
+|---|---|---|
+| Inside an availability zone | ~200 µs | ~5,000 |
+| Between zones in one region | ~1 ms | ~1,000 |
+| US East ↔ Western Europe | ~80 ms | ~12 |
+| California ↔ Netherlands | ~145 ms | ~7 |
+| Opposite side of the world | ~280 ms | ~3–4 |
+
+**Reading 1 GB**, roughly:
+
+| Source | Throughput | Time for 1 GB |
+|---|---|---|
+| Memory, one core | 10–70 GB/s | ~30 ms |
+| NVMe SSD | 7–14 GB/s | ~0.1 s |
+| 25 Gbit/s network | ~3 GB/s | ~0.35 s |
+| Hard disk, sequential | ~250 MB/s | ~4 s |
+| One object-storage stream | ~60 MB/s | ~17 s, so use many parallel range reads |
+
+What these mean for design:
+
+- **Chains of calls are expensive across regions.** Three sequential calls to a service 80 ms away cost 240 ms before any work is done. Collocate chatty services, batch, or call in parallel.
+- **A remote cache is not automatically faster than a local disk.** In 2012 a network round trip (500 µs) beat a disk seek (10 ms) by twenty times, which made "memory over the network" the obvious answer. Today a local NVMe read (50 µs) is cheaper than a same-zone round trip (200 µs). A cache such as Redis earns its place when it saves a database query, computation or a cross-region trip.
+- **Within a zone, the database query is mostly network.** A primary-key lookup costs about 20 µs over a local Unix socket and about 0.4 ms over the network. Fewer round trips (batching, pipelining, a join instead of N+1 queries) usually beats faster queries.
+- **Synchronous replication across zones is cheap; across regions it is not.** Adding 1 ms per write is fine for most systems. Adding 80–150 ms is a product decision; see [replication](/data/replication/).
+- **Tail latency multiplies.** A request that fans out to 100 servers waits for the slowest one: 63% of such requests hit at least one server's p99.
+
+## The classic table for reference
+
+The values below are the "~2012" version from Jonas Bonér's gist, which compiled Jeff Dean's and Peter Norvig's numbers. The original System Design Primer used a variant with 10 µs for compression, 30 ms for reading 1 MB from disk and an extra row for reading 1 MB over 1 Gbps (10 ms).
+
+```text title="Latency comparison numbers (~2012)"
+L1 cache reference                         0.5 ns
+Branch mispredict                            5 ns
+L2 cache reference                           7 ns
+Mutex lock/unlock                           25 ns
+Main memory reference                      100 ns
+Compress 1K bytes with Zippy             3,000 ns  =   3 µs
+Send 1K bytes over 1 Gbps network       10,000 ns  =  10 µs
+Read 4K randomly from SSD              150,000 ns  = 150 µs
+Read 1 MB sequentially from memory     250,000 ns  = 250 µs
+Round trip within same datacenter      500,000 ns  = 500 µs
+Read 1 MB sequentially from SSD      1,000,000 ns  =   1 ms
+Disk seek                           10,000,000 ns  =  10 ms
+Read 1 MB sequentially from disk    20,000,000 ns  =  20 ms
+Send packet CA->Netherlands->CA    150,000,000 ns  = 150 ms
+```
+
+Turn on **Compare with the classic table** in the explorer to see each 2026 value next to its classic counterpart.
+
+<Aside type="note" title="In the interview">
+Nobody expects exact figures. Interviewers check that you put operations in the right order of magnitude and use them to justify a design: "a cross-region call is about 100 ms, so we cannot do it on the request path", or "the working set fits in memory, so a cache hit is a sub-millisecond network hop". Common mistakes: treating a network call as free, assuming a disk is always slower than the network, and quoting 2012 SSD numbers for NVMe. If asked how you know a number, say how you would measure it (a microbenchmark, `fio`, `ping`, tracing) instead of defending a digit.
+</Aside>
+
+## Sources
+
+Values were collected on 8 October 2026 from the measurements and documentation below. Where only cycle counts were published, nanoseconds assume 3–5 GHz. A few rows were cross-checked with microbenchmarks on a small cloud VM.
+
+<LatencySources />
+
+## Further reading
+
+- [Software Engineering Advice from Building Large-Scale Distributed Systems](https://static.googleusercontent.com/media/research.google.com/en//people/jeff/stanford-295-talk.pdf) — Jeff Dean's talk with the original table and a thumbnail-page estimate.
+- [Latency numbers every programmer should know](https://gist.github.com/jboner/2841832) — the gist that made the table famous.
+- [Napkin Math](https://github.com/sirupsen/napkin-math) — a maintained set of performance figures and benchmarks for estimates.
+- [Chips and Cheese](https://chipsandcheese.com/) — detailed cache and memory measurements of current CPUs.
+- [Azure network round-trip latency statistics](https://learn.microsoft.com/en-us/azure/networking/azure-network-latency) — monthly median round-trip times between cloud regions.
+
+## Related topics
+
+- [Latency vs throughput](/fundamentals/latency-vs-throughput/) — why the two numbers answer different questions.
+- [Back-of-the-envelope estimation](/start/estimation/) — how to use these numbers to size a system.
+- [Powers of two](/reference/powers-of-two/) — the other table every estimate needs.
+- [Caching layers](/caching/caching-layers/) — where each cache sits on the latency ladder.
+- [TCP and UDP](/communication/tcp-and-udp/) — why round trips dominate connection setup.

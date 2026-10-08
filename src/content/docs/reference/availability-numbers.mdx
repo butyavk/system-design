@@ -1,0 +1,122 @@
+---
+title: Availability numbers
+description: How much downtime each number of nines allows, and how to compute the availability of components in series and in parallel, with a calculator.
+sidebar:
+  order: 3
+---
+import { Aside } from '@astrojs/starlight/components';
+import AvailabilityCalculator from '~/components/AvailabilityCalculator.astro';
+
+"Four nines" sounds like a quality badge, but it is a time budget: about 52 minutes a year, or 4 minutes 23 seconds a month, for every outage, failed deploy and slow fail-over combined. This page turns availability targets into downtime and shows how the availability of a whole system follows from its parts. The patterns that achieve it are covered in [availability patterns](/fundamentals/availability-patterns/).
+
+<Aside type="tip" title="TL;DR">
+- Each extra nine divides the downtime budget by ten: 99.9% ≈ 8 h 46 min a year, 99.99% ≈ 53 min, 99.999% ≈ 5 min.
+- **In series** (every part is needed) availabilities multiply, so the total is lower than the weakest part.
+- **In parallel** (any copy will do) the probabilities of failure multiply, so redundancy adds nines, but only if the copies fail independently.
+- Downtime ≈ failure rate × time to recover. Above three nines, fast automated **recovery** matters more than rare failures.
+</Aside>
+
+## The nines
+
+Availability is the share of time, or of requests, in which a service works. The tables below use a 365.25-day year; a quarter and a month are a quarter and a twelfth of it.
+
+| Availability | Per year | Per quarter | Per month | Per week | Per day |
+|---|---|---|---|---|---|
+| 99% (two nines) | 3 d 15 h 40 min | 21 h 55 min | 7 h 18 min | 1 h 41 min | 14 min 24 s |
+| 99.5% | 1 d 19 h 50 min | 10 h 57 min | 3 h 39 min | 50 min 24 s | 7 min 12 s |
+| 99.9% (three nines) | 8 h 46 min | 2 h 11 min | 43 min 50 s | 10 min 5 s | 1 min 26 s |
+| 99.95% | 4 h 23 min | 1 h 6 min | 21 min 55 s | 5 min 2 s | 43 s |
+| 99.99% (four nines) | 52 min 36 s | 13 min 9 s | 4 min 23 s | 1 min | 8.6 s |
+| 99.999% (five nines) | 5 min 16 s | 1 min 19 s | 26 s | 6 s | 0.9 s |
+| 99.9999% (six nines) | 32 s | 8 s | 2.6 s | 0.6 s | 0.09 s |
+
+What each level means in practice:
+
+- **99.9%** allows one 40-minute incident a month. A human can be paged, investigate and roll back within that budget. This is a common target for internal services and many SaaS products.
+- **99.99%** allows about 4 minutes a month. By the time an on-call engineer has opened a laptop, the budget is gone. Detection, fail-over and rollback must be **automatic**, and deploys must be gradual.
+- **99.999%** allows 26 seconds a month. It needs redundancy across failure domains, no single global dependency, and changes that can never take the whole service down at once. Few products need it; telecom and payment cores are the classic examples.
+
+Two ways to count are in use. **Time-based**: the share of minutes in which the service was healthy. **Request-based**: successful requests divided by valid requests over a window. Request-based availability reflects what users actually saw and is the usual basis for an SLO. At 1 million requests a day, a 99.9% target allows about 30,000 failed requests a month.
+
+## Calculator
+
+The first panel converts any availability into a downtime budget. The second composes a system: give each component its availability and the number of redundant copies, and the calculator multiplies through, shows the formula with your numbers and points at the weakest link. Defaults: a load balancer, three app servers at 99.5% each and a database with a replica.
+
+<AvailabilityCalculator />
+
+## Components in series
+
+When a request has to pass through every component, all of them must be up at the same time. With independent failures, the probabilities multiply:
+
+```text
+A_total = A1 × A2 × … × An
+```
+
+Three components at 99.9% give `0.999³ ≈ 99.7%`, about 26 hours of downtime a year, which is three times worse than any one of them. Long chains of synchronous dependencies are the usual reason a system misses its target: thirty internal services at 99.9% each, all on the request path, give only about 97%.
+
+## Components in parallel
+
+When any one of N copies can serve the request, the service fails only if all copies are down at once. Now the **failure** probabilities multiply:
+
+```text
+A_total = 1 − (1 − A)^N
+```
+
+Two copies at 99.9% give `1 − 0.001² = 99.9999%`. Each extra copy multiplies the unavailability by `(1 − A)`, so redundancy is the cheapest way to add nines, as long as a copy can take over quickly and automatically.
+
+### A worked example
+
+A load balancer at 99.99%, app servers at 99.5% each and a database at 99.9%:
+
+| Design | Calculation | Availability | Downtime per year |
+|---|---|---|---|
+| One of each | 0.9999 × 0.995 × 0.999 | 99.39% | ≈ 53 h |
+| Three app servers | 0.9999 × (1 − 0.005³) × 0.999 | 99.89% | ≈ 9.6 h |
+| … plus a database replica | 0.9999 × (1 − 0.005³) × (1 − 0.001²) | 99.99% | ≈ 53 min |
+| … plus a second load balancer | (1 − 0.0001²) × (1 − 0.005³) × (1 − 0.001²) | 99.9999% | ≈ 36 s |
+
+The lesson is to find the **weakest series link** and make it redundant. Making a component that is already redundant even more redundant barely changes the total.
+
+### Where the formulas mislead
+
+- **Independence is an assumption.** Two replicas in one rack, behind one switch, running the same bad deploy or reading the same bad config fail together. Correlated failures are why real systems rarely reach the computed figure. Spread copies across zones, and roll changes out gradually.
+- **Fail-over is not free.** The parallel formula assumes the switch is instant. If promoting a replica takes 2 minutes and happens twice a month, that alone uses almost all of a four-nines monthly budget.
+- **Quorums need more than one survivor.** A cluster that needs 2 of 3 nodes is down when any two fail: with 99.9% nodes it reaches about 99.9997%, not the 99.9999999% that "any one of three" would suggest.
+- **A dependency's SLA is not your availability.** If a managed database promises 99.95% and your code and deploys add their own failures, your service is below 99.95%. A common rule from Google SRE is that each critical dependency should be about ten times more reliable than the service built on it.
+
+## Downtime = failures × recovery time
+
+Availability can also be estimated from how often things break and how long they take to fix:
+
+```text
+A = MTBF / (MTBF + MTTR)
+```
+
+MTBF is the mean time between failures and MTTR the mean time to recovery. A component that fails once a month and takes 30 minutes to recover is about 99.93% available. Cutting recovery to 5 minutes, by automating detection and fail-over, raises it to 99.99% without making failures any rarer. That is why high-availability work focuses on **fast detection and recovery**: health checks, automatic fail-over, quick rollbacks and small blast radii.
+
+## Trade-offs
+
+| Extra nine | What it costs |
+|---|---|
+| 99% → 99.9% | Redundant instances, health checks, basic on-call |
+| 99.9% → 99.99% | Multi-zone deployment, automated fail-over, gradual rollouts, error budgets |
+| 99.99% → 99.999% | Multi-region or cell-based design, no global single points of failure, much more testing; often 10× the operational effort |
+
+Every extra nine costs roughly an order of magnitude more effort. Choose the target from what users need and what downtime costs the business, not from the highest number that sounds good.
+
+<Aside type="note" title="In the interview">
+Expect "what availability do you need?" early on, and "what happens when X fails?" later. Translate the target into minutes ("four nines is about four minutes a month, so fail-over must be automatic"), compute the series total of your critical path, and show where you added redundancy. Strong answers mention correlated failures, fail-over time and the difference between an SLA and an SLO. A common mistake is to multiply parallel copies as if they were in series, or to claim five nines for a design with one database primary.
+</Aside>
+
+## Further reading
+
+- [Embracing risk](https://sre.google/sre-book/embracing-risk/) — Google SRE book on availability targets, request-based measurement and error budgets.
+- [The Calculus of Service Availability](https://queue.acm.org/detail.cfm?id=3096459) — how dependencies limit a service's availability, and the rule of the extra nine.
+- [AWS Fault Isolation Boundaries](https://docs.aws.amazon.com/whitepapers/latest/aws-fault-isolation-boundaries/availability-zones.html) — what Availability Zones isolate and what they do not.
+
+## Related topics
+
+- [Availability patterns](/fundamentals/availability-patterns/) — fail-over, replication, SLOs and multi-zone design that achieve these numbers.
+- [Resilience patterns](/reliability/resilience-patterns/) — timeouts, retries and circuit breakers that stop one failure from spreading.
+- [Observability](/reliability/observability/) — measuring availability and alerting on error budgets.
+- [Latency numbers](/reference/latency-numbers/) — the other set of numbers every design needs.

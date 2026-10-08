@@ -1,1 +1,231 @@
-:root{}
+/*
+ * Theme: "latency ladder".
+ * Ink on white with a deep teal accent; amber is reserved for signals
+ * (latency marks, "new" badges). Onest for text (Cyrillic-native),
+ * JetBrains Mono for code only.
+ */
+
+:root {
+  --sl-font: 'Onest Variable', 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sl-font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --sl-content-width: 46rem;
+  --sl-line-height: 1.7;
+  --sl-line-height-headings: 1.18;
+
+  /* Dark (Starlight's default :root theme) */
+  --sl-color-accent-low: #0d3633;
+  --sl-color-accent: #3cc4b6;
+  --sl-color-accent-high: #bdf0e9;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #e6eded;
+  --sl-color-gray-2: #c2cdcf;
+  --sl-color-gray-3: #8e9ca0;
+  --sl-color-gray-4: #5b6a6f;
+  --sl-color-gray-5: #34434a;
+  --sl-color-gray-6: #1d2a2f;
+  --sl-color-gray-7: #162125;
+  --sl-color-black: #11191d;
+
+  --sdp-signal: #f2b84b;
+  --sdp-signal-low: #3a2c0f;
+  --sdp-tip-bg: #10302d;
+  --sdp-note-bg: #172633;
+  --sdp-note: #7fb2e5;
+  --sdp-note-high: #cfe3f7;
+  --sdp-caution-bg: #33270f;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #d3eeea;
+  --sl-color-accent: #0e7c74;
+  --sl-color-accent-high: #064540;
+  --sl-color-white: #16202b;
+  --sl-color-gray-1: #1f2a36;
+  --sl-color-gray-2: #34404c;
+  --sl-color-gray-3: #556270;
+  --sl-color-gray-4: #8693a0;
+  --sl-color-gray-5: #c6ced4;
+  --sl-color-gray-6: #e8edef;
+  --sl-color-gray-7: #f3f6f6;
+  --sl-color-black: #ffffff;
+
+  --sdp-signal: #b86e05;
+  --sdp-signal-low: #fbefd9;
+  --sdp-tip-bg: #ecf7f5;
+  --sdp-note-bg: #eef3f9;
+  --sdp-note: #2f6aa3;
+  --sdp-note-high: #1b4570;
+  --sdp-caution-bg: #fcf4e4;
+}
+
+/* ---------- Typography ---------- */
+
+.sl-markdown-content :is(h1, h2, h3, h4, h5),
+.content-panel h1 {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.content-panel h1#_top {
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 2.9rem);
+  letter-spacing: -0.025em;
+}
+.sl-markdown-content h2 {
+  margin-top: 2.6rem;
+  padding-top: 0.2rem;
+}
+.sl-markdown-content p,
+.sl-markdown-content li {
+  text-wrap: pretty;
+}
+.sl-markdown-content strong {
+  font-weight: 620;
+}
+.sl-markdown-content code:not(pre code) {
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.3rem;
+  background: var(--sl-color-gray-6);
+  border: none;
+}
+.site-title {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--sl-color-white);
+}
+
+/* ---------- Asides ---------- */
+
+.starlight-aside {
+  border-radius: 0 0.5rem 0.5rem 0;
+  border-inline-start-width: 3px;
+}
+.starlight-aside__title {
+  font-size: var(--sl-text-base);
+  letter-spacing: 0;
+}
+.starlight-aside--tip {
+  --sl-color-asides-text-accent: var(--sl-color-accent-high);
+  --sl-color-asides-border: var(--sl-color-accent);
+  background-color: var(--sdp-tip-bg);
+}
+:root[data-theme='light'] .starlight-aside--tip {
+  --sl-color-asides-text-accent: var(--sl-color-accent);
+}
+.starlight-aside--note {
+  --sl-color-asides-text-accent: var(--sdp-note-high);
+  --sl-color-asides-border: var(--sdp-note);
+  background-color: var(--sdp-note-bg);
+}
+:root[data-theme='light'] .starlight-aside--note {
+  --sl-color-asides-text-accent: var(--sdp-note);
+}
+.starlight-aside--caution {
+  --sl-color-asides-text-accent: var(--sdp-signal);
+  --sl-color-asides-border: var(--sdp-signal);
+  background-color: var(--sdp-caution-bg);
+}
+
+/* ---------- Badges (sidebar "New") ---------- */
+
+:root {
+  --sl-badge-tip-border: var(--sdp-signal);
+  --sl-badge-tip-bg: transparent;
+  --sl-badge-tip-text: var(--sdp-signal);
+}
+:root[data-theme='light'] {
+  --sl-badge-tip-bg: transparent;
+}
+.sl-badge {
+  font-family: var(--sl-font);
+  font-weight: 600;
+  border-radius: 999px;
+}
+.sidebar-content .sl-badge {
+  font-size: 0.68rem;
+  padding: 0.12rem 0.45rem;
+  vertical-align: 0.08em;
+}
+
+/* ---------- Sidebar ---------- */
+
+.sidebar-content .top-level > li > details > summary .group-label .large {
+  font-size: var(--sl-text-sm);
+  font-weight: 650;
+  color: var(--sl-color-white);
+}
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus {
+  font-weight: 600;
+  color: var(--sl-color-accent-high);
+  background-color: var(--sl-color-accent-low);
+}
+:root[data-theme='light'] .sidebar-content a[aria-current='page'] {
+  color: var(--sl-color-accent-high);
+}
+
+/* ---------- Tables ---------- */
+
+.sl-markdown-content table:not(:where(.not-content *)) {
+  font-size: var(--sl-text-sm);
+}
+.sl-markdown-content th:not(:where(.not-content *)) {
+  font-weight: 620;
+  background: var(--sl-color-gray-7);
+}
+
+/* ---------- Link cards: quiet, with an accent edge on hover ---------- */
+
+.sl-link-card {
+  border-radius: 0.6rem;
+  box-shadow: none;
+  border-color: var(--sl-color-gray-5);
+  transition: border-color 120ms ease;
+}
+.sl-link-card:hover {
+  background: transparent;
+  border-color: var(--sl-color-accent);
+  box-shadow: inset 3px 0 0 var(--sl-color-accent);
+}
+.sl-link-card .title {
+  font-weight: 620;
+}
+
+/* ---------- Splash hero ---------- */
+
+.hero {
+  padding-block: clamp(2rem, 4vw, 4rem) 1rem;
+}
+.hero h1 {
+  font-size: clamp(2.4rem, 1.6rem + 3.6vw, 4.2rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  color: var(--sl-color-white);
+}
+.hero .tagline {
+  max-width: 38rem;
+  font-size: clamp(1.05rem, 1rem + 0.35vw, 1.25rem);
+  color: var(--sl-color-gray-2);
+}
+
+/* ---------- Mermaid ---------- */
+
+.sl-markdown-content pre.mermaid,
+.sl-markdown-content .mermaid {
+  background: transparent;
+  border: 1px solid var(--sl-color-gray-6);
+  border-radius: 0.6rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+/* ---------- Footer attribution spacing ---------- */
+footer .sdp-attribution {
+  max-width: var(--sl-content-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-link-card { transition: none; }
+}

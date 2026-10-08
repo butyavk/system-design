@@ -1,0 +1,583 @@
+---
+// Availability calculator: (a) allowed downtime for an availability target,
+// (b) composite availability of components in series / with N parallel copies.
+import { formatDuration, type Locale } from './lib/format';
+
+interface Props {
+  /** Initial availability, percent. */
+  initial?: number;
+}
+
+const { initial = 99.9 } = Astro.props;
+const locale: Locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const uid = `av-${Math.random().toString(36).slice(2, 8)}`;
+
+const T = {
+  en: {
+    targetTitle: 'Downtime budget',
+    targetLabel: 'Availability, %',
+    presets: 'Presets',
+    nines: (n: string) => `${n} nines`,
+    period: 'Period',
+    allowed: 'Allowed downtime',
+    year: 'Year',
+    quarter: 'Quarter',
+    month: 'Month',
+    week: 'Week',
+    day: 'Day',
+    invalid: 'Enter a number between 0 and 100.',
+    compTitle: 'Composite availability',
+    compIntro: 'Each request passes through every component in order (series). A component with N copies fails only if all copies fail at once (parallel). Failures are assumed independent.',
+    name: 'Component',
+    avail: 'Availability, %',
+    copies: 'Copies in parallel',
+    remove: 'Remove',
+    add: 'Add component',
+    total: 'Total availability',
+    perYear: 'downtime per year',
+    formula: 'Formula',
+    weakest: 'Weakest link',
+    defaults: [
+      ['Load balancer', 99.99, 1],
+      ['App servers', 99.5, 3],
+      ['Database (primary + replica)', 99.9, 2],
+    ] as [string, number, number][],
+    newName: 'Component',
+  },
+  ru: {
+    targetTitle: 'Бюджет простоя',
+    targetLabel: 'Доступность, %',
+    presets: 'Типовые значения',
+    nines: (n: string) => `${n} ${n === '2' || n === '3' || n === '4' ? 'девятки' : 'девяток'}`,
+    period: 'Период',
+    allowed: 'Допустимый простой',
+    year: 'Год',
+    quarter: 'Квартал',
+    month: 'Месяц',
+    week: 'Неделя',
+    day: 'Сутки',
+    invalid: 'Введите число от 0 до 100.',
+    compTitle: 'Доступность составной системы',
+    compIntro: 'Запрос проходит через все компоненты по очереди (последовательно). Компонент из N копий отказывает, только если отказали все копии сразу (параллельно). Отказы считаются независимыми.',
+    name: 'Компонент',
+    avail: 'Доступность, %',
+    copies: 'Копий параллельно',
+    remove: 'Удалить',
+    add: 'Добавить компонент',
+    total: 'Итоговая доступность',
+    perYear: 'простоя в год',
+    formula: 'Формула',
+    weakest: 'Самое слабое звено',
+    defaults: [
+      ['Балансировщик нагрузки', 99.99, 1],
+      ['Серверы приложений', 99.5, 3],
+      ['База данных (основной узел + реплика)', 99.9, 2],
+    ] as [string, number, number][],
+    newName: 'Компонент',
+  },
+}[locale];
+
+const PERIODS: [keyof typeof T & string, number][] = [
+  ['year', 365.25 * 86400],
+  ['quarter', (365.25 / 4) * 86400],
+  ['month', (365.25 / 12) * 86400],
+  ['week', 7 * 86400],
+  ['day', 86400],
+];
+const presets = [
+  { v: '99', n: '2' },
+  { v: '99.9', n: '3' },
+  { v: '99.95', n: '3.5' },
+  { v: '99.99', n: '4' },
+  { v: '99.999', n: '5' },
+];
+const fmtPct = (v: string) => (locale === 'ru' ? v.replace('.', ',') : v);
+const down = (seconds: number) => formatDuration(seconds * (1 - initial / 100), locale);
+
+const clientData = {
+  locale,
+  periods: PERIODS.map(([, s]) => s),
+  t: {
+    invalid: T.invalid,
+    name: T.name,
+    avail: T.avail,
+    copies: T.copies,
+    remove: T.remove,
+    newName: T.newName,
+    perYear: T.perYear,
+    weakest: T.weakest,
+  },
+  defaults: T.defaults,
+};
+---
+
+<div class="av not-content" id={uid} data-av>
+  <script type="application/json" data-av-json set:html={JSON.stringify(clientData)} />
+
+  <section class="av-card" aria-labelledby={`${uid}-t1`}>
+    <h3 class="av-h" id={`${uid}-t1`}>{T.targetTitle}</h3>
+    <div class="av-target">
+      <label class="av-field">
+        <span class="av-field-label">{T.targetLabel}</span>
+        <input
+          class="av-input av-input-big"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          value={fmtPct(String(initial))}
+          data-av-target
+          aria-describedby={`${uid}-err`}
+        />
+      </label>
+      <div class="av-presets" role="group" aria-label={T.presets}>
+        {presets.map((p) => (
+          <button type="button" class="av-chip" data-preset={p.v} aria-pressed={String(Number(p.v) === initial)}>
+            <span class="av-chip-v">{fmtPct(p.v)}%</span>
+            <span class="av-chip-n">{T.nines(fmtPct(p.n))}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+    <p class="av-err" id={`${uid}-err`} data-av-err hidden>{T.invalid}</p>
+    <table class="av-table">
+      <thead>
+        <tr><th scope="col">{T.period}</th><th scope="col">{T.allowed}</th></tr>
+      </thead>
+      <tbody aria-live="polite" data-av-down>
+        {PERIODS.map(([k, s]) => (
+          <tr>
+            <th scope="row">{T[k] as string}</th>
+            <td>{down(s)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="av-card" aria-labelledby={`${uid}-t2`}>
+    <h3 class="av-h" id={`${uid}-t2`}>{T.compTitle}</h3>
+    <p class="av-intro">{T.compIntro}</p>
+    <div class="av-comp-head" aria-hidden="true">
+      <span>{T.name}</span><span>{T.avail}</span><span>{T.copies}</span><span></span>
+    </div>
+    <ol class="av-comps" data-av-comps></ol>
+    <button type="button" class="av-add" data-av-add>
+      <span aria-hidden="true">+</span> {T.add}
+    </button>
+    <div class="av-total" aria-live="polite">
+      <div class="av-total-main">
+        <span class="av-total-label">{T.total}</span>
+        <span class="av-total-v" data-av-total>—</span>
+        <span class="av-total-sub" data-av-total-sub></span>
+      </div>
+      <div class="av-formula">
+        <span class="av-total-label">{T.formula}</span>
+        <code data-av-formula></code>
+        <code class="av-formula-num" data-av-formula-num></code>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+  .av {
+    margin-block: 1.5rem;
+    display: grid;
+    gap: 1rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-text);
+    container-type: inline-size;
+  }
+  .av-card {
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    min-width: 0;
+  }
+  :global(:root[data-theme='dark']) .av-card { background: var(--sl-color-gray-6); }
+  .av-h {
+    margin: 0 0 0.75rem;
+    font-size: var(--sl-text-base);
+    line-height: 1.3;
+    color: var(--sl-color-white);
+  }
+  .av-target {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    align-items: flex-end;
+  }
+  .av-field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+  .av-field-label { font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); }
+  .av :global(.av-input) {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    min-height: 2.25rem;
+    width: 100%;
+    min-width: 0;
+  }
+  .av .av-input-big { font-size: var(--sl-text-xl); font-weight: 600; width: 9rem; }
+  .av :global(.av-input[aria-invalid='true']) { border-color: var(--sl-color-red); }
+  .av-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .av-chip {
+    font: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.05rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    cursor: pointer;
+    line-height: 1.2;
+  }
+  .av-chip:hover { border-color: var(--sl-color-gray-3); }
+  .av-chip[aria-pressed='true'] {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent-low);
+  }
+  .av-chip-v { font-weight: 600; font-variant-numeric: tabular-nums; font-size: var(--sl-text-sm); }
+  .av-chip-n { font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); }
+  .av-chip[aria-pressed='true'] .av-chip-n { color: var(--sl-color-gray-2); }
+  .av-err { margin: 0.5rem 0 0; color: var(--sl-color-red-high, var(--sl-color-red)); font-size: var(--sl-text-xs); }
+
+  .av-table {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  .av-table th,
+  .av-table td {
+    text-align: left;
+    padding: 0.45rem 0.5rem;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  .av-table thead th {
+    font-size: var(--sl-text-xs);
+    font-weight: 400;
+    color: var(--sl-color-gray-3);
+    border-bottom-color: var(--sl-color-gray-5);
+  }
+  .av-table tbody th { font-weight: 400; color: var(--sl-color-gray-2); width: 40%; }
+  .av-table td { color: var(--sl-color-white); font-weight: 600; }
+  .av-table tbody tr:last-child > * { border-bottom: 0; }
+
+  .av-intro { margin: 0 0 0.75rem; font-size: var(--sl-text-xs); color: var(--sl-color-gray-2); line-height: 1.55; }
+  .av-comp-head,
+  .av-comps :global(.av-comp) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 7.5rem 6.5rem 2.25rem;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .av-comp-head {
+    font-size: var(--sl-text-2xs);
+    color: var(--sl-color-gray-3);
+    padding-bottom: 0.3rem;
+  }
+  .av-comps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+  .av-comps :global(.av-comp) { margin: 0; }
+  .av-comps :global(.av-cell) { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+  .av-comps :global(.av-sr) {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .av-comps :global(.av-remove) {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.35rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  .av-comps :global(.av-remove:hover) { color: var(--sl-color-white); border-color: var(--sl-color-gray-5); }
+  .av-comps :global(.av-remove:disabled) { opacity: 0.35; cursor: default; }
+  .av-comps :global(.av-copies) { display: flex; align-items: center; gap: 0.25rem; min-width: 0; }
+  .av-comps :global(.av-step) {
+    flex: none;
+    width: 1.9rem;
+    height: 2.25rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+  }
+  .av-comps :global(.av-copies .av-input) {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 1.75rem;
+    text-align: center;
+    padding-inline: 0.2rem;
+  }
+  .av-add {
+    margin-top: 0.75rem;
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.35rem;
+    border: 1px dashed var(--sl-color-gray-4);
+    background: transparent;
+    color: var(--sl-color-white);
+    cursor: pointer;
+    min-height: 2.25rem;
+  }
+  .av-add:hover { border-color: var(--sl-color-accent); }
+  .av-total {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-gray-5);
+    display: grid;
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .av-total-main,
+  .av-formula { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+  .av-total-label { font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); }
+  .av-total-v {
+    font-size: var(--sl-text-3xl);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--sl-color-white);
+  }
+  .av-total-sub { font-size: var(--sl-text-xs); color: var(--sl-color-gray-2); }
+  .av-formula code {
+    font-size: var(--sl-text-xs);
+    background: var(--sl-color-bg);
+    border: 1px solid var(--sl-color-hairline);
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.35rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--sl-color-white);
+    display: block;
+  }
+  .av-formula-num { color: var(--sl-color-gray-2) !important; }
+
+  .av :global(:is(button, input):focus-visible) {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  @container (max-width: 34rem) {
+    .av-comp-head { display: none; }
+    .av-comps :global(.av-comp) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.25rem;
+      padding: 0.6rem;
+      border-radius: 0.4rem;
+      background: var(--sl-color-bg);
+      border: 1px solid var(--sl-color-hairline);
+    }
+    .av-comps :global(.av-cell-name) { grid-column: 1 / 3; }
+    .av-comps :global(.av-remove) { grid-column: 3; grid-row: 1; align-self: end; }
+    .av-comps :global(.av-sr) {
+      position: static; width: auto; height: auto; clip: auto;
+      font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3);
+    }
+    .av-total { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  import { formatDuration, parseNum, nf, type Locale } from './lib/format';
+
+  interface ClientData {
+    locale: Locale;
+    periods: number[];
+    t: Record<string, string>;
+    defaults: [string, number, number][];
+  }
+  interface Comp {
+    name: string;
+    a: number;
+    n: number;
+  }
+
+  const MAX_COPIES = 9;
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const data: ClientData = JSON.parse(root.querySelector('[data-av-json]')!.textContent || '{}');
+    const { locale, t } = data;
+    const pctFmt = (v: number, maxFrac = 6) => {
+      // Show enough decimals to make the nines visible, but no float noise.
+      const s = nf(locale, { maximumFractionDigits: maxFrac }).format(v);
+      return s;
+    };
+    const ninesPct = (fraction: number) => {
+      if (fraction >= 1) return '100';
+      // Number of leading 9s after "99" determines how many decimals are meaningful.
+      const nines = Math.floor(-Math.log10(1 - fraction));
+      const digits = Math.min(8, Math.max(2, nines + 1));
+      return pctFmt(Math.floor(fraction * 100 * 10 ** digits) / 10 ** digits, digits);
+    };
+
+    // ---- (a) downtime budget ----
+    const target = root.querySelector<HTMLInputElement>('[data-av-target]')!;
+    const err = root.querySelector<HTMLElement>('[data-av-err]')!;
+    const cells = [...root.querySelectorAll<HTMLTableCellElement>('[data-av-down] td')];
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('[data-preset]')];
+    const updateTarget = () => {
+      const v = parseNum(target.value, 'ru');
+      const ok = Number.isFinite(v) && v >= 0 && v <= 100;
+      target.setAttribute('aria-invalid', String(!ok));
+      err.hidden = ok;
+      for (const c of chips) c.setAttribute('aria-pressed', String(ok && Number(c.dataset.preset) === v));
+      if (!ok) return;
+      data.periods.forEach((s, i) => {
+        cells[i].textContent = formatDuration(s * (1 - v / 100), locale);
+      });
+    };
+    target.addEventListener('input', updateTarget);
+    for (const c of chips) {
+      c.addEventListener('click', () => {
+        target.value = locale === 'ru' ? c.dataset.preset!.replace('.', ',') : c.dataset.preset!;
+        updateTarget();
+      });
+    }
+
+    // ---- (b) composition ----
+    const list = root.querySelector<HTMLOListElement>('[data-av-comps]')!;
+    const totalEl = root.querySelector<HTMLElement>('[data-av-total]')!;
+    const totalSub = root.querySelector<HTMLElement>('[data-av-total-sub]')!;
+    const formulaEl = root.querySelector<HTMLElement>('[data-av-formula]')!;
+    const formulaNum = root.querySelector<HTMLElement>('[data-av-formula-num]')!;
+    let comps: Comp[] = data.defaults.map(([name, a, n]) => ({ name, a, n }));
+    let seq = 0;
+
+    const fmtIn = (v: number) => (locale === 'ru' ? String(v).replace('.', ',') : String(v));
+
+    function render() {
+      list.replaceChildren();
+      comps.forEach((c, i) => {
+        const id = `${root.id}-c${seq++}`;
+        const li = document.createElement('li');
+        li.className = 'av-comp';
+        li.innerHTML = `
+          <span class="av-cell av-cell-name">
+            <label class="av-sr" for="${id}-n"></label>
+            <input id="${id}-n" class="av-input av-input-name" type="text" autocomplete="off">
+          </span>
+          <span class="av-cell">
+            <label class="av-sr" for="${id}-a"></label>
+            <input id="${id}-a" class="av-input" type="text" inputmode="decimal" autocomplete="off">
+          </span>
+          <span class="av-cell">
+            <label class="av-sr" for="${id}-c"></label>
+            <span class="av-copies">
+              <button type="button" class="av-step" data-d="-1">−</button>
+              <input id="${id}-c" class="av-input" type="text" inputmode="numeric" autocomplete="off">
+              <button type="button" class="av-step" data-d="1">+</button>
+            </span>
+          </span>
+          <button type="button" class="av-remove">×</button>`;
+        const [lName, lA, lC] = li.querySelectorAll<HTMLElement>('.av-sr');
+        lName.textContent = t.name;
+        lA.textContent = t.avail;
+        lC.textContent = t.copies;
+        const [dec, inc] = li.querySelectorAll<HTMLButtonElement>('.av-step');
+        dec.setAttribute('aria-label', `${t.copies} −1`);
+        inc.setAttribute('aria-label', `${t.copies} +1`);
+        const nameIn = li.querySelector<HTMLInputElement>(`#${CSS.escape(id)}-n`)!;
+        nameIn.value = c.name;
+        const aIn = li.querySelector<HTMLInputElement>(`#${CSS.escape(id)}-a`)!;
+        aIn.value = fmtIn(c.a);
+        const cIn = li.querySelector<HTMLInputElement>(`#${CSS.escape(id)}-c`)!;
+        cIn.value = String(c.n);
+        const rm = li.querySelector<HTMLButtonElement>('.av-remove')!;
+        rm.setAttribute('aria-label', `${t.remove}: ${c.name}`);
+        rm.title = t.remove;
+        rm.disabled = comps.length <= 1;
+
+        nameIn.addEventListener('input', () => {
+          c.name = nameIn.value;
+          rm.setAttribute('aria-label', `${t.remove}: ${c.name}`);
+          compute();
+        });
+        aIn.addEventListener('input', () => {
+          const v = parseNum(aIn.value, 'ru');
+          const ok = Number.isFinite(v) && v >= 0 && v <= 100;
+          aIn.setAttribute('aria-invalid', String(!ok));
+          if (ok) c.a = v;
+          compute();
+        });
+        const setN = (n: number) => {
+          c.n = Math.min(MAX_COPIES, Math.max(1, Math.round(n)));
+          cIn.value = String(c.n);
+          compute();
+        };
+        cIn.addEventListener('change', () => setN(parseNum(cIn.value) || 1));
+        li.querySelectorAll<HTMLButtonElement>('.av-step').forEach((b) =>
+          b.addEventListener('click', () => setN(c.n + Number(b.dataset.d))),
+        );
+        rm.addEventListener('click', () => {
+          comps.splice(i, 1);
+          render();
+          (list.querySelector('.av-input-name') as HTMLInputElement | null)?.focus();
+        });
+        list.append(li);
+      });
+      compute();
+    }
+
+    function compute() {
+      let total = 1;
+      const sym: string[] = [];
+      const num: string[] = [];
+      let weakest = -1;
+      let weakestVal = 2;
+      comps.forEach((c, i) => {
+        const a = c.a / 100;
+        const eff = 1 - Math.pow(1 - a, c.n);
+        total *= eff;
+        if (eff < weakestVal) {
+          weakestVal = eff;
+          weakest = i;
+        }
+        const aStr = pctFmt(a, 6);
+        if (c.n === 1) {
+          sym.push(`A${i + 1}`);
+          num.push(aStr);
+        } else {
+          sym.push(`(1 − (1 − A${i + 1})^${c.n})`);
+          num.push(`(1 − (1 − ${aStr})^${c.n})`);
+        }
+      });
+      list.querySelectorAll('.av-comp').forEach((li, i) => li.classList.toggle('av-weak', i === weakest && comps.length > 1));
+      formulaEl.textContent = `A = ${sym.join(' × ')}`;
+      formulaNum.textContent = `= ${num.join(' × ')}\n= ${pctFmt(total, 8)}`;
+      totalEl.textContent = `${ninesPct(total)}%`;
+      const year = 365.25 * 86400;
+      const w = comps[weakest];
+      totalSub.textContent = `≈ ${formatDuration(year * (1 - total), locale)} ${t.perYear}` + (w && comps.length > 1 ? ` · ${t.weakest}: ${w.name}` : '');
+    }
+
+    root.querySelector('[data-av-add]')!.addEventListener('click', () => {
+      comps.push({ name: `${t.newName} ${comps.length + 1}`, a: 99.9, n: 1 });
+      render();
+      const inputs = list.querySelectorAll<HTMLInputElement>('.av-input-name');
+      inputs[inputs.length - 1]?.focus();
+    });
+
+    updateTarget();
+    render();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-av]').forEach(init);
+</script>

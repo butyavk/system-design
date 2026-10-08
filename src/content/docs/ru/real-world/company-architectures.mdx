@@ -1,0 +1,146 @@
+---
+title: Как это устроено у компаний
+description: Проверенные статьи о том, как Amazon, Discord, Figma, Netflix, Shopify, Slack, Stripe, Uber и другие строили и масштабировали свои системы, и чему они учат.
+sidebar:
+  order: 2
+---
+import { Aside } from '@astrojs/starlight/components';
+
+Инженерные статьи компаний показывают, как паттерны из этого руководства ведут себя под реальной нагрузкой, при жёстких сроках и с унаследованным кодом. Ниже по компаниям собраны материалы, которые стоит прочитать, и для каждого одна строка о том, чему он учит. Мы сохранили компании из оригинального Primer везде, где рабочий источник ещё существует, и добавили сильные статьи 2016–2024 годов.
+
+<Aside type="tip" title="Коротко">
+- Читайте каждую статью ради **ограничения, которое вынудило к изменениям**, того, что попробовала команда, и того, чего это стоило.
+- Старые заметки High Scalability (2007–2016) показывают, **как команды наращивали простой стек**. Числа устарели, но порядок шагов по-прежнему актуален.
+- Новые статьи показывают, **что изменилось**: управляемые облачные хранилища, слои шардирования для Postgres и MySQL, сервисы на Rust и изоляция через ячейки (cells).
+- Чтобы подготовиться к конкретному типу вопроса, используйте раздел **«Что читать по темам»** ниже.
+</Aside>
+
+## Как читать разбор кейса
+
+Считайте каждую статью ответом на вопрос по проектированию, который вам не показали. Во время чтения записывайте:
+
+- **Исходную точку и триггер.** Каким был стек и что сломалось первым: пропускная способность записи, горячая партиция, стоимость рассылки (fan-out), авария или скорость разработки?
+- **Отвергнутые варианты.** Причины, по которым команда не выбрала технологию, часто полезнее самого выбора.
+- **Цену.** Миграции идут месяцами, двойная запись требует проверки, новым системам нужны люди для эксплуатации. В хороших статьях эта цена названа.
+- **Дату.** Статья 2011 года описывает железо и инструменты 2011 года. Сохраняйте рассуждения, а выбор технологий обновляйте.
+
+Большинство историй проходят похожий путь роста:
+
+```mermaid
+flowchart LR
+  one["Один сервер приложения<br/>и одна база"] --> cache["Кэш и<br/>реплики для чтения"]
+  cache --> cdn["CDN и асинхронные<br/>очереди задач"]
+  cdn --> shard["Шардирование<br/>базы"]
+  shard --> svc["Разделение<br/>на сервисы"]
+  svc --> cells["Ячейки или поды<br/>для ограничения сбоев"]
+```
+
+## Статьи компаний
+
+Компании отсортированы по алфавиту. Год — это дата публикации статьи, а не появления системы.
+
+| Компания | Статья | Чему учит |
+|---|---|---|
+| Airbnb | [Avoiding double payments in a distributed payments system](https://medium.com/airbnb-engineering/avoiding-double-payments-in-a-distributed-payments-system-2981f6b070bb) (2019) | Библиотека идемпотентности, которая выносит сетевые вызовы из транзакций базы, чтобы повторные попытки никогда не списывали деньги дважды. |
+| Amazon | [Amazon architecture](https://highscalability.com/amazon-architecture/) (2007) | Переход от двухуровневого монолита к сервисам, которыми владеют небольшие команды; по интервью с Вернером Фогельсом. |
+| Amazon | [Building and operating a pretty big storage system called S3](https://www.allthingsdistributed.com/2023/07/building-and-operating-a-pretty-big-storage-system.html) (2023) | Как масштаб меняет работу: распределение данных по огромному числу дисков, управление «нагревом» и владение системой в командах. |
+| Cinchcast | [Producing 1,500 hours of audio every day](https://highscalability.com/cinchcast-architecture-producing-1500-hours-of-audio-every-d/) (2012) | Стек на .NET и SQL Server, где базу прикрывают Redis, CDN и Elasticsearch. |
+| Cloudflare | [How we built Pingora](https://blog.cloudflare.com/how-we-built-pingora-the-proxy-that-connects-cloudflare-to-the-internet/) (2022) | Почему Cloudflare заменила NGINX собственным прокси на Rust: повторное использование соединений между воркерами, эффективность и безопасность. |
+| DataSift | [Realtime datamining at 120,000 tweets per second](https://highscalability.com/datasift-architecture-realtime-datamining-at-120000-tweets-p/) (2011) | Фильтрация потока со скоростью firehose: компиляция фильтров, общая работа для разных клиентов и шардирование потока. |
+| Discord | [How Discord stores billions of messages](https://discord.com/blog/how-discord-stores-billions-of-messages) (2017) | Перенос истории чатов из MongoDB в Cassandra с партициями по каналу и временному интервалу. |
+| Discord | [How Discord stores trillions of messages](https://discord.com/blog/how-discord-stores-trillions-of-messages) (2023) | Продолжение: горячие партиции и паузы сборщика мусора, переход на ScyllaDB (со 177 узлов на 72) и сервисы данных на Rust, объединяющие одинаковые запросы. |
+| Dropbox | [Inside the Magic Pocket](https://dropbox.tech/infrastructure/inside-the-magic-pocket) (2016) | Уход из S3 в собственное неизменяемое блочное хранилище: цели проекта, надёжность хранения и общая архитектура. |
+| Dropbox | [Rewriting the heart of our sync engine](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine) (2020) | Когда полная переписка оправдана и какие практики тестирования позволили безопасно выпустить результат четырёхлетней работы. |
+| ESPN | [Operating at 100,000 requests per second](https://highscalability.com/espns-architecture-at-scale-operating-at-100000-duh-nuh-nuhs/) (2013) | Как выдерживать пики спортивного трафика на нескольких сотнях серверов за счёт активного кэширования страниц и их фрагментов. |
+| Facebook / Meta | [How Facebook Live streams to 800,000 simultaneous viewers](https://highscalability.com/how-facebook-live-streams-to-800000-simultaneous-viewers/) (2016) | Пиковый трафик прямых эфиров, пограничные кэши, схлопывающие одинаковые запросы, и планирование мощностей для нового продукта. |
+| Facebook / Meta | [How we built a general purpose key value store with ZippyDB](https://engineering.fb.com/2021/08/06/core-infra/zippydb/) (2021) | Строго согласованное геораспределённое хранилище на RocksDB, где клиент выбирает уровень согласованности для каждого запроса. |
+| Facebook / Meta | [How Meta built the infrastructure for Threads](https://engineering.fb.com/2023/12/19/core-infra/how-meta-built-the-infrastructure-for-threads/) (2023) | Запуск на десятки миллионов пользователей за несколько дней благодаря проверенным платформам (хранилищу ZippyDB и бессерверной платформе задач Async) вместо создания новых. |
+| Figma | [How Figma's multiplayer technology works](https://www.figma.com/blog/how-figmas-multiplayer-technology-works/) (2019) | Совместное редактирование в реальном времени с центральным сервером и правилами в духе CRDT, и почему Figma отказалась от операционных преобразований (OT). |
+| Figma | [How Figma's databases team lived to tell the scale](https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/) (2024) | Горизонтальное шардирование Postgres за прокси запросов, когда вертикальное разделение исчерпало запас. |
+| Flickr | [Flickr architecture](https://highscalability.com/flickr-architecture/) (2007) | Классический стек PHP и MySQL, масштабированный шардированием базы, memcached и кэшем Squid. |
+| GitHub | [Partitioning GitHub's relational databases to handle scale](https://github.blog/engineering/infrastructure/partitioning-githubs-relational-databases-scale/) (2021) | Разделение большого кластера MySQL по доменам схемы и инструменты, которые находят запросы через границы доменов. |
+| Google | [Google architecture](https://highscalability.com/google-architecture/) (2008) | Как GFS, MapReduce и Bigtable работают вместе на обычном железе. Читайте вместе с [ключевыми статьями](/real-world/foundational-papers/). |
+| Google | [How Google serves data from multiple datacenters](https://highscalability.com/how-google-serves-data-from-multiple-datacenters/) (2009) | Сравнение резервных копий, схемы «лидер — фолловер», нескольких лидеров, двухфазного коммита и Paxos для данных в нескольких дата-центрах. |
+| Instagram | [14 million users, terabytes of photos](https://highscalability.com/instagram-architecture-14-million-users-terabytes-of-photos/) (2011) | Как три инженера вели быстро растущее приложение на AWS с PostgreSQL, Redis, memcached и асинхронными очередями задач. |
+| Instagram | [What powers Instagram](https://instagram-engineering.com/what-powers-instagram-hundreds-of-instances-dozens-of-technologies-adf2e22da2ad) (2011) | Обзор стека от самой команды, от балансировки нагрузки до мониторинга, примерно через год после запуска. |
+| Instagram | [Sharding and IDs at Instagram](https://medium.com/instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) (2012) | Сортируемые по времени 64-битные идентификаторы, генерируемые внутри PostgreSQL, и тысячи логических шардов на меньшем числе физических серверов. |
+| Justin.tv (сейчас Twitch) | [Live video broadcasting architecture](https://highscalability.com/justintvs-live-video-broadcasting-architecture/) (2010) | Построение дерева репликации видеосерверов для каждого потока с учётом нагрузки и положения в сети. |
+| Mailbox | [From 0 to one million users in 6 weeks](https://highscalability.com/scaling-mailbox-from-0-to-one-million-users-in-6-weeks-and-1/) (2013) | Очередь на подключение, которая сдерживала рост, пока бэкенд не догнал спрос. |
+| Netflix | [What happens when you press play?](https://highscalability.com/netflix-what-happens-when-you-press-play/) (2017) | Разделение на управляющий слой в AWS и CDN Open Connect, который отдаёт заранее размещённое видео изнутри сетей провайдеров. |
+| Netflix | [Zuul 2: the journey to asynchronous, non-blocking systems](https://netflixtechblog.com/zuul-2-the-netflix-journey-to-asynchronous-non-blocking-systems-45947377fb5c) (2016) | Перевод API-шлюза на асинхронный ввод-вывод: большой выигрыш в работе с соединениями и малый для задач, нагружающих процессор. |
+| Netflix | [Introducing Netflix's key-value data abstraction layer](https://netflixtechblog.com/introducing-netflixs-key-value-data-abstraction-layer-1ea8a0a11b30) (2024) | Cassandra и другие хранилища за единым API, с токенами идемпотентности, разбиением больших значений на части и адаптивной пагинацией. |
+| Notion | [Herding elephants: lessons from sharding Postgres](https://www.notion.com/blog/sharding-postgres-at-notion) (2021) | 480 логических шардов на 32 базах, маршрутизация на уровне приложения и миграция через журнал изменений, дозаливку и сверку данных. |
+| Pinterest | [18 million visitors, 10x growth, 12 employees](https://highscalability.com/pinterest-architecture-update-18-million-visitors-10x-growth/) (2012) | Быстрый рост небольшой команды на AWS с шардированным MySQL, Redis и memcached. |
+| Pinterest | [From 0 to tens of billions of page views a month](https://highscalability.com/scaling-pinterest-from-0-to-10s-of-billions-of-page-views-a/) (2013) | Почему команда выбрала зрелые инструменты и ручное шардирование вместо кластерных баз. Полезный противовес погоне за новыми технологиями. |
+| Playfish | [50 million monthly users and growing](https://highscalability.com/playfishs-social-gaming-architecture-50-million-monthly-user/) (2010) | Социальные игры на EC2: Java-серверы без состояния, шардированный MySQL и данные пользователя в одном блобе. |
+| PlentyOfFish | [PlentyOfFish architecture](https://highscalability.com/plentyoffish-architecture/) (2009) | Как далеко могут увести вертикальное масштабирование, машины с большим объёмом памяти и CDN, когда сайт ведут считанные люди. |
+| Salesforce | [How they handle 1.3 billion transactions a day](https://highscalability.com/salesforce-architecture-how-they-handle-13-billion-transacti/) (2013) | Мультиарендный SaaS, разделённый на изолированные инстансы и «суперподы», с отдельным хранилищем для больших файлов. |
+| Shopify | [A pods architecture to allow Shopify to scale](https://shopify.engineering/a-pods-architecture-to-allow-shopify-to-scale) (2018) | Изоляция групп магазинов в поды, чтобы сбой одного шарда не ронял всю платформу. |
+| Shopify | [Deconstructing the monolith](https://shopify.engineering/deconstructing-monolith-designing-software-maximizes-developer-productivity) (2019) | Модульный монолит: одно развёртываемое Rails-приложение с жёсткими границами доменов вместо микросервисов. |
+| Slack | [Scaling datastores at Slack with Vitess](https://slack.engineering/scaling-datastores-at-slack-with-vitess/) (2020) | Переход с MySQL, шардированного по рабочим пространствам, на Vitess ради гибких ключей шардирования, и как прошла миграция. |
+| Slack | [Real-time messaging](https://slack.engineering/real-time-messaging/) (2023) | Серверы каналов, шлюзов и присутствия, которые рассылают сообщения и события подключённым клиентам по всему миру. |
+| Stack Overflow | [Stack Overflow architecture](https://highscalability.com/stack-overflow-architecture/) (2009) | Знаменито маленький парк серверов: вертикальное масштабирование, SQL Server и аккуратное кэширование. |
+| Stack Overflow | [Stack Overflow: the architecture, 2016 edition](https://nickcraver.com/blog/2016/02/17/stack-overflow-the-architecture-2016-edition/) (2016) | Тот же подход семь лет спустя: балансировщики, веб-уровень, Redis, Elasticsearch и SQL Server, с реальными цифрами трафика. |
+| Stripe | [Scaling your API with rate limiters](https://stripe.com/blog/rate-limiters) (2017) | Четыре вида ограничителей частоты запросов и сброса нагрузки и как вводить их, не задевая легитимный трафик. |
+| Stripe | [Designing robust and predictable APIs with idempotency](https://stripe.com/blog/idempotency) (2017) | Ключи идемпотентности, повторные попытки с экспоненциальной задержкой (backoff) и случайным разбросом (jitter) для API в ненадёжных сетях. |
+| Stripe | [Online migrations at scale](https://stripe.com/blog/online-migrations) (2017) | Четырёхшаговая схема двойной записи для переноса сотен миллионов записей без простоя. |
+| TripAdvisor | [40M visitors, 200M dynamic page views, 30 TB of data](https://highscalability.com/tripadvisor-architecture-40m-visitors-200m-dynamic-page-view/) (2011) | Стек на Java и PostgreSQL с активным кэшированием; команды владеют функциями от начала до конца. |
+| Tumblr | [15 billion page views a month](https://highscalability.com/tumblr-architecture-15-billion-page-views-a-month-and-harder/) (2012) | Почему рассылка в ленту дашборда оказалась сложнее ленты Twitter и как шёл переход от PHP-монолита к сервисам на JVM. |
+| Twitter / X | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake) (2010) | Уникальные, примерно упорядоченные по времени 64-битные идентификаторы без центральной координации. |
+| Twitter / X | [Timelines at scale](https://www.infoq.com/presentations/Twitter-Timeline-Scalability/) (2013) | Доклад: рассылка при записи (fan-out on write) в ленты в Redis и особая обработка аккаунтов с миллионами подписчиков. |
+| Twitter / X | [150M active users, 300K QPS, a 22 MB/s firehose](https://highscalability.com/the-architecture-twitter-uses-to-deal-with-150m-active-users/) (2013) | Текстовый пересказ той же архитектуры: домашние ленты считаются при записи, поиск — при чтении. |
+| Uber | [How Uber scales their real-time market platform](https://highscalability.com/how-uber-scales-their-real-time-market-platform/) (2015) | Система диспетчеризации: геопространственный индекс, кольцо воркеров на консистентном хешировании и переживание отказа дата-центра. |
+| Uber | [Lessons learned from scaling Uber to 2000 engineers, 1000 services](https://highscalability.com/lessons-learned-from-scaling-uber-to-2000-engineers-1000-ser/) (2016) | Скрытая цена тысячи микросервисов: множество языков, трассировка, владение сервисами и координация между командами. |
+| Uber | [H3: Uber's hexagonal hierarchical spatial index](https://www.uber.com/blog/h3/) (2018) | Почему шестиугольные ячейки сетки удобнее квадратов для анализа спроса, предложения и цен. |
+| Uber | [How Uber serves over 40 million reads per second](https://www.uber.com/blog/how-uber-serves-over-40-million-reads-per-second-using-an-integrated-cache/) (2024) | CacheFront: кэш на Redis, встроенный в путь запросов базы Docstore, с захватом изменений (CDC) для инвалидации устаревших записей. |
+| WhatsApp | [The WhatsApp architecture Facebook bought for $19 billion](https://highscalability.com/the-whatsapp-architecture-facebook-bought-for-19-billion/) (2014) | Erlang на FreeBSD, миллионы соединений на сервер и очень маленькая команда разработки. |
+| YouTube | [YouTube architecture](https://highscalability.com/youtube-architecture/) (2008) | Ранний рост: серверы приложений на Python, репликация MySQL, затем шардирование и CDN для популярных видео. |
+
+Ключевые научные статьи этих компаний (memcache, TAO и Haystack в Facebook; Dynamo и Aurora в Amazon; Bigtable и Spanner в Google) собраны на странице [ключевых статей](/real-world/foundational-papers/).
+
+## Что читать по темам
+
+Если вы готовитесь к определённому типу вопроса, начните отсюда:
+
+| Тип вопроса | Что читать |
+|---|---|
+| Чат, присутствие, совместная работа в реальном времени | Discord (обе статьи), Slack real-time messaging, WhatsApp, Figma multiplayer |
+| Новостная лента или таймлайн | Twitter timelines, Tumblr, Pinterest, Instagram |
+| Шардирование реляционной базы | Instagram IDs, Notion, базы Figma, GitHub, Slack и Vitess, поды Shopify |
+| Видео, фото и большие файлы | Netflix Open Connect, YouTube, Justin.tv, Facebook Live, Dropbox Magic Pocket, Amazon S3 |
+| Платежи и надёжность API | Stripe (все три статьи), Airbnb о двойных платежах |
+| Геолокация и диспетчеризация | Диспетчеризация Uber, Uber H3 |
+| Кэширование при очень высокой нагрузке на чтение | Uber CacheFront, ESPN, Stack Overflow |
+| Монолит или сервисы | Amazon, модульный монолит Shopify, Netflix Zuul 2, Salesforce |
+| Генерация уникальных идентификаторов | Twitter Snowflake, шардирование и ID в Instagram |
+
+## Что изменилось со времён классических статей
+
+- **Реляционные базы шардируют, а не покидают.** Notion, Figma, GitHub и Slack остались на Postgres или MySQL и добавили слой маршрутизации (собственный код, прокси или Vitess). В 2010-х многие команды на этом этапе переезжали в NoSQL.
+- **Ячейки и поды ограничивают последствия сбоя.** Поды Shopify, суперподы Salesforce и многие сервисы AWS делят пользователей между изолированными копиями стека, так что отказ задевает лишь часть клиентов.
+- **Доступ к данным идёт через платформенные абстракции.** Слой «ключ — значение» в Netflix и встроенный кэш Uber прячут движки хранения за API. Благодаря этому миграции вроде перехода Discord с Cassandra на ScyllaDB проходят легче.
+- **Rust появляется на горячих путях.** Сервисы данных Discord и Pingora от Cloudflare показывают Rust там, где важны паузы сборщика мусора или безопасность памяти.
+- **На запуске выигрывает повторное использование, а не изобретение.** Запуск Threads в Meta показывает, что проверенные внутренние платформы помогают продукту пережить внезапный всплеск трафика.
+
+<Aside type="note" title="На собеседовании">
+Используйте кейс как аргумент, а не как сценарий: «У Discord были горячие партиции на популярных каналах, поэтому я поставлю объединение запросов перед хранилищем сообщений». Интервьюеры ценят дизайн, который следует из заданных требований, больше, чем скопированный у известной компании.
+
+Будьте готовы к уточнениям: почему компания выбрала этот вариант, чего он стоил и нужен ли он вообще при вашем масштабе. Архитектура уровня Netflix часто избыточна для вопроса, который вам задали.
+
+Интервьюеры в компании, куда вы приходите, могли сами писать или рецензировать статью, на которую вы ссылаетесь. Либо называйте детали точно, либо ссылайтесь в общих словах.
+</Aside>
+
+## Что почитать
+
+- [High Scalability](https://highscalability.com/): архив, из которого взята бо́льшая часть классических ссылок выше. С 2024 года новых записей мало.
+- [InfoQ: Architecture and design](https://www.infoq.com/architecture-design/): доклады с конференций и статьи практиков, обновляется еженедельно.
+- [Рассылка ByteByteGo](https://blog.bytebytego.com/): иллюстрированные разборы того, как устроены известные системы.
+- [Инженерные блоги](/real-world/engineering-blogs/): где искать новые статьи такого рода.
+
+## Связанные темы
+
+- [Ключевые статьи и системы](/real-world/foundational-papers/): исследования, на которых основаны многие из этих решений.
+- [Партиционирование и шардирование](/data/partitioning-and-sharding/): приём, который стоит за большинством историй о базах данных выше.
+- [Монолит и микросервисы](/architecture/monolith-and-microservices/): истории Amazon, Shopify и Uber в обобщённом виде.
+- [Проектируем ленту Twitter](/practice/twitter-timeline/): полный разбор кейса на основе статей о таймлайнах.
+- [Масштабирование до миллионов пользователей](/practice/scaling-to-millions/): путь роста с диаграммы выше, шаг за шагом.

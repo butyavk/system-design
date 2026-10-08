@@ -1,0 +1,958 @@
+---
+// Interactive "latency numbers every programmer should know".
+// Server-renders every row (works without JS); the client script adds
+// category filters, the classic-vs-2026 toggle, the human-scale toggle and
+// the "A is N× slower than B" comparison.
+import { latencyItems, latencyCategories, latencySources } from '~/data/latency';
+import { formatNs, formatHumanSeconds, formatRatio, ruTimes, type Locale } from './lib/format';
+
+interface Props {
+  /** Initial category filter, e.g. "cpu,storage". Default: all. */
+  categories?: string;
+  /** Item ids pre-selected in the comparison. */
+  compareA?: string;
+  compareB?: string;
+}
+
+const { categories, compareA = 'ssd4k', compareB = 'dram' } = Astro.props;
+const locale: Locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const uid = `lx-${Math.random().toString(36).slice(2, 8)}`;
+
+const T = {
+  en: {
+    caption: 'Typical latencies, log scale. Order of magnitude only: real hardware varies — the lighter band shows the usual range.',
+    filter: 'Show categories',
+    all: 'All',
+    classic: 'Compare with the classic table (Jeff Dean, ~2012)',
+    human: 'Human scale: if 1 ns were 1 second',
+    legendNow: '2026, typical',
+    legendRange: 'usual range',
+    legendOld: 'classic, ~2012',
+    humanNote: 'Human scale: every nanosecond is stretched to a second.',
+    range: 'Typical range',
+    classicRow: 'Classic table',
+    notInClassic: 'Not in the classic table.',
+    sources: 'Sources',
+    setA: 'Compare as A',
+    setB: 'Compare as B',
+    compareTitle: 'Compare two operations',
+    a: 'A',
+    b: 'B',
+    swap: 'Swap A and B',
+    empty: 'No categories selected.',
+    shown: 'rows shown',
+    fasterNow: 'faster than in 2012',
+    slowerNow: 'slower than in 2012',
+    sameNow: 'about the same as in 2012',
+  },
+  ru: {
+    caption: 'Типичные задержки, логарифмическая шкала. Только порядок величин: железо бывает разным — светлая полоса показывает обычный разброс.',
+    filter: 'Показывать категории',
+    all: 'Все',
+    classic: 'Сравнить с классической таблицей (Джефф Дин, ~2012)',
+    human: 'В человеческом масштабе: если бы 1 нс длилась 1 секунду',
+    legendNow: '2026, типично',
+    legendRange: 'обычный разброс',
+    legendOld: 'классика, ~2012',
+    humanNote: 'Человеческий масштаб: каждая наносекунда растянута до секунды.',
+    range: 'Обычный разброс',
+    classicRow: 'Классическая таблица',
+    notInClassic: 'В классической таблице этой строки нет.',
+    sources: 'Источники',
+    setA: 'Сравнить как A',
+    setB: 'Сравнить как B',
+    compareTitle: 'Сравнить две операции',
+    a: 'A',
+    b: 'B',
+    swap: 'Поменять A и B местами',
+    empty: 'Не выбрано ни одной категории.',
+    shown: 'строк показано',
+    fasterNow: 'быстрее, чем в 2012 году',
+    slowerNow: 'медленнее, чем в 2012 году',
+    sameNow: 'примерно как в 2012 году',
+  },
+}[locale];
+
+// Log-scale domain: ~0.3 ns … 1 s.
+const LOG_MIN = -0.5;
+const LOG_MAX = 9;
+const pct = (ns: number) => {
+  const v = (Math.log10(Math.max(ns, 10 ** LOG_MIN)) - LOG_MIN) / (LOG_MAX - LOG_MIN);
+  return Math.min(100, Math.max(0, v * 100));
+};
+
+// One gridline per decade (1 ns … 1 s); labels on 1 ns, 1 µs, 1 ms, 1 s.
+const ticks = Array.from({ length: LOG_MAX + 1 }, (_, exp) => {
+  const ns = 10 ** exp;
+  return { exp, major: exp % 3 === 0, left: pct(ns), label: formatNs(ns, locale), human: shortHuman(ns) };
+});
+
+function shortHuman(seconds: number): string {
+  const steps: [string, number][] = [
+    ['second', 1], ['minute', 60], ['hour', 3600], ['day', 86400], ['month', 2_629_800], ['year', 31_557_600],
+  ];
+  let unit = 'second';
+  let div = 1;
+  for (const [u, d] of steps) if (seconds >= d * 0.9995) { unit = u; div = d; }
+  return new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', {
+    style: 'unit', unit, unitDisplay: 'short', maximumSignificantDigits: 2,
+  }).format(seconds / div);
+}
+
+/** "8× faster than in 2012" / "в 8 раз быстрее, чем в 2012 году". */
+function deltaText(ratio: number): string {
+  if (Math.abs(Math.log10(ratio)) < 0.08) return T.sameNow;
+  const r = ratio > 1 ? ratio : 1 / ratio;
+  const tail = ratio > 1 ? T.fasterNow : T.slowerNow;
+  const n = formatRatio(r, locale);
+  return locale === 'ru' ? `в ${n} ${ruTimes(r)} ${tail}` : `${n}× ${tail}`;
+}
+
+const sourceMap = new Map(latencySources.map((s) => [s.key, s]));
+const catLabel = new Map(latencyCategories.map((c) => [c.id, c.label[locale]]));
+
+const rows = [...latencyItems]
+  .sort((a, b) => a.value2026 - b.value2026)
+  .map((it) => {
+    const ratio = it.value2012 ? it.value2012 / it.value2026 : undefined;
+    return {
+      ...it,
+      labelText: it.label[locale],
+      noteText: it.note[locale],
+      valueText: formatNs(it.value2026, locale),
+      humanText: formatHumanSeconds(it.value2026, locale),
+      classicText: it.value2012 !== undefined ? formatNs(it.value2012, locale) : undefined,
+      rangeText: it.low !== undefined && it.high !== undefined ? `${formatNs(it.low, locale)} – ${formatNs(it.high, locale)}` : undefined,
+      humanRangeText: it.low !== undefined && it.high !== undefined ? `${formatHumanSeconds(it.low, locale)} – ${formatHumanSeconds(it.high, locale)}` : undefined,
+      w: pct(it.value2026),
+      wOld: it.value2012 !== undefined ? pct(it.value2012) : 0,
+      rLow: it.low !== undefined ? pct(it.low) : undefined,
+      rHigh: it.high !== undefined ? pct(it.high) : undefined,
+      deltaText: ratio === undefined ? undefined : deltaText(ratio),
+      srcs: it.sources.map((k) => sourceMap.get(k)).filter((s) => s !== undefined),
+    };
+  });
+
+const initialCats = categories ? categories.split(',').map((s) => s.trim()) : latencyCategories.map((c) => c.id);
+
+const clientData = {
+  locale,
+  items: rows.map((r) => ({ id: r.id, label: r.labelText, v: r.value2026 })),
+  t: {
+    slower: locale === 'ru' ? 'медленнее' : 'slower than',
+    faster: locale === 'ru' ? 'быстрее' : 'faster than',
+    same: locale === 'ru' ? 'занимают примерно одинаковое время' : 'take about the same time',
+    humanIf: locale === 'ru' ? 'Если бы B длилось 1 секунду, A заняло бы' : 'If B took 1 second, A would take',
+    pick: locale === 'ru' ? 'Выберите две разные операции.' : 'Pick two different operations.',
+    shown: T.shown,
+  },
+};
+
+---
+
+<div class="lx not-content" id={uid} data-lx>
+  <script type="application/json" data-lx-json set:html={JSON.stringify(clientData)} />
+
+  <div class="lx-controls">
+    <fieldset class="lx-chips">
+      <legend class="lx-legend-label">{T.filter}</legend>
+      <button type="button" class="lx-chip" data-cat="all" aria-pressed={String(initialCats.length === latencyCategories.length)}>{T.all}</button>
+      {latencyCategories.map((c) => (
+        <button type="button" class="lx-chip" data-cat={c.id} aria-pressed={String(initialCats.includes(c.id))}>
+          <span class="lx-chip-label">{c.label[locale]}</span>
+        </button>
+      ))}
+    </fieldset>
+
+    <div class="lx-toggles">
+      <label class="lx-switch">
+        <input type="checkbox" data-lx-classic />
+        <span class="lx-switch-track" aria-hidden="true"><span class="lx-switch-thumb"></span></span>
+        <span>{T.classic}</span>
+      </label>
+      <label class="lx-switch">
+        <input type="checkbox" data-lx-human />
+        <span class="lx-switch-track" aria-hidden="true"><span class="lx-switch-thumb"></span></span>
+        <span>{T.human}</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="lx-keyline">
+    <p class="lx-caption">{T.caption}</p>
+    <ul class="lx-key" aria-hidden="true">
+      <li><span class="lx-sw lx-sw-now"></span>{T.legendNow}</li>
+      <li><span class="lx-sw lx-sw-range"></span>{T.legendRange}</li>
+      <li class="lx-key-old"><span class="lx-sw lx-sw-old"></span>{T.legendOld}</li>
+    </ul>
+  </div>
+
+  <div class="lx-chart">
+    <div class="lx-axis" aria-hidden="true">
+      <span class="lx-axis-pad"></span>
+      <div class="lx-axis-track">
+        {ticks.filter((tk) => tk.major).map((tk) => (
+          <span class:list={['lx-tick', { 'lx-tick-last': tk.left > 99, 'lx-tick-first': tk.exp === 0 }]} style={`left:${tk.left}%`}>
+            <span class="lx-tick-ns">{tk.label}</span>
+            <span class="lx-tick-human">{tk.human}</span>
+          </span>
+        ))}
+      </div>
+      <span class="lx-axis-pad lx-axis-pad-end"></span>
+    </div>
+
+    <ol class="lx-rows">
+      {rows.map((r) => (
+        <li class="lx-row" data-id={r.id} data-cat={r.category} hidden={!initialCats.includes(r.category)}>
+          <details>
+            <summary>
+              <span class="lx-label">
+                <span class="lx-mark" data-mark aria-hidden="true"></span>
+                <span class="lx-label-text">{r.labelText}</span>
+              </span>
+              <span class="lx-track" aria-hidden="true">
+                {ticks.map((tk) => <span class:list={['lx-grid', { 'lx-grid-major': tk.major }]} style={`left:${tk.left}%`}></span>)}
+                <span class="lx-bars">
+                  <span class="lx-barline">
+                    {r.rLow !== undefined && r.rHigh !== undefined && (
+                      <span class="lx-range" style={`left:${r.rLow}%;width:${Math.max(0.6, r.rHigh - r.rLow)}%`}></span>
+                    )}
+                    <span class="lx-bar lx-bar-now" style={`width:${r.w}%`}></span>
+                  </span>
+                  <span class="lx-barline lx-barline-old">
+                    {r.value2012 !== undefined && <span class="lx-bar lx-bar-old" style={`width:${r.wOld}%`}></span>}
+                  </span>
+                </span>
+              </span>
+              <span class="lx-value">
+                <span class="lx-v-ns">{r.valueText}</span>
+                <span class="lx-v-human">{r.humanText}</span>
+                <span class="lx-v-old">
+                  {r.classicText ? (
+                    <><span class="lx-sw lx-sw-old" aria-hidden="true"></span><span class="lx-visually-hidden">{T.legendOld}: </span>{r.classicText}</>
+                  ) : (
+                    <span aria-hidden="true">—</span>
+                  )}
+                </span>
+              </span>
+              <span class="lx-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="lx-note">
+              <p>{r.noteText}</p>
+              <dl>
+                {r.rangeText && (
+                  <>
+                    <dt>{T.range}</dt>
+                    <dd>
+                      <span class="lx-v-ns">{r.rangeText}</span>
+                      <span class="lx-v-human">{r.humanRangeText}</span>
+                    </dd>
+                  </>
+                )}
+                <dt>{T.classicRow}</dt>
+                <dd>
+                  {r.classicText ? (
+                    <>
+                      {r.classicText}
+                      {r.classicLabel && <> · <q>{r.classicLabel}</q></>}
+                      {r.deltaText && <span class="lx-delta">{' — '}{r.deltaText}</span>}
+                    </>
+                  ) : (
+                    T.notInClassic
+                  )}
+                </dd>
+                <dt>{T.sources}</dt>
+                <dd class="lx-srcs">
+                  {r.srcs.map((s, i) => (
+                    <>
+                      {i > 0 && '; '}
+                      {s.url ? <a href={s.url} rel="noopener">{s.title}</a> : <span>{s.title}</span>}
+                    </>
+                  ))}
+                </dd>
+              </dl>
+              <p class="lx-note-actions">
+                <span class="lx-note-cat">{catLabel.get(r.category)}</span>
+                <button type="button" class="lx-btn" data-set="a" data-id={r.id}>{T.setA}</button>
+                <button type="button" class="lx-btn" data-set="b" data-id={r.id}>{T.setB}</button>
+              </p>
+            </div>
+          </details>
+        </li>
+      ))}
+    </ol>
+    <p class="lx-empty" hidden>{T.empty}</p>
+  </div>
+
+  <div class="lx-compare" role="group" aria-labelledby={`${uid}-cmp`}>
+    <h3 class="lx-compare-title" id={`${uid}-cmp`}>{T.compareTitle}</h3>
+    <div class="lx-compare-row">
+      <label class="lx-field">
+        <span class="lx-field-tag">{T.a}</span>
+        <select data-lx-a aria-label={`${T.compareTitle}: ${T.a}`}>
+          {rows.map((r) => <option value={r.id} selected={r.id === compareA}>{r.labelText}</option>)}
+        </select>
+      </label>
+      <button type="button" class="lx-swap" data-lx-swap aria-label={T.swap} title={T.swap}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <label class="lx-field">
+        <span class="lx-field-tag">{T.b}</span>
+        <select data-lx-b aria-label={`${T.compareTitle}: ${T.b}`}>
+          {rows.map((r) => <option value={r.id} selected={r.id === compareB}>{r.labelText}</option>)}
+        </select>
+      </label>
+    </div>
+    <p class="lx-result" aria-live="polite" data-lx-result></p>
+  </div>
+</div>
+
+<style>
+  .lx {
+    --lx-now: #0e7c74;
+    --lx-old: #a3aeb6;
+    --lx-surface: var(--sl-color-bg);
+    --lx-panel: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    --lx-row-h: 1.85rem;
+    container-type: inline-size;
+    margin-block: 1.5rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-text);
+  }
+  .lx { --lx-range: color-mix(in srgb, var(--lx-now) 28%, transparent); }
+  :global(:root[data-theme='dark']) .lx {
+    --lx-now: #3cc4b6;
+    --lx-old: #66767c;
+    --lx-panel: var(--sl-color-gray-6);
+    --lx-range: color-mix(in srgb, var(--lx-now) 45%, transparent);
+  }
+
+  .lx-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .lx-chips {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+  .lx-legend-label {
+    width: 100%;
+    padding: 0;
+    margin-bottom: 0.35rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+    float: left;
+  }
+  .lx-chip {
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    line-height: 1.2;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--sl-color-gray-5);
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+    min-height: 2rem;
+  }
+  .lx-chip:hover {
+    border-color: var(--sl-color-gray-3);
+    color: var(--sl-color-white);
+  }
+  .lx-chip[aria-pressed='true'] {
+    background: var(--sl-color-accent-low);
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
+  }
+  .lx-chip[aria-pressed='true']::before {
+    content: '';
+    display: inline-block;
+    width: 0.5em;
+    height: 0.28em;
+    border: solid currentColor;
+    border-width: 0 0 2px 2px;
+    transform: translateY(-0.2em) rotate(-45deg);
+    margin-right: 0.45em;
+  }
+
+  .lx-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .lx-switch {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-size: var(--sl-text-xs);
+    line-height: 1.35;
+    color: var(--sl-color-gray-2);
+    max-width: 24rem;
+  }
+  .lx-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+  .lx-switch-track {
+    flex: none;
+    width: 2.1rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    background: var(--sl-color-gray-5);
+    position: relative;
+    margin-top: -0.05rem;
+  }
+  .lx-switch-thumb {
+    position: absolute;
+    top: 0.15rem;
+    left: 0.15rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    background: var(--sl-color-black);
+    box-shadow: var(--sl-shadow-sm);
+  }
+  :global(:root[data-theme='dark']) .lx-switch-thumb {
+    background: var(--sl-color-white);
+  }
+  .lx-switch input:checked + .lx-switch-track {
+    background: var(--sl-color-accent);
+  }
+  .lx-switch input:checked + .lx-switch-track .lx-switch-thumb {
+    transform: translateX(0.9rem);
+    background: #fff;
+  }
+  .lx-switch input:focus-visible + .lx-switch-track,
+  .lx-chip:focus-visible,
+  .lx-btn:focus-visible,
+  .lx-swap:focus-visible,
+  .lx select:focus-visible,
+  .lx summary:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  .lx-keyline {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .lx-caption {
+    margin: 0;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+    flex: 1 1 18rem;
+  }
+  .lx-key {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.9rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-2);
+  }
+  .lx-key li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+  }
+  .lx-key-old {
+    display: none !important;
+  }
+  .lx.is-classic .lx-key-old {
+    display: inline-flex !important;
+  }
+  .lx-sw {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.5rem;
+    border-radius: 0 2px 2px 0;
+    flex: none;
+  }
+  .lx-sw-now { background: var(--lx-now); }
+  .lx-sw-old { background: var(--lx-old); }
+  .lx-sw-range { background: var(--lx-range); }
+
+  .lx-chart {
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--sl-color-hairline);
+  }
+  .lx-axis,
+  .lx summary {
+    display: grid;
+    grid-template-columns: minmax(9rem, 38%) minmax(0, 1fr) 5.25rem 1rem;
+    column-gap: 0.75rem;
+    align-items: center;
+  }
+  .lx-axis {
+    height: 1.9rem;
+    font-size: var(--sl-text-2xs);
+    color: var(--sl-color-gray-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .lx-axis-pad-end { grid-column: span 2; }
+  .lx-axis-track {
+    position: relative;
+    height: 100%;
+  }
+  .lx-tick {
+    position: absolute;
+    bottom: 0.35rem;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .lx-tick-last { transform: translateX(-100%); }
+  .lx-tick-first { transform: translateX(-30%); }
+  .lx-tick-human,
+  .lx.is-human .lx-tick-ns { display: none; }
+  .lx.is-human .lx-tick-human { display: inline; }
+
+  .lx-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .lx-row {
+    margin: 0 !important;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  .lx-row[hidden] { display: none; }
+  .lx details { margin: 0; }
+  .lx summary {
+    list-style: none;
+    cursor: pointer;
+    min-height: var(--lx-row-h);
+    padding-block: 0.3rem;
+    border-radius: 0.25rem;
+  }
+  .lx summary::-webkit-details-marker { display: none; }
+  .lx summary:hover { background: var(--lx-panel); }
+  .lx details[open] > summary { background: var(--lx-panel); }
+
+  .lx-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    line-height: 1.3;
+    color: var(--sl-color-white);
+    padding-left: 0.25rem;
+  }
+  .lx-mark:empty { display: none; }
+  .lx-mark {
+    flex: none;
+    font-size: var(--sl-text-2xs);
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.2rem 0.35rem;
+    border-radius: 0.25rem;
+    background: var(--sl-color-white);
+    color: var(--sl-color-black);
+  }
+
+  .lx-track {
+    position: relative;
+    height: 1.4rem;
+    align-self: center;
+  }
+  .lx.is-classic .lx-track { height: 1.6rem; }
+  .lx-grid {
+    position: absolute;
+    top: -0.3rem;
+    bottom: -0.3rem;
+    width: 1px;
+    background: var(--sl-color-hairline);
+  }
+  .lx-grid-major {
+    background: var(--sl-color-hairline-light, var(--sl-color-gray-5));
+  }
+  .lx-bars {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+  .lx-barline {
+    position: relative;
+    height: 0.65rem;
+  }
+  .lx-barline-old { display: none; }
+  .lx.is-classic .lx-barline { height: 0.6rem; }
+  .lx.is-classic .lx-barline-old { display: block; }
+  .lx-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .lx-bar-now { background: var(--lx-now); }
+  .lx-bar-old { background: var(--lx-old); }
+  .lx-range {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 4px;
+    background: var(--lx-range);
+  }
+
+  .lx-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+    color: var(--sl-color-white);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .lx-value > span { display: block; }
+  .lx-v-human,
+  .lx-v-old { display: none !important; }
+  .lx.is-human .lx-v-ns { display: none !important; }
+  .lx.is-human .lx-v-human { display: block !important; }
+  .lx.is-human .lx-note .lx-v-human { display: inline !important; }
+  .lx.is-classic .lx-v-old {
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 400;
+    font-size: var(--sl-text-2xs);
+    color: var(--sl-color-gray-3);
+  }
+  .lx.is-classic.is-human .lx-v-old { display: none !important; }
+
+  .lx-chevron {
+    width: 0.45rem;
+    height: 0.45rem;
+    border: solid var(--sl-color-gray-3);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-2px, -2px);
+    justify-self: center;
+  }
+  .lx details[open] .lx-chevron { transform: rotate(-135deg) translate(-1px, -1px); }
+
+  .lx-note {
+    padding: 0.5rem 1.25rem 0.85rem 0.5rem;
+    background: var(--lx-panel);
+    border-radius: 0 0 0.25rem 0.25rem;
+    font-size: var(--sl-text-xs);
+    line-height: 1.55;
+    color: var(--sl-color-gray-2);
+  }
+  .lx-note p { margin: 0 0 0.5rem; }
+  .lx-note dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.2rem 0.75rem;
+    margin: 0 0 0.6rem;
+  }
+  .lx-note dt { color: var(--sl-color-gray-3); margin: 0; font-weight: 400; }
+  .lx-note dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .lx-note a { color: var(--sl-color-text-accent); }
+  .lx-note .lx-v-human { display: none !important; }
+  .lx-delta { color: var(--sl-color-gray-2); }
+  .lx-note-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 !important;
+  }
+  .lx-note-cat {
+    margin-right: auto;
+    color: var(--sl-color-gray-3);
+  }
+  .lx-btn {
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    padding: 0.25rem 0.6rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    cursor: pointer;
+    min-height: 1.9rem;
+  }
+  .lx-btn:hover { border-color: var(--sl-color-accent); }
+
+  .lx-empty {
+    padding: 1rem 0.25rem;
+    color: var(--sl-color-gray-3);
+    margin: 0;
+  }
+
+  .lx-compare {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.5rem;
+    background: var(--lx-panel);
+  }
+  .lx-compare-title {
+    margin: 0 0 0.6rem;
+    font-size: var(--sl-text-base);
+    color: var(--sl-color-white);
+    line-height: 1.3;
+  }
+  .lx-compare-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .lx-field {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+  .lx-field-tag {
+    flex: none;
+    font-weight: 700;
+    font-size: var(--sl-text-2xs);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    background: var(--sl-color-white);
+    color: var(--sl-color-black);
+  }
+  .lx select {
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    width: 100%;
+    min-width: 0;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    min-height: 2.25rem;
+  }
+  .lx-swap {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    cursor: pointer;
+  }
+  .lx-swap:hover { border-color: var(--sl-color-accent); }
+  .lx-result {
+    margin: 0.85rem 0 0;
+    font-size: var(--sl-text-base);
+    line-height: 1.5;
+    color: var(--sl-color-white);
+  }
+  .lx-result :global(strong) {
+    font-size: var(--sl-text-xl);
+    font-variant-numeric: tabular-nums;
+  }
+  .lx-result :global(.lx-result-sub) {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+
+  .lx-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lx-bar,
+    .lx-range { transition: width 0.25s ease; }
+    .lx-switch-thumb { transition: transform 0.15s ease; }
+    .lx-chevron { transition: transform 0.15s ease; }
+  }
+
+  /* Narrow containers: label and value on one line, bar underneath. */
+  @container (max-width: 34rem) {
+    .lx-axis,
+    .lx summary {
+      grid-template-columns: minmax(0, 1fr) auto 0.9rem;
+      column-gap: 0.5rem;
+    }
+    .lx summary { row-gap: 0.15rem; padding-block: 0.4rem; }
+    .lx-axis-pad { display: none; }
+    .lx-axis-track { grid-column: 1 / -1; }
+    .lx-label { grid-column: 1; grid-row: 1; }
+    .lx-value { grid-column: 2; grid-row: 1; }
+    .lx-chevron { grid-column: 3; grid-row: 1; }
+    .lx-track { grid-column: 1 / -1; grid-row: 2; }
+    .lx-compare-row { grid-template-columns: 1fr; }
+    .lx-swap { justify-self: center; transform: rotate(90deg); }
+    .lx-toggles { width: 100%; }
+  }
+</style>
+
+<script>
+  import { formatRatio, formatHumanSeconds, ruTimes, type Locale } from './lib/format';
+
+  interface ClientData {
+    locale: Locale;
+    items: { id: string; label: string; v: number }[];
+    t: Record<string, string>;
+  }
+
+  const PREF_KEY = 'sdp-latency-prefs';
+
+  function readPrefs(): { classic?: boolean; human?: boolean } {
+    try {
+      return JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+    } catch {
+      return {};
+    }
+  }
+  function writePrefs(p: { classic: boolean; human: boolean }) {
+    try {
+      localStorage.setItem(PREF_KEY, JSON.stringify(p));
+    } catch {
+      /* storage unavailable: ignore */
+    }
+  }
+
+  function escapeHtml(s: string) {
+    return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  }
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const data: ClientData = JSON.parse(root.querySelector<HTMLScriptElement>('[data-lx-json]')!.textContent || '{}');
+    const { locale, t } = data;
+    const byId = new Map(data.items.map((i) => [i.id, i]));
+
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('.lx-chip')];
+    const rows = [...root.querySelectorAll<HTMLLIElement>('.lx-row')];
+    const empty = root.querySelector<HTMLElement>('.lx-empty')!;
+    const classic = root.querySelector<HTMLInputElement>('[data-lx-classic]')!;
+    const human = root.querySelector<HTMLInputElement>('[data-lx-human]')!;
+    const selA = root.querySelector<HTMLSelectElement>('[data-lx-a]')!;
+    const selB = root.querySelector<HTMLSelectElement>('[data-lx-b]')!;
+    const result = root.querySelector<HTMLElement>('[data-lx-result]')!;
+
+    // --- category chips -------------------------------------------------
+    const catChips = chips.filter((c) => c.dataset.cat !== 'all');
+    const allChip = chips.find((c) => c.dataset.cat === 'all')!;
+    const applyFilter = () => {
+      const on = new Set(catChips.filter((c) => c.getAttribute('aria-pressed') === 'true').map((c) => c.dataset.cat));
+      allChip.setAttribute('aria-pressed', String(on.size === catChips.length));
+      let shown = 0;
+      for (const r of rows) {
+        const vis = on.has(r.dataset.cat);
+        r.hidden = !vis;
+        if (vis) shown++;
+      }
+      empty.hidden = shown > 0;
+    };
+    for (const chip of chips) {
+      chip.addEventListener('click', () => {
+        if (chip === allChip) {
+          for (const c of catChips) c.setAttribute('aria-pressed', 'true');
+        } else {
+          const pressed = chip.getAttribute('aria-pressed') === 'true';
+          chip.setAttribute('aria-pressed', String(!pressed));
+        }
+        applyFilter();
+      });
+    }
+
+    // --- toggles ---------------------------------------------------------
+    const prefs = readPrefs();
+    classic.checked = !!prefs.classic;
+    human.checked = !!prefs.human;
+    const applyToggles = (save: boolean) => {
+      root.classList.toggle('is-classic', classic.checked);
+      root.classList.toggle('is-human', human.checked);
+      if (save) writePrefs({ classic: classic.checked, human: human.checked });
+      updateCompare();
+    };
+    classic.addEventListener('change', () => applyToggles(true));
+    human.addEventListener('change', () => applyToggles(true));
+
+    // --- compare -----------------------------------------------------------
+    function updateCompare() {
+      const a = byId.get(selA.value);
+      const b = byId.get(selB.value);
+      for (const r of rows) {
+        const mark = r.querySelector<HTMLElement>('[data-mark]')!;
+        mark.textContent = r.dataset.id === selA.value ? 'A' : r.dataset.id === selB.value ? 'B' : '';
+      }
+      if (!a || !b || a.id === b.id) {
+        result.textContent = t.pick;
+        return;
+      }
+      const ratio = a.v / b.v;
+      const A = `«${escapeHtml(a.label)}»`;
+      const B = `«${escapeHtml(b.label)}»`;
+      const qa = locale === 'ru' ? A : `“${escapeHtml(a.label)}”`;
+      const qb = locale === 'ru' ? B : `“${escapeHtml(b.label)}”`;
+      let html: string;
+      if (Math.abs(Math.log10(ratio)) < 0.04) {
+        html = locale === 'ru' ? `${qa} и ${qb} ${t.same}.` : `${qa} and ${qb} ${t.same}.`;
+      } else {
+        const r = ratio >= 1 ? ratio : 1 / ratio;
+        const word = ratio >= 1 ? t.slower : t.faster;
+        const n = formatRatio(r, locale);
+        html =
+          locale === 'ru'
+            ? `${qa} ${word}, чем ${qb}, примерно <strong>в&nbsp;${n}&nbsp;${ruTimes(r)}</strong>.`
+            : `${qa} is <strong>≈${n}×</strong> ${word} ${qb}.`;
+      }
+      if (human.checked) {
+        html += `<span class="lx-result-sub">${t.humanIf} ${escapeHtml(formatHumanSeconds(ratio, locale))}.</span>`;
+      }
+      result.innerHTML = html;
+    }
+    selA.addEventListener('change', updateCompare);
+    selB.addEventListener('change', updateCompare);
+    root.querySelector('[data-lx-swap]')!.addEventListener('click', () => {
+      const tmp = selA.value;
+      selA.value = selB.value;
+      selB.value = tmp;
+      updateCompare();
+    });
+    root.querySelectorAll<HTMLButtonElement>('[data-set]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sel = btn.dataset.set === 'a' ? selA : selB;
+        sel.value = btn.dataset.id!;
+        updateCompare();
+        sel.focus({ preventScroll: true });
+        root.querySelector('.lx-compare')!.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      });
+    });
+
+    applyFilter();
+    applyToggles(false);
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-lx]').forEach(init);
+</script>

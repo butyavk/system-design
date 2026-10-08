@@ -1,0 +1,344 @@
+---
+// Powers of two 2^7…2^50 (exact, approximate decimal, binary vs decimal bytes)
+// plus a byte-unit converter.
+import { unitNames, type Locale } from './lib/format';
+
+const locale: Locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const ru = locale === 'ru';
+const uid = `p2-${Math.random().toString(36).slice(2, 8)}`;
+const tag = ru ? 'ru-RU' : 'en-US';
+
+const T = {
+  en: {
+    caption: 'Powers of two from 2⁷ to 2⁵⁰. Bold rows are the ones worth memorising.',
+    power: 'Power',
+    exact: 'Exact value',
+    approx: 'Approx. decimal',
+    iec: 'Binary (IEC)',
+    si: 'Decimal (SI) ≈',
+    onlyKey: 'Only key rows',
+    convTitle: 'Byte converter',
+    amount: 'Amount',
+    unit: 'Unit',
+    exactBytes: 'Exact bytes',
+    asDecimal: 'In decimal units (SI)',
+    asBinary: 'In binary units (IEC)',
+    diff: (si: string, iec: string, pct: string) => `1 ${si} is ${pct}% smaller than 1 ${iec}`,
+    invalid: 'Enter a non-negative number, e.g. 1.5 or 2,5.',
+    gap: 'Gap between the two',
+  },
+  ru: {
+    caption: 'Степени двойки от 2⁷ до 2⁵⁰. Жирным выделены строки, которые стоит помнить наизусть.',
+    power: 'Степень',
+    exact: 'Точное значение',
+    approx: 'Примерно',
+    iec: 'Двоичные (IEC)',
+    si: 'Десятичные (SI) ≈',
+    onlyKey: 'Только ключевые строки',
+    convTitle: 'Конвертер байтов',
+    amount: 'Количество',
+    unit: 'Единица',
+    exactBytes: 'Точно в байтах',
+    asDecimal: 'В десятичных единицах (SI)',
+    asBinary: 'В двоичных единицах (IEC)',
+    diff: (si: string, iec: string, pct: string) => `1 ${si} меньше 1 ${iec} на ${pct}%`,
+    invalid: 'Введите неотрицательное число, например 1,5.',
+    gap: 'Разница между ними',
+  },
+}[locale];
+
+const KEY = new Set([8, 10, 16, 20, 30, 32, 40, 50]);
+const iecNames = unitNames(locale, 'iec');
+const siNames = unitNames(locale, 'si');
+const compact = new Intl.NumberFormat(tag, { notation: 'compact', compactDisplay: 'long', maximumSignificantDigits: 3 });
+const intF = new Intl.NumberFormat(tag);
+const sigF = (d: number) => new Intl.NumberFormat(tag, { maximumSignificantDigits: d });
+
+function approx(v: bigint): string {
+  const n = Number(v);
+  if (n < 1000) return intF.format(n);
+  if (n >= 1e15) {
+    // Intl compact stops at trillions; spell quadrillions ourselves.
+    const q = n / 1e15;
+    return ru ? `${sigF(3).format(q)} квадрлн` : `${sigF(3).format(q)} quadrillion`;
+  }
+  return compact.format(n);
+}
+
+const rows = Array.from({ length: 44 }, (_, i) => {
+  const p = i + 7;
+  const v = 2n ** BigInt(p);
+  const tier = Math.floor(p / 10);
+  const rem = p % 10;
+  const iec = tier === 0 ? `${intF.format(Number(v))} ${iecNames[0]}` : `${intF.format(2 ** rem)} ${iecNames[tier]}`;
+  const si = `${sigF(3).format(Number(v) / 1000 ** tier)} ${siNames[tier]}`;
+  return { p, key: KEY.has(p), exact: v.toLocaleString(tag), approx: approx(v), iec, si: tier === 0 ? '' : si };
+});
+
+const units = [
+  { id: 'B', label: siNames[0], f: 1 },
+  ...[1, 2, 3, 4, 5].flatMap((k) => [
+    { id: `si${k}`, label: siNames[k], f: 1000 ** k },
+    { id: `iec${k}`, label: iecNames[k], f: 1024 ** k },
+  ]),
+];
+
+const clientData = { locale, si: siNames, iec: iecNames, t: { invalid: T.invalid } };
+---
+
+<div class="p2 not-content" id={uid} data-p2>
+  <script type="application/json" data-p2-json set:html={JSON.stringify(clientData)} />
+
+  <section class="p2-conv" aria-labelledby={`${uid}-conv`}>
+    <h3 class="p2-h" id={`${uid}-conv`}>{T.convTitle}</h3>
+    <div class="p2-conv-in">
+      <label class="p2-field p2-field-grow">
+        <span>{T.amount}</span>
+        <input class="p2-input" type="text" inputmode="decimal" autocomplete="off" value="1" data-p2-amount aria-describedby={`${uid}-err`} />
+      </label>
+      <label class="p2-field">
+        <span>{T.unit}</span>
+        <select class="p2-input" data-p2-unit>
+          {units.map((u) => <option value={u.f} selected={u.id === 'iec3'}>{u.label}</option>)}
+        </select>
+      </label>
+    </div>
+    <p class="p2-err" id={`${uid}-err`} data-p2-err hidden>{T.invalid}</p>
+    <dl class="p2-conv-out" aria-live="polite">
+      <div>
+        <dt>{T.exactBytes}</dt>
+        <dd data-p2-exact>—</dd>
+      </div>
+      <div>
+        <dt>{T.asDecimal}</dt>
+        <dd data-p2-si>—</dd>
+      </div>
+      <div>
+        <dt>{T.asBinary}</dt>
+        <dd data-p2-iec>—</dd>
+      </div>
+    </dl>
+  </section>
+
+  <div class="p2-tablebar">
+    <p class="p2-caption" id={`${uid}-cap`}>{T.caption}</p>
+    <label class="p2-check">
+      <input type="checkbox" data-p2-key />
+      <span>{T.onlyKey}</span>
+    </label>
+  </div>
+  <div class="p2-scroll" tabindex="0" role="region" aria-labelledby={`${uid}-cap`}>
+    <table class="p2-table">
+      <thead>
+        <tr>
+          <th scope="col">{T.power}</th>
+          <th scope="col" class="p2-num">{T.exact}</th>
+          <th scope="col">{T.approx}</th>
+          <th scope="col">{T.iec}</th>
+          <th scope="col">{T.si}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr class:list={{ 'p2-key': r.key }} data-key={r.key ? '1' : '0'}>
+            <th scope="row">2<sup>{r.p}</sup></th>
+            <td class="p2-num">{r.exact}</td>
+            <td>{r.approx}</td>
+            <td>{r.iec}</td>
+            <td class="p2-si">{r.si}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .p2 {
+    margin-block: 1.5rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-text);
+    container-type: inline-size;
+  }
+  .p2-conv {
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    margin-bottom: 1.25rem;
+  }
+  :global(:root[data-theme='dark']) .p2-conv { background: var(--sl-color-gray-6); }
+  .p2-h { margin: 0 0 0.6rem; font-size: var(--sl-text-base); color: var(--sl-color-white); line-height: 1.3; }
+  .p2-conv-in { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .p2-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); min-width: 0; }
+  .p2-field-grow { flex: 1 1 10rem; }
+  .p2-input {
+    font: inherit;
+    font-size: var(--sl-text-base);
+    font-variant-numeric: tabular-nums;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    min-height: 2.4rem;
+    min-width: 0;
+  }
+  select.p2-input { min-width: 6.5rem; }
+  .p2-input[aria-invalid='true'] { border-color: var(--sl-color-red); }
+  .p2-err { margin: 0.4rem 0 0; font-size: var(--sl-text-xs); color: var(--sl-color-red-high, var(--sl-color-red)); }
+  .p2-conv-out {
+    margin: 0.85rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .p2-conv-out dt { font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); font-weight: 400; margin: 0; }
+  .p2-conv-out dd {
+    margin: 0.15rem 0 0;
+    font-size: var(--sl-text-lg);
+    font-weight: 700;
+    color: var(--sl-color-white);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
+  .p2-conv-out dd :global(small) {
+    display: block;
+    font-size: var(--sl-text-2xs);
+    color: var(--sl-color-gray-3);
+    font-weight: 400;
+  }
+
+  .p2-tablebar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.4rem 1rem;
+    margin-bottom: 0.4rem;
+  }
+  .p2-caption { margin: 0; font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); flex: 1 1 16rem; }
+  .p2-check { display: inline-flex; gap: 0.4rem; align-items: center; font-size: var(--sl-text-xs); color: var(--sl-color-gray-2); cursor: pointer; }
+  .p2-check input { width: 1rem; height: 1rem; accent-color: var(--sl-color-accent); }
+  .p2-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.5rem;
+  }
+  .p2-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .p2-table th,
+  .p2-table td {
+    padding: 0.35rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+  .p2-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    font-size: var(--sl-text-xs);
+    font-weight: 400;
+    color: var(--sl-color-gray-3);
+    border-bottom-color: var(--sl-color-gray-5);
+  }
+  :global(:root[data-theme='dark']) .p2-table thead th { background: var(--sl-color-gray-6); }
+  .p2-table tbody th {
+    font-weight: 400;
+    color: var(--sl-color-gray-2);
+    position: sticky;
+    left: 0;
+    background: var(--sl-color-bg);
+  }
+  .p2-table tr.p2-key > th {
+    background: color-mix(in srgb, var(--sl-color-accent) 7%, var(--sl-color-bg));
+  }
+  .p2-table td { color: var(--sl-color-gray-2); }
+  .p2-table .p2-num { text-align: right; }
+  .p2-table .p2-si { color: var(--sl-color-gray-3); }
+  .p2-table tr.p2-key > * { color: var(--sl-color-white); font-weight: 600; }
+  .p2-table tr.p2-key { background: color-mix(in srgb, var(--sl-color-accent) 7%, transparent); }
+  .p2-table tbody tr:last-child > * { border-bottom: 0; }
+  .p2.is-key .p2-table tr[data-key='0'] { display: none; }
+  .p2 sup { font-size: 0.7em; }
+
+  .p2 :is(input, select, .p2-scroll):focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+  @container (max-width: 34rem) {
+    .p2-conv-out { grid-template-columns: 1fr; }
+    .p2-table th,
+    .p2-table td { padding-inline: 0.5rem; }
+  }
+</style>
+
+<script>
+  import { parseNum, sig, nf, type Locale } from './lib/format';
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const data: { locale: Locale; si: string[]; iec: string[]; t: Record<string, string> } = JSON.parse(
+      root.querySelector('[data-p2-json]')!.textContent || '{}',
+    );
+    const { locale } = data;
+    const amount = root.querySelector<HTMLInputElement>('[data-p2-amount]')!;
+    const unit = root.querySelector<HTMLSelectElement>('[data-p2-unit]')!;
+    const err = root.querySelector<HTMLElement>('[data-p2-err]')!;
+    const exactEl = root.querySelector<HTMLElement>('[data-p2-exact]')!;
+    const siEl = root.querySelector<HTMLElement>('[data-p2-si]')!;
+    const iecEl = root.querySelector<HTMLElement>('[data-p2-iec]')!;
+    const keyBox = root.querySelector<HTMLInputElement>('[data-p2-key]')!;
+
+    const scaled = (bytes: number, base: number, names: string[]) => {
+      let i = 0;
+      let v = bytes;
+      while (v >= base && i < names.length - 1) {
+        v /= base;
+        i++;
+      }
+      return `${sig(v, locale, 4)} ${names[i]}`;
+    };
+    const exactStr = (bytes: number) => {
+      if (bytes < Number.MAX_SAFE_INTEGER && Number.isInteger(bytes)) return nf(locale).format(bytes);
+      if (bytes < Number.MAX_SAFE_INTEGER) return nf(locale, { maximumFractionDigits: 2 }).format(bytes);
+      return nf(locale, { notation: 'scientific', maximumSignificantDigits: 6 }).format(bytes);
+    };
+    const unitsOf = (names: string[], base: number) =>
+      names
+        .slice(1, 6)
+        .map((n, i) => ({ n, v: base ** (i + 1) }));
+
+    function update() {
+      const v = parseNum(amount.value, locale);
+      const ok = Number.isFinite(v) && v >= 0;
+      amount.setAttribute('aria-invalid', String(!ok));
+      err.hidden = ok;
+      if (!ok) return;
+      const bytes = v * Number(unit.value);
+      const b = locale === 'ru' ? 'байт' : 'bytes';
+      exactEl.innerHTML = `${exactStr(bytes)} <small>${b}</small>`;
+      // Show the best-fitting unit, plus the next smaller unit as a sub-line.
+      const pick = (base: number, names: string[]) => {
+        const main = scaled(bytes, base, names);
+        const all = unitsOf(names, base).filter((u) => bytes >= u.v / 1000 && bytes < u.v * 1e6);
+        const extra = all.map((u) => `${sig(bytes / u.v, locale, 4)} ${u.n}`).filter((s) => s !== main).slice(0, 2).join(' · ');
+        return `${main}${extra ? `<small>${extra}</small>` : ''}`;
+      };
+      siEl.innerHTML = pick(1000, data.si);
+      iecEl.innerHTML = pick(1024, data.iec);
+    }
+    amount.addEventListener('input', update);
+    unit.addEventListener('change', update);
+    keyBox.addEventListener('change', () => root.classList.toggle('is-key', keyBox.checked));
+    update();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-p2]').forEach(init);
+</script>
