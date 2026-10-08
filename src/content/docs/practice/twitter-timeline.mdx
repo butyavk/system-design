@@ -295,7 +295,7 @@ flowchart LR
 |---|---|---|
 | Tweet log (stream) | Fast posting, buffering, replay, one source for every consumer | Another system to run; consumers must be idempotent |
 | Chunked fan-out workers | Seconds instead of minutes for large accounts | Out-of-order delivery (absorbed by ID-sorted timelines) |
-| Celebrity pull path | Removes about half of all fan-out writes | Merge logic and a threshold to tune |
+| Celebrity pull path | Removes more than half of all fan-out writes | Merge logic and a threshold to tune |
 | Sharded timeline cache | Single-digit-ms reads at 190,000/s | About 8 TB of RAM; a rebuild path for lost shards |
 | Object caches | Cheap hydration | Invalidation of edited and deleted tweets |
 | Time-tiered search index | Fast recent search, cheap history | Scatter-gather to every shard in a tier |

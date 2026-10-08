@@ -125,12 +125,12 @@ Limit (actual time=0.047..0.051 rows=16 loops=1)
 Execution Time: 0.072 ms
 ```
 
-The plan went from reading about 17,000 pages (about 135 MB) to 7 pages, and from 143 ms to under 0.1 ms. That is roughly 2,000 times faster, for a 77 MB index that every insert must now maintain.
+The plan went from reading about 17,000 pages (about 140 MB) to 7 pages, and from 143 ms to under 0.1 ms. That is roughly 2,000 times faster, for a 77 MB index that every insert must now maintain.
 
 ### 3. Index deliberately
 
 - **Composite order matters.** An index on `(customer_id, created_at)` serves `WHERE customer_id = ?` and `WHERE customer_id = ? ORDER BY created_at`. Put equality columns first, then the range or sort column. Engines can sometimes use an index without its leading column (MySQL's skip scan, PostgreSQL 18's B-tree skip scan), but only efficiently when that column has few distinct values. Do not design around it.
-- **Covering indexes** contain every column the query needs, so the table is never touched (PostgreSQL `INCLUDE`; in InnoDB, secondary indexes always carry the primary key). In PostgreSQL this works only on pages the visibility map marks all-visible, which is why the example ran `VACUUM`.
+- **Covering indexes** contain every column the query needs, so the table is never touched (PostgreSQL `INCLUDE`; in InnoDB, secondary indexes always carry the primary key). In PostgreSQL this works only on pages the visibility map marks all-visible, which is why the example table was vacuumed before the run (`Heap Fetches: 0`).
 - **Selectivity.** An index pays off when it narrows the rows a lot. On our table, `status` has four equally common values. With an index on it, `status = 'paid'` still returns 500,000 rows spread over every one of the 17,242 table pages, so the query takes about 200 ms with or without the index. No index makes a filter that matches a quarter of the table cheap. A **partial index** (`... WHERE status = 'new'`) helps when you query one rare value.
 - **Write cost.** Each index adds work to every `INSERT`, to `UPDATE`s of indexed columns, and to `DELETE`. It also competes for RAM. Find unused indexes (`pg_stat_user_indexes.idx_scan = 0`, `sys.schema_unused_indexes` in MySQL) and drop them.
 - **Bulk loads.** For a big load into a fresh table, load first and build indexes afterwards. The PostgreSQL docs recommend this, and `COPY` beats row-by-row `INSERT`s.

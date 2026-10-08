@@ -20,7 +20,7 @@ In a system of many services, instances come and go constantly through autoscali
 
 Static configuration ("orders lives at 10.0.3.17:8080") breaks as soon as instances become ephemeral. Discovery needs three parts:
 
-1. **Registration**: an instance announces itself when it is ready, either self-registration or by the platform (the orchestrator, or a registrar watching it).
+1. **Registration**: an instance is announced when it is ready, either by registering itself or by the platform (the orchestrator, or a registrar watching it).
 2. **Health tracking**: instances that die or become unhealthy are removed quickly.
 3. **Lookup**: callers resolve a name to the current set of healthy addresses, ideally with a push-based update rather than polling.
 

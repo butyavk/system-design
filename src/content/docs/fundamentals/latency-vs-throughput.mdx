@@ -35,7 +35,7 @@ Take 1,000 requests: 940 take 20 ms, 45 take 80 ms, 10 take 400 ms and 5 take 2.
 | Mean | 38.9 ms | Nearly twice the typical request; describes nobody |
 | p50 (median) | 20 ms | The typical experience |
 | p95 | 80 ms | One request in 20 is at least this slow |
-| p99 | 400 ms | One in 100 — a user making 100 calls per session sees it every session |
+| p99 | 400 ms | One in 100 — a user making 100 calls per session sees it in most sessions (63%) |
 | p99.9 | 2,500 ms | The tail that timeouts and retries are built around |
 
 Practical rules:

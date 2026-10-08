@@ -53,7 +53,7 @@ Notes that change design decisions:
 
 - **Kafka 4.0** (2025) dropped ZooKeeper entirely. Clusters run on **KRaft**, so there is one system to operate. Tiered storage, which moves old segments to object storage, became production-ready in 3.9. The new consumer rebalance protocol (KIP-848) became GA in 4.0. **Share groups** ("queues for Kafka"), with per-record acknowledgement and delivery counts, became production-ready in 4.2. Producers default to `acks=all` with idempotence on. A "diskless topics" proposal (KIP-1150), which writes directly to object storage, was accepted in 2026 and is still being implemented.
 - **Managed Kafka** (Amazon MSK, Confluent Cloud, Aiven and others) is the usual choice, because running brokers yourself is real work.
-- **Pulsar** separates serving (brokers) from storage (bookies). Brokers can be added or replaced without moving data. It offers exclusive, failover, shared and key-shared subscriptions, so one system covers both queue and log use cases. 5.0 became the LTS release in October 2026.
+- **Pulsar** separates serving (brokers) from storage (bookies). Brokers can be added or replaced without moving data. It offers exclusive, failover, shared and key-shared subscriptions, so one system covers both queue and log use cases. Version 5.0 was released in October 2026.
 - **Kinesis** shards accept up to 1 MB/s or 1,000 records/s of writes and serve 2 MB/s of reads, shared by all standard consumers. Enhanced fan-out gives each registered consumer its own 2 MB/s per shard. Retention defaults to 24 hours and can be raised to 365 days. Records can be up to 10 MiB since late 2025. On-demand mode adds shards automatically.
 
 ## Partitions and ordering

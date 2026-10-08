@@ -248,7 +248,7 @@ assert first == retry and misuse[0] == 422 and len(charges) == 1
 
 A production version must also handle two retries arriving concurrently (lock the key, or answer
 `409` while the first is in progress) and write the key and the business change in one transaction.
-An IETF draft for a standard `Idempotency-Key` header describes the same contract: `400` for a
+An IETF draft for a standard `Idempotency-Key` header (now expired) described the same contract: `400` for a
 missing key, `422` for a reused key with a different payload, `409` for a concurrent retry.
 
 ## Trade-offs: which one to choose

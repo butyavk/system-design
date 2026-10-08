@@ -210,7 +210,7 @@ With `E` employees and `R` ranks (3 here):
 2. **Skills-based routing.** Real contact centers route by language, product and skill, not only by rank. Give employees a set of skills and calls a set of required skills, then match on the subset. This is where a strategy interface for routing pays off.
 3. **Concurrency.** Calls arrive on many threads. Guard `CallCenter` state with one lock, or run routing as a single event loop that consumes a message queue. The single-writer design avoids two agents grabbing the same call.
 4. **Persistence and metrics.** Store each state change as an event (`queued`, `assigned`, `escalated`, `completed`) with timestamps. Wait times, handling times and abandonment rates fall out of the event log, and the router can be rebuilt after a crash.
-5. **Distributed call center.** Many sites share one queue. The queue moves to a durable broker, and agents pull work instead of being pushed it. See [queues and back pressure](/async/queues-and-back-pressure/).
+5. **Distributed call center.** Many sites share one queue. The queue moves to a durable broker, and agents pull work instead of having it pushed to them. See [queues and back pressure](/async/queues-and-back-pressure/).
 
 <Aside type="note" title="In the interview">
 - Clarify the escalation rule and what "nobody free" means before drawing classes.

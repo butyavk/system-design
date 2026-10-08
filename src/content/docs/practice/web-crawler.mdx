@@ -193,7 +193,7 @@ The frontier for billions of URLs does not fit in RAM. Keep the head of each que
 The Robots Exclusion Protocol has been a standard since 2022 (RFC 9309):
 
 - Fetch `/robots.txt` per host (scheme, host and port) before anything else, and cache it for **at most 24 hours**.
-- Parse at least the first **500 KiB**. Follow up to 5 redirects.
+- Parse at least the first **500 KiB**. Follow at least 5 consecutive redirects.
 - `4xx` (for example `404`) means no restrictions. `5xx` or a network error means **assume everything is disallowed**, and retry later. If the file stays unreachable for a long time (around 30 days), a crawler may fall back to a cached copy or treat the site as unrestricted.
 - Match the most specific `User-agent` group and the longest matching `Allow`/`Disallow` rule. `Crawl-delay` is not part of the RFC. Some crawlers honour it, and Google ignores it.
 

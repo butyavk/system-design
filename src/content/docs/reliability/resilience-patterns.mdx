@@ -25,7 +25,7 @@ A cascading failure is a feedback loop: a failure causes more load or more waiti
 
 1. **Overload spreads.** One of three replicas dies, so the other two each get 50% more traffic, pass their limit, slow down, fail health checks and are removed. The last one now takes everything.
 2. **Resources run out.** A dependency slows from 20 ms to 2 s. Callers keep the same request rate, so by Little's law in-flight requests grow 100×. Thread pools, connection pools and memory fill up, and the caller stops serving even requests that never touch the slow dependency.
-3. **Retries amplify.** Each layer retries 3 times. With 4 layers of services, one user request can become 3⁴ = 81 calls to the bottom layer, all of them arriving just as it is struggling.
+3. **Retries amplify.** Each layer makes up to 3 attempts. With 4 layers of services, one user request can become 3⁴ = 81 calls to the bottom layer, all of them arriving just as it is struggling.
 4. **Recovery fails.** A restarted service with a cold cache takes full traffic at once and falls over again. Clients that failed together retry together.
 
 The last stage has a name: a **metastable failure**. The trigger is gone, but the system stays broken because the feedback loop (retries, queues, cold caches) keeps load above capacity. Recovery often needs load to drop *well below* the level that started the incident. The patterns below break those loops.
