@@ -40,15 +40,15 @@ The material moves from concepts to practice. Each section has its own entry in 
 | Section | What you will learn | Start with |
 |---|---|---|
 | Start here | How to study, the interview framework, estimation | [Study plan](/start/study-plan/) |
-| Fundamentals and trade-offs | Scalability, latency, CAP, consistency, availability | [Performance vs scalability](/fundamentals/performance-vs-scalability/) |
+| Fundamentals and trade-offs | Scalability, latency, CAP, consistency, availability, consensus | [Performance vs scalability](/fundamentals/performance-vs-scalability/) |
 | Networking and traffic | DNS, CDNs, load balancers, gateways | [DNS](/traffic/dns/) |
-| Application architecture | Monoliths, microservices, service discovery | [Monolith and microservices](/architecture/monolith-and-microservices/) |
+| Application architecture | Monoliths, microservices, service discovery, LLM-powered systems | [Monolith and microservices](/architecture/monolith-and-microservices/) |
 | Databases and storage | SQL, replication, sharding, NoSQL, object storage | [Relational databases](/data/relational-databases/) |
 | Caching | Cache layers, update and eviction strategies | [Caching layers](/caching/caching-layers/) |
 | Asynchronism and messaging | Queues, back pressure, event streaming | [Queues and back pressure](/async/queues-and-back-pressure/) |
 | Communication and APIs | HTTP, TCP and UDP, RPC and REST, API styles | [HTTP](/communication/http/) |
 | Reliability and security | Rate limiting, resilience, observability, security | [Rate limiting](/reliability/rate-limiting/) |
-| Numbers and reference | Latency, powers of two, availability nines | [Latency numbers](/reference/latency-numbers/) |
+| Numbers and reference | Latency, powers of two, availability nines, flashcards with Anki export | [Latency numbers](/reference/latency-numbers/) |
 | Practice: system design | Eight end-to-end case studies and a list of more questions | [URL shortener and Pastebin](/practice/url-shortener-pastebin/) |
 | Practice: object-oriented design | Six class-design exercises in Python | [Hash map](/ood/hash-map/) |
 | Real-world systems | Papers, company architectures, blogs | [Foundational papers](/real-world/foundational-papers/) |
@@ -73,9 +73,9 @@ This site is an adaptation of [The System Design Primer](https://github.com/donn
 
 - **Restructured** into 13 sections with short pages, a sidebar, search and previous/next navigation.
 - **Rewritten** in new words, with explanations of *why* a mechanism works, not only *what* it is.
-- **Updated for 2026.** The original text mostly dates from 2016 to 2019. Pages now cover what changed since then where it affects design decisions: managed cloud databases and queues, HTTP/3 and QUIC, Kafka-style logs, distributed SQL, Valkey alongside Redis, edge compute, SLOs and error budgets.
-- **Expanded.** New pages on object storage, event streaming, rate limiting, resilience patterns, observability, API styles and service meshes.
-- **Interactive.** Calculators let you change the inputs of an estimate and see the result immediately.
+- **Updated for 2026.** The original text was mostly written from 2017 to 2019. Pages now cover what changed since then where it affects design decisions: managed cloud databases and queues, HTTP/3 and QUIC, Kafka-style logs, distributed SQL, Valkey alongside Redis, edge compute, SLOs and error budgets.
+- **Expanded.** New pages on object storage, event streaming, rate limiting, resilience patterns, observability, API styles and service meshes, consensus and coordination, and LLM-powered systems.
+- **Interactive.** Calculators let you change the inputs of an estimate and see the result immediately. [Flashcards](/reference/flashcards/) with spaced repetition replace the original's Anki decks, and can be exported to Anki.
 - **Bilingual.** Every page exists in English and Russian.
 - **Re-checked links.** Many links in the original have rotted; further-reading lists here were verified when written.
 

@@ -1,0 +1,1013 @@
+---
+// Flashcards with a simple Leitner schedule (boxes 1–5). Progress is kept in
+// localStorage per locale. Every card is server-rendered into the "Browse all
+// cards" list, which works without JavaScript; the interactive deck reads the
+// card content from those nodes, so the data is not shipped twice.
+import { getCollection } from 'astro:content';
+import { flashcards, flashSections, cardHtml, inlineHtml } from '~/data/flashcards';
+
+const locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const uid = `fc-${Math.random().toString(36).slice(2, 8)}`;
+
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+const href = (link: string) => `${base}${locale === 'ru' ? 'ru/' : ''}${link.replace(/^\//, '')}`;
+
+// Page titles for the "Read more" links, in the reader's language when possible.
+const docs = await getCollection('docs');
+const titles = new Map(docs.map((d) => [d.id.replace(/\/index$/, ''), d.data.title]));
+const pageTitle = (link: string) => {
+  const slug = link.replace(/^\/|\/$/g, '');
+  return titles.get(locale === 'ru' ? `ru/${slug}` : slug) ?? titles.get(slug) ?? slug;
+};
+
+const T = {
+  en: {
+    region: 'Flashcards',
+    study: 'Section',
+    all: 'All',
+    due: 'Due',
+    learned: 'Learned',
+    total: 'Total',
+    boxes: 'Leitner boxes',
+    newCards: 'New',
+    box: 'Box',
+    show: 'Show answer',
+    again: 'Again',
+    gotIt: 'Got it',
+    question: 'Question',
+    answer: 'Answer',
+    readMore: 'Read more',
+    tapHint: 'Click the card or press Space to flip',
+    touchHint: 'Tap the card to see the answer',
+    keys: 'Keys: Space flips · 1 again · 2 got it',
+    shuffle: 'Shuffle',
+    reset: 'Reset progress',
+    confirm: 'Reset your flashcard progress for every section? This cannot be undone.',
+    saved: 'Progress is saved in this browser only.',
+    notSaved: 'This browser does not let the page save progress, so it lasts for this visit only.',
+    noJs: 'Turn on JavaScript to study with spaced repetition. You can still browse every card below.',
+    browse: 'Browse all cards',
+    left: 'left in this round',
+    practice: 'Practice round: answers here do not change your schedule.',
+    caughtUp: 'All caught up',
+    caughtUpText: 'No cards in this selection are due right now.',
+    roundDone: 'Practice round complete',
+    roundDoneText: 'Nice work. Come back when cards are due, or go through them once more.',
+    practiseAll: 'Practise all cards anyway',
+    practiseAgain: 'Practise again',
+    nextDue: 'Next review',
+    today: 'today',
+    tomorrow: 'tomorrow',
+    flipped: 'Answer shown.',
+    unflipped: 'Question shown.',
+    sentBack: 'Back to box 1. You will see this card again in this round.',
+    promoted: 'Moved to box',
+    nextIn: 'next review',
+    resetDone: 'Progress reset.',
+  },
+  ru: {
+    region: 'Карточки',
+    study: 'Раздел',
+    all: 'Все',
+    due: 'К повторению',
+    learned: 'Выучено',
+    total: 'Всего',
+    boxes: 'Коробки Лейтнера',
+    newCards: 'Новые',
+    box: 'Коробка',
+    show: 'Показать ответ',
+    again: 'Ещё раз',
+    gotIt: 'Помню',
+    question: 'Вопрос',
+    answer: 'Ответ',
+    readMore: 'Подробнее',
+    tapHint: 'Нажмите на карточку или пробел, чтобы перевернуть',
+    touchHint: 'Коснитесь карточки, чтобы увидеть ответ',
+    keys: 'Клавиши: пробел — перевернуть · 1 — ещё раз · 2 — помню',
+    shuffle: 'Перемешать',
+    reset: 'Сбросить прогресс',
+    confirm: 'Сбросить прогресс по карточкам во всех разделах? Отменить это нельзя.',
+    saved: 'Прогресс сохраняется только в этом браузере.',
+    notSaved: 'Этот браузер не даёт странице сохранять прогресс, поэтому он сохранится только до конца визита.',
+    noJs: 'Включите JavaScript, чтобы заниматься с интервальными повторениями. Все карточки можно просмотреть ниже.',
+    browse: 'Все карточки списком',
+    left: 'осталось в этом круге',
+    practice: 'Тренировочный круг: ответы здесь не меняют расписание.',
+    caughtUp: 'Всё повторено',
+    caughtUpText: 'В этой подборке сейчас нет карточек к повторению.',
+    roundDone: 'Тренировочный круг пройден',
+    roundDoneText: 'Отлично. Возвращайтесь, когда подойдёт срок, или пройдите карточки ещё раз.',
+    practiseAll: 'Всё равно потренироваться',
+    practiseAgain: 'Пройти ещё раз',
+    nextDue: 'Следующее повторение',
+    today: 'сегодня',
+    tomorrow: 'завтра',
+    flipped: 'Показан ответ.',
+    unflipped: 'Показан вопрос.',
+    sentBack: 'Карточка вернулась в коробку 1 и ещё встретится в этом круге.',
+    promoted: 'Карточка в коробке',
+    nextIn: 'следующее повторение',
+    resetDone: 'Прогресс сброшен.',
+  },
+}[locale];
+
+const sectionLabel = new Map(flashSections.map((s) => [s.id, s.label[locale]]));
+const countBySection = new Map(flashSections.map((s) => [s.id, flashcards.filter((c) => c.section === s.id).length]));
+const sections = flashSections.filter((s) => (countBySection.get(s.id) ?? 0) > 0);
+
+const clientData = { locale, t: T };
+---
+
+<section class="fc not-content" id={uid} data-fc aria-label={T.region}>
+  <script type="application/json" data-fc-json set:html={JSON.stringify(clientData)} />
+
+  <p class="fc-nojs" data-fc-nojs>{T.noJs}</p>
+
+  <div class="fc-deck" data-fc-deck hidden>
+    <fieldset class="fc-filter">
+      <legend class="fc-label">{T.study}</legend>
+      <div class="fc-chips">
+        <label class="fc-chip">
+          <input type="radio" name={`${uid}-section`} value="all" checked />
+          <span class="fc-chip-body">
+            <span>{T.all}</span>
+            <span class="fc-chip-count" data-fc-count="all">{flashcards.length}</span>
+          </span>
+        </label>
+        {sections.map((s) => (
+          <label class="fc-chip">
+            <input type="radio" name={`${uid}-section`} value={s.id} />
+            <span class="fc-chip-body">
+              <span>{s.label[locale]}</span>
+              <span class="fc-chip-count" data-fc-count={s.id}>{countBySection.get(s.id)}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+
+    <div class="fc-stats">
+      <dl class="fc-counters">
+        <div class="fc-counter fc-counter-due"><dt>{T.due}</dt><dd data-fc-stat="due">0</dd></div>
+        <div class="fc-counter"><dt>{T.learned}</dt><dd data-fc-stat="learned">0</dd></div>
+        <div class="fc-counter"><dt>{T.total}</dt><dd data-fc-stat="total">{flashcards.length}</dd></div>
+      </dl>
+      <div class="fc-boxes-wrap">
+      <span class="fc-label fc-boxes-label" id={`${uid}-boxes`} aria-hidden="true">{T.boxes}</span>
+      <div class="fc-boxes" role="group" aria-labelledby={`${uid}-boxes`}>
+        <div class="fc-box fc-box-new" data-fc-box="0">
+          <span class="fc-box-name">{T.newCards}</span>
+          <span class="fc-box-num" data-fc-boxnum>0</span>
+          <span class="fc-box-bar" aria-hidden="true"><span data-fc-boxfill></span></span>
+        </div>
+        {[1, 2, 3, 4, 5].map((b) => (
+          <div class="fc-box" data-fc-box={b}>
+            <span class="fc-box-name"><span class="fc-sr">{T.box} </span>{b}</span>
+            <span class="fc-box-num" data-fc-boxnum>0</span>
+            <span class="fc-box-bar" aria-hidden="true"><span data-fc-boxfill></span></span>
+          </div>
+        ))}
+      </div>
+      </div>
+    </div>
+
+    <div class="fc-stage" data-fc-stage>
+      <div class="fc-card" tabindex="0" role="group" aria-roledescription={locale === 'ru' ? 'карточка' : 'flashcard'} data-fc-card>
+        <div class="fc-face fc-front" data-fc-front>
+          <div class="fc-face-top">
+            <span class="fc-eyebrow" data-fc-section></span>
+            <span class="fc-level" data-fc-level></span>
+          </div>
+          <p class="fc-kicker">{T.question}</p>
+          <div class="fc-q" data-fc-q></div>
+          <p class="fc-hint" aria-hidden="true"><span class="fc-hint-mouse">{T.tapHint}</span><span class="fc-hint-touch">{T.touchHint}</span></p>
+        </div>
+        <div class="fc-face fc-back" data-fc-back inert aria-hidden="true">
+          <div class="fc-face-top">
+            <span class="fc-eyebrow" data-fc-section></span>
+            <span class="fc-level" data-fc-level></span>
+          </div>
+          <p class="fc-kicker">{T.answer}</p>
+          <div class="fc-q fc-q-small" data-fc-q></div>
+          <div class="fc-a" data-fc-a></div>
+          <a class="fc-more" data-fc-more href="#">
+            <span>{T.readMore}: <span data-fc-more-title></span></span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="fc-empty" data-fc-empty hidden tabindex="-1">
+        <p class="fc-empty-title" data-fc-empty-title></p>
+        <p class="fc-empty-text" data-fc-empty-text></p>
+        <p class="fc-empty-next" data-fc-empty-next></p>
+        <button type="button" class="fc-btn fc-btn-primary" data-fc-practise></button>
+      </div>
+    </div>
+
+    <div class="fc-actions" data-fc-actions>
+      <p class="fc-left"><span data-fc-left>0</span> {T.left}</p>
+      <div class="fc-buttons">
+        <button type="button" class="fc-btn fc-btn-primary fc-btn-wide" data-fc-show aria-keyshortcuts="Space">
+          {T.show} <kbd aria-hidden="true">Space</kbd>
+        </button>
+        <button type="button" class="fc-btn fc-btn-again" data-fc-again aria-keyshortcuts="1" hidden>
+          {T.again} <kbd aria-hidden="true">1</kbd>
+        </button>
+        <button type="button" class="fc-btn fc-btn-primary" data-fc-got aria-keyshortcuts="2" hidden>
+          {T.gotIt} <kbd aria-hidden="true">2</kbd>
+        </button>
+      </div>
+    </div>
+    <p class="fc-practice-note" data-fc-practice-note hidden>{T.practice}</p>
+
+    <div class="fc-foot">
+      <p class="fc-keys">{T.keys}</p>
+      <div class="fc-tools">
+        <button type="button" class="fc-tool" data-fc-shuffle aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          {T.shuffle}
+        </button>
+        <button type="button" class="fc-tool fc-tool-reset" data-fc-reset>{T.reset}</button>
+      </div>
+    </div>
+    <p class="fc-saved" data-fc-saved>{T.saved}</p>
+    <p class="fc-sr" aria-live="polite" data-fc-live></p>
+  </div>
+
+  <details class="fc-browse">
+    <summary>{T.browse} <span class="fc-browse-count" data-fc-browse-count>({flashcards.length})</span></summary>
+    <ol class="fc-list">
+      {flashcards.map((c) => (
+        <li class="fc-item" data-id={c.id} data-section={c.section} data-label={sectionLabel.get(c.section)} data-href={href(c.link)} data-title={pageTitle(c.link)}>
+          <details>
+            <summary><span class="fc-item-sec">{sectionLabel.get(c.section)}</span> <span class="fc-item-q" set:html={inlineHtml(c.front[locale])} /></summary>
+            <div class="fc-item-a" set:html={cardHtml(c.back[locale])} />
+            <a class="fc-item-more" href={href(c.link)}>{T.readMore}: {pageTitle(c.link)} →</a>
+          </details>
+        </li>
+      ))}
+    </ol>
+  </details>
+</section>
+
+<style>
+  .fc {
+    --fc-radius: 0.75rem;
+    --fc-back-bg: var(--sdp-tip-bg, var(--sl-color-accent-low));
+    margin-block: 1.5rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-text);
+    container-type: inline-size;
+  }
+  .fc-sr,
+  .fc :global(.fc-sr) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .fc-nojs {
+    padding: 0.75rem 1rem;
+    border: 1px dashed var(--sl-color-gray-4);
+    border-radius: 0.5rem;
+    color: var(--sl-color-gray-2);
+  }
+  .fc-deck[hidden],
+  .fc [hidden] {
+    display: none !important;
+  }
+
+  /* ---- section filter ---- */
+  .fc-filter { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .fc-label {
+    padding: 0;
+    margin-bottom: 0.4rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .fc-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .fc-chip { position: relative; display: block; cursor: pointer; flex: none; }
+  .fc-chip input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .fc-chip-body {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.1rem;
+    padding: 0.35rem 0.5rem 0.35rem 0.8rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    font-size: var(--sl-text-xs);
+    line-height: 1.2;
+    color: var(--sl-color-gray-2);
+    white-space: nowrap;
+  }
+  .fc-chip:hover .fc-chip-body { border-color: var(--sl-color-gray-3); color: var(--sl-color-white); }
+  .fc-chip input:checked + .fc-chip-body {
+    background: var(--sl-color-accent-low);
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
+    font-weight: 600;
+  }
+  .fc-chip input:focus-visible + .fc-chip-body { outline: 2px solid var(--sl-color-accent); outline-offset: 2px; }
+  .fc-chip-count {
+    min-width: 1.5rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--sl-color-gray-6);
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-2xs);
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .fc-chip-count.is-due { background: var(--sdp-signal-low, var(--sl-color-gray-6)); color: var(--sdp-signal, var(--sl-color-white)); }
+  .fc-chip input:checked + .fc-chip-body .fc-chip-count { background: var(--sl-color-accent); color: var(--sl-color-text-invert); }
+
+  /* ---- counters and boxes ---- */
+  .fc-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-top: 1rem;
+  }
+  .fc-counters { display: flex; gap: 1.5rem; margin: 0; }
+  .fc-counter { display: flex; flex-direction: column-reverse; justify-content: flex-end; margin: 0; }
+  .fc-counter dt { margin: 0; font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); font-weight: 400; }
+  .fc-counter dd {
+    margin: 0;
+    font-size: var(--sl-text-2xl);
+    font-weight: 650;
+    line-height: 1.1;
+    color: var(--sl-color-white);
+    font-variant-numeric: tabular-nums;
+  }
+  .fc-counter-due dd { color: var(--sl-color-text-accent); }
+  .fc-boxes-wrap { display: flex; flex-direction: column; align-self: end; min-width: 0; }
+  .fc-boxes-label { margin-bottom: 0.3rem; }
+  .fc-boxes { display: grid; grid-template-columns: minmax(3rem, 3.8rem) repeat(5, minmax(2.4rem, 3rem)); gap: 0.3rem; }
+  .fc-box {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 0.15rem;
+    padding: 0.3rem 0.4rem 0.35rem;
+    border: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    border-radius: 0.4rem;
+    text-align: center;
+  }
+  .fc-box-name { font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); line-height: 1.2; white-space: nowrap; }
+  .fc-box-new .fc-box-name { color: var(--sdp-signal, var(--sl-color-gray-3)); }
+  .fc-box-num { font-size: var(--sl-text-sm); font-weight: 650; color: var(--sl-color-white); font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .fc-box-bar { display: block; height: 0.25rem; border-radius: 999px; background: var(--sl-color-gray-6); overflow: hidden; }
+  .fc-box-bar > span { display: block; height: 100%; width: 0; background: var(--sl-color-accent); border-radius: inherit; }
+  .fc-box-new .fc-box-bar > span { background: var(--sdp-signal, var(--sl-color-accent)); }
+
+  /* ---- the card ---- */
+  .fc-stage {
+    position: relative;
+    margin-top: 1rem;
+    perspective: 1600px;
+  }
+  /* Two cards peeking out underneath: it is a deck. */
+  .fc-stage::before,
+  .fc-stage::after {
+    content: '';
+    position: absolute;
+    left: 0.9rem;
+    right: 0.9rem;
+    bottom: -0.45rem;
+    height: 2rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-top: 0;
+    border-radius: 0 0 var(--fc-radius) var(--fc-radius);
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    z-index: 0;
+  }
+  .fc-stage::after { left: 1.8rem; right: 1.8rem; bottom: -0.85rem; opacity: 0.6; }
+  .fc-stage.is-last::after { display: none; }
+  .fc-stage.is-last::before { display: none; }
+  .fc-stage.is-empty::before,
+  .fc-stage.is-empty::after { display: none; }
+
+  .fc-card {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-height: 15rem;
+    transform-style: preserve-3d;
+    border-radius: var(--fc-radius);
+    cursor: pointer;
+    outline: none;
+  }
+  .fc-card.is-flipped { transform: rotateY(180deg); cursor: default; }
+  .fc-card:focus-visible .fc-face { outline: 2px solid var(--sl-color-accent); outline-offset: 3px; }
+  .fc-face {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.25rem 1.4rem 1.2rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: var(--fc-radius);
+    background: var(--sl-color-bg);
+    box-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.06), 0 8px 24px -12px hsla(0, 0%, 0%, 0.25);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    min-width: 0;
+  }
+  .fc-back {
+    transform: rotateY(180deg);
+    background: var(--fc-back-bg);
+    border-color: var(--sl-color-accent);
+    box-shadow: inset 3px 0 0 var(--sl-color-accent), 0 8px 24px -12px hsla(0, 0%, 0%, 0.25);
+  }
+  .fc-face-top { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+  .fc-eyebrow {
+    font-size: var(--sl-text-2xs);
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sl-color-text-accent);
+  }
+  .fc-level { display: inline-flex; align-items: center; gap: 0.25rem; font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); white-space: nowrap; }
+  .fc-level :global(.fc-dots) { display: inline-flex; gap: 0.25rem; align-items: center; }
+  .fc-level :global(.fc-dot) { width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid var(--sl-color-gray-4); }
+  .fc-level :global(.fc-dot.is-on) { background: var(--sl-color-accent); border-color: var(--sl-color-accent); }
+  .fc-level :global(.fc-new) {
+    padding: 0.05rem 0.45rem;
+    border: 1px solid var(--sdp-signal, var(--sl-color-gray-4));
+    border-radius: 999px;
+    color: var(--sdp-signal, var(--sl-color-gray-2));
+    font-weight: 600;
+  }
+  .fc-kicker { margin: 0.4rem 0 0; font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); }
+  .fc-q {
+    margin: 0;
+    font-size: clamp(1.15rem, 1rem + 1.2cqi, 1.5rem);
+    line-height: 1.35;
+    font-weight: 620;
+    letter-spacing: -0.01em;
+    color: var(--sl-color-white);
+    text-wrap: balance;
+  }
+  .fc-front .fc-q { flex: 1; display: flex; align-items: center; }
+  .fc-q-small { font-size: var(--sl-text-sm); font-weight: 600; color: var(--sl-color-gray-2); letter-spacing: 0; }
+  .fc-hint { margin: 0; font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); }
+  .fc-hint-touch { display: none; }
+  @media (hover: none) and (pointer: coarse) {
+    .fc-hint-mouse,
+    .fc-keys,
+    .fc-btn kbd { display: none; }
+    .fc-hint-touch { display: inline; }
+  }
+  .fc-a { font-size: var(--sl-text-base); line-height: 1.6; color: var(--sl-color-gray-1); }
+  .fc-a :global(p) { margin: 0 0 0.6rem; }
+  .fc-a :global(ul),
+  .fc-a :global(ol) { margin: 0 0 0.6rem; padding-inline-start: 1.25rem; }
+  .fc-a :global(li) { margin: 0.2rem 0; }
+  .fc-a :global(li::marker) { color: var(--sl-color-text-accent); }
+  .fc-a :global(strong),
+  .fc-q :global(strong) { color: var(--sl-color-white); font-weight: 650; }
+  .fc :global(code) {
+    font-family: var(--sl-font-mono);
+    font-size: 0.86em;
+    padding: 0.08em 0.32em;
+    border-radius: 0.25rem;
+    background: var(--sl-color-gray-6);
+    overflow-wrap: anywhere;
+  }
+  .fc-back :global(code) { background: hsla(0, 0%, 50%, 0.16); }
+  .fc-more {
+    margin-top: auto;
+    align-self: flex-start;
+    display: inline-flex;
+    gap: 0.4rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    color: var(--sl-color-text-accent);
+    text-decoration: none;
+  }
+  .fc-more:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+  .fc-more:focus-visible { outline: 2px solid var(--sl-color-accent); outline-offset: 2px; border-radius: 0.2rem; }
+
+  .fc-empty {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    min-height: 15rem;
+    justify-content: center;
+    padding: 1.5rem 1.4rem;
+    border: 1px dashed var(--sl-color-gray-4);
+    border-radius: var(--fc-radius);
+    outline: none;
+  }
+  .fc-empty-title { margin: 0; font-size: var(--sl-text-xl); font-weight: 650; color: var(--sl-color-white); }
+  .fc-empty-text,
+  .fc-empty-next { margin: 0; color: var(--sl-color-gray-2); }
+  .fc-empty-next:empty { display: none; }
+  .fc-empty .fc-btn { margin-top: 0.6rem; }
+
+  /* ---- actions ---- */
+  .fc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-top: 1.5rem;
+  }
+  .fc-left { margin: 0; font-size: var(--sl-text-xs); color: var(--sl-color-gray-3); font-variant-numeric: tabular-nums; }
+  .fc-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .fc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-height: 2.6rem;
+    padding: 0.45rem 1.1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--sl-color-gray-4);
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    font: inherit;
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .fc-btn:hover { border-color: var(--sl-color-gray-2); }
+  .fc-btn-primary { background: var(--sl-color-accent); border-color: var(--sl-color-accent); color: var(--sl-color-text-invert); }
+  :global(:root[data-theme='light']) .fc-btn-primary { color: #fff; }
+  .fc-btn-primary:hover { background: var(--sl-color-accent-high); border-color: var(--sl-color-accent-high); }
+  :global(:root[data-theme='dark']) .fc-btn-primary:hover { color: var(--sl-color-black); }
+  .fc-btn-again:hover { border-color: var(--sl-color-red); color: var(--sl-color-red); }
+  .fc-btn:focus-visible,
+  .fc-tool:focus-visible,
+  .fc-browse summary:focus-visible,
+  .fc-item-more:focus-visible { outline: 2px solid var(--sl-color-accent); outline-offset: 2px; }
+  .fc-btn kbd {
+    font-family: var(--sl-font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 0.05rem 0.35rem;
+    border-radius: 0.25rem;
+    border: 1px solid currentColor;
+    opacity: 0.7;
+  }
+  .fc-practice-note { margin: 0.6rem 0 0; font-size: var(--sl-text-xs); color: var(--sdp-signal, var(--sl-color-gray-2)); }
+
+  .fc-foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: 1.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5));
+  }
+  .fc-keys { margin: 0; font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); }
+  .fc-tools { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .fc-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    cursor: pointer;
+  }
+  .fc-tool:hover { color: var(--sl-color-white); border-color: var(--sl-color-gray-3); }
+  .fc-tool[aria-pressed='true'] { background: var(--sl-color-accent-low); border-color: var(--sl-color-accent); color: var(--sl-color-white); }
+  .fc-tool-reset:hover { border-color: var(--sl-color-red); color: var(--sl-color-red); }
+  .fc-saved { margin: 0.5rem 0 0; font-size: var(--sl-text-2xs); color: var(--sl-color-gray-3); }
+
+  /* ---- browse list ---- */
+  .fc-browse { margin-top: 1.75rem; border-top: 1px solid var(--sl-color-hairline-light, var(--sl-color-gray-5)); padding-top: 0.75rem; }
+  .fc-browse > summary { cursor: pointer; font-weight: 600; color: var(--sl-color-white); padding: 0.25rem 0; }
+  .fc-browse-count { font-weight: 400; color: var(--sl-color-gray-3); }
+  .fc-list { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+  .fc-item { margin: 0; border-bottom: 1px solid var(--sl-color-hairline); }
+  .fc-item[hidden] { display: none; }
+  .fc-item summary { cursor: pointer; padding: 0.55rem 0.25rem; line-height: 1.45; color: var(--sl-color-white); }
+  .fc-item summary:focus-visible { outline: 2px solid var(--sl-color-accent); outline-offset: 1px; }
+  .fc-item-sec {
+    display: inline-block;
+    margin-right: 0.35rem;
+    font-size: var(--sl-text-2xs);
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--sl-color-text-accent);
+  }
+  .fc-item-a { padding: 0 0.25rem 0 1.1rem; color: var(--sl-color-gray-2); line-height: 1.6; }
+  .fc-item-a :global(p) { margin: 0 0 0.5rem; }
+  .fc-item-a :global(ul),
+  .fc-item-a :global(ol) { margin: 0 0 0.5rem; padding-inline-start: 1.2rem; }
+  .fc-item-more { display: inline-block; margin: 0 0 0.75rem 1.1rem; font-size: var(--sl-text-xs); font-weight: 600; color: var(--sl-color-text-accent); }
+
+  /* ---- motion ---- */
+  @media (prefers-reduced-motion: no-preference) {
+    .fc-card.is-animated { transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1); }
+    .fc-card.is-entering { animation: fc-enter 0.28s ease-out; }
+    .fc-box-bar > span { transition: width 0.3s ease; }
+    @keyframes fc-enter {
+      from { opacity: 0; translate: 0 0.6rem; }
+      to { opacity: 1; translate: 0 0; }
+    }
+  }
+
+  /* ---- narrow containers (phones) ---- */
+  @container (max-width: 34rem) {
+    .fc-chips {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-inline: -0.25rem;
+      padding: 0.15rem 0.25rem 0.4rem;
+      scrollbar-width: thin;
+      -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+      mask-image: linear-gradient(to right, #000 85%, transparent);
+    }
+    .fc-stats { flex-direction: column; gap: 0.75rem; }
+    .fc-counters { justify-content: space-between; }
+    .fc-boxes-wrap { align-self: stretch; }
+    .fc-boxes { grid-template-columns: 1.3fr repeat(5, minmax(0, 1fr)); }
+    .fc-face { padding: 1rem 1rem 1rem; }
+    .fc-card { min-height: 13rem; }
+    .fc-actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 3;
+      flex-direction: column-reverse;
+      align-items: stretch;
+      gap: 0.35rem;
+      margin-inline: -0.5rem;
+      padding: 0.6rem 0.5rem calc(0.6rem + env(safe-area-inset-bottom, 0px));
+      background: var(--sl-color-bg);
+      box-shadow: 0 -1px 0 var(--sl-color-hairline-light, var(--sl-color-gray-5));
+    }
+    .fc-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+    .fc-btn-wide { grid-column: 1 / -1; }
+    .fc-left { text-align: center; }
+  }
+</style>
+
+<script>
+  type Locale = 'en' | 'ru';
+  type Strings = Record<string, string>;
+  type Progress = { b: number; d: number }; // box 1–5, due day (local day number)
+  type Store = { v: 1; cards: Record<string, Progress>; section?: string; shuffle?: boolean };
+  type Card = { id: string; section: string; label: string; href: string; title: string; q: string; a: string; el: HTMLLIElement };
+
+  /** Days until a card in each box is due again after "Got it". Box 1 is today. */
+  const INTERVALS = [0, 0, 1, 3, 7, 16];
+  const MAX_BOX = 5;
+
+  const today = () => {
+    const now = new Date();
+    return Math.floor((now.getTime() - now.getTimezoneOffset() * 60_000) / 86_400_000);
+  };
+
+  function ruPlural(n: number, forms: [string, string, string]) {
+    const a = Math.abs(n) % 100;
+    const b = a % 10;
+    if (a > 10 && a < 20) return forms[2];
+    if (b > 1 && b < 5) return forms[1];
+    if (b === 1) return forms[0];
+    return forms[2];
+  }
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const { locale, t } = JSON.parse(root.querySelector('[data-fc-json]')!.textContent || '{}') as { locale: Locale; t: Strings };
+    const KEY = `sdp-flashcards-${locale}`;
+    const $ = <E extends Element = HTMLElement>(sel: string) => root.querySelector<E>(sel)!;
+    const $$ = <E extends Element = HTMLElement>(sel: string) => [...root.querySelectorAll<E>(sel)];
+
+    // ---- storage (falls back to memory) ----
+    let canSave = true;
+    const load = (): Store => {
+      try {
+        const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+        if (v && typeof v === 'object' && v.cards && typeof v.cards === 'object') return v as Store;
+      } catch {
+        canSave = false;
+      }
+      return { v: 1, cards: {} };
+    };
+    const store = load();
+    const save = () => {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(store));
+      } catch {
+        canSave = false;
+        $('[data-fc-saved]').textContent = t.notSaved;
+      }
+    };
+    if (!canSave) $('[data-fc-saved]').textContent = t.notSaved;
+
+    // ---- cards from the server-rendered list ----
+    const cards: Card[] = $$<HTMLLIElement>('.fc-item').map((el) => ({
+      id: el.dataset.id!,
+      section: el.dataset.section!,
+      label: el.dataset.label!,
+      href: el.dataset.href!,
+      title: el.dataset.title!,
+      q: el.querySelector('.fc-item-q')!.innerHTML,
+      a: el.querySelector('.fc-item-a')!.innerHTML,
+      el,
+    }));
+    const byId = new Map(cards.map((c, i) => [c.id, { c, i }]));
+    const boxOf = (c: Card) => store.cards[c.id]?.b ?? 0; // 0 = new
+    const isDue = (c: Card) => !store.cards[c.id] || store.cards[c.id].d <= today();
+
+    // ---- elements ----
+    const deck = $('[data-fc-deck]');
+    const radios = $$<HTMLInputElement>('.fc-chip input');
+    const stage = $('[data-fc-stage]');
+    const cardEl = $('[data-fc-card]');
+    const front = $('[data-fc-front]');
+    const back = $('[data-fc-back]');
+    const empty = $('[data-fc-empty]');
+    const actions = $('[data-fc-actions]');
+    const btnShow = $<HTMLButtonElement>('[data-fc-show]');
+    const btnAgain = $<HTMLButtonElement>('[data-fc-again]');
+    const btnGot = $<HTMLButtonElement>('[data-fc-got]');
+    const btnShuffle = $<HTMLButtonElement>('[data-fc-shuffle]');
+    const btnPractise = $<HTMLButtonElement>('[data-fc-practise]');
+    const live = $('[data-fc-live]');
+    const practiceNote = $('[data-fc-practice-note]');
+
+    let section = store.section && (store.section === 'all' || cards.some((c) => c.section === store.section)) ? store.section : 'all';
+    let shuffle = !!store.shuffle;
+    let practice = false;
+    let queue: string[] = [];
+    let flipped = false;
+    let currentLabel = '';
+
+    const inFilter = (c: Card) => section === 'all' || c.section === section;
+    const say = (msg: string) => {
+      live.textContent = '';
+      requestAnimationFrame(() => (live.textContent = msg));
+    };
+    const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function dayText(day: number) {
+      const diff = day - today();
+      if (diff <= 0) return t.today;
+      if (diff === 1) return t.tomorrow;
+      return locale === 'ru' ? `через ${diff} ${ruPlural(diff, ['день', 'дня', 'дней'])}` : `in ${diff} days`;
+    }
+    const cardsWord = (n: number) => (locale === 'ru' ? ruPlural(n, ['карточка', 'карточки', 'карточек']) : n === 1 ? 'card' : 'cards');
+
+    function buildQueue() {
+      const pool = cards.filter(inFilter).filter((c) => practice || isDue(c));
+      if (shuffle) {
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+      } else {
+        // Weakest first: box 1, then new cards, then higher boxes; ties keep page order.
+        const rank = (c: Card) => (boxOf(c) === 1 ? 0 : boxOf(c) === 0 ? 1 : boxOf(c));
+        pool.sort((a, b) => rank(a) - rank(b) || byId.get(a.id)!.i - byId.get(b.id)!.i);
+      }
+      queue = pool.map((c) => c.id);
+    }
+
+    function renderStats() {
+      const pool = cards.filter(inFilter);
+      const due = pool.filter(isDue).length;
+      const learned = pool.filter((c) => boxOf(c) >= 2).length;
+      $('[data-fc-stat="due"]').textContent = String(due);
+      $('[data-fc-stat="learned"]').textContent = String(learned);
+      $('[data-fc-stat="total"]').textContent = String(pool.length);
+      const counts = [0, 0, 0, 0, 0, 0];
+      for (const c of pool) counts[boxOf(c)]++;
+      const max = Math.max(1, ...counts);
+      for (const box of $$('[data-fc-box]')) {
+        const b = Number(box.dataset.fcBox);
+        box.querySelector('[data-fc-boxnum]')!.textContent = String(counts[b]);
+        (box.querySelector('[data-fc-boxfill]') as HTMLElement).style.width = `${(counts[b] / max) * 100}%`;
+      }
+      // Chip badges: cards due per section.
+      for (const r of radios) {
+        const s = r.value;
+        const n = cards.filter((c) => (s === 'all' || c.section === s) && isDue(c)).length;
+        const badge = root.querySelector<HTMLElement>(`[data-fc-count="${s}"]`)!;
+        badge.textContent = String(n);
+        badge.classList.toggle('is-due', n > 0);
+        r.setAttribute('aria-label', `${r.parentElement!.querySelector('.fc-chip-body > span')!.textContent}, ${t.due.toLowerCase()}: ${n}`);
+      }
+      // Browse list follows the filter.
+      let shown = 0;
+      for (const c of cards) {
+        const vis = inFilter(c);
+        c.el.hidden = !vis;
+        if (vis) shown++;
+      }
+      $('[data-fc-browse-count]').textContent = `(${shown})`;
+    }
+
+    function levelHtml(c: Card) {
+      const b = boxOf(c);
+      if (b === 0) return `<span class="fc-new">${t.newCards}</span>`;
+      const dots = Array.from({ length: MAX_BOX }, (_, i) => `<span class="fc-dot${i < b ? ' is-on' : ''}"></span>`).join('');
+      return `<span class="fc-sr">${t.box} ${b} / ${MAX_BOX}</span><span class="fc-dots" aria-hidden="true">${t.box} ${b} ${dots}</span>`;
+    }
+
+    function setFlipped(on: boolean, animate: boolean) {
+      flipped = on;
+      cardEl.classList.toggle('is-animated', animate);
+      cardEl.classList.toggle('is-flipped', on);
+      front.toggleAttribute('inert', on);
+      front.setAttribute('aria-hidden', String(on));
+      back.toggleAttribute('inert', !on);
+      back.setAttribute('aria-hidden', String(!on));
+      cardEl.setAttribute('aria-label', `${currentLabel}. ${on ? t.answer : t.question}`);
+      btnShow.hidden = on;
+      btnAgain.hidden = !on;
+      btnGot.hidden = !on;
+    }
+
+    function renderCard(focusCard = false) {
+      renderStats();
+      practiceNote.hidden = !practice;
+      const id = queue[0];
+      $('[data-fc-left]').textContent = String(queue.length);
+      stage.classList.toggle('is-last', queue.length <= 1);
+      if (!id) {
+        cardEl.hidden = true;
+        actions.hidden = true;
+        stage.classList.add('is-empty');
+        empty.hidden = false;
+        const pool = cards.filter(inFilter);
+        $('[data-fc-empty-title]').textContent = practice ? t.roundDone : t.caughtUp;
+        $('[data-fc-empty-text]').textContent = practice ? t.roundDoneText : t.caughtUpText;
+        const upcoming = pool.filter((c) => !isDue(c)).map((c) => store.cards[c.id].d);
+        if (upcoming.length) {
+          const next = Math.min(...upcoming);
+          const n = upcoming.filter((d) => d === next).length;
+          $('[data-fc-empty-next]').textContent = `${t.nextDue}: ${dayText(next)} — ${n} ${cardsWord(n)}`;
+        } else {
+          $('[data-fc-empty-next]').textContent = '';
+        }
+        btnPractise.textContent = practice ? t.practiseAgain : `${t.practiseAll} (${pool.length})`;
+        if (focusCard) empty.focus();
+        return;
+      }
+      stage.classList.remove('is-empty');
+      empty.hidden = true;
+      cardEl.hidden = false;
+      actions.hidden = false;
+      const c = byId.get(id)!.c;
+      currentLabel = c.label;
+      setFlipped(false, false);
+      for (const el of $$('[data-fc-section]')) el.textContent = c.label;
+      for (const el of $$('[data-fc-level]')) el.innerHTML = levelHtml(c);
+      for (const el of $$('[data-fc-q]')) el.innerHTML = c.q;
+      $('[data-fc-a]').innerHTML = c.a;
+      const more = $<HTMLAnchorElement>('[data-fc-more]');
+      more.href = c.href;
+      $('[data-fc-more-title]').textContent = c.title;
+      // Restart the "deal" animation.
+      cardEl.classList.remove('is-entering');
+      void cardEl.offsetWidth;
+      cardEl.classList.add('is-entering');
+      if (focusCard) cardEl.focus({ preventScroll: true });
+    }
+
+    function flip() {
+      if (!queue.length) return;
+      setFlipped(!flipped, !reduced());
+      say(flipped ? t.flipped : t.unflipped);
+      if (flipped) {
+        // Keep the answer buttons in view on small screens.
+        const r = actions.getBoundingClientRect();
+        if (r.bottom > innerHeight) actions.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
+      }
+    }
+
+    function grade(known: boolean) {
+      const id = queue[0];
+      if (!id || !flipped) return;
+      const c = byId.get(id)!.c;
+      if (known) {
+        queue.shift();
+        if (!practice) {
+          const b = Math.min(MAX_BOX, Math.max(1, boxOf(c)) + 1);
+          store.cards[id] = { b, d: today() + INTERVALS[b] };
+          save();
+          say(`${t.promoted} ${b} — ${t.nextIn} ${dayText(store.cards[id].d)}.`);
+        }
+      } else {
+        queue.push(queue.shift()!);
+        if (!practice) {
+          store.cards[id] = { b: 1, d: today() };
+          save();
+        }
+        say(t.sentBack);
+      }
+      renderCard(true);
+    }
+
+    // ---- events ----
+    for (const r of radios) {
+      r.checked = r.value === section;
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        section = r.value;
+        store.section = section;
+        practice = false;
+        save();
+        buildQueue();
+        renderCard();
+      });
+    }
+    btnShuffle.setAttribute('aria-pressed', String(shuffle));
+    btnShuffle.addEventListener('click', () => {
+      shuffle = !shuffle;
+      store.shuffle = shuffle;
+      btnShuffle.setAttribute('aria-pressed', String(shuffle));
+      save();
+      buildQueue();
+      renderCard(true);
+    });
+    $('[data-fc-reset]').addEventListener('click', () => {
+      if (!window.confirm(t.confirm)) return;
+      store.cards = {};
+      practice = false;
+      save();
+      buildQueue();
+      renderCard();
+      say(t.resetDone);
+    });
+    btnPractise.addEventListener('click', () => {
+      practice = true;
+      buildQueue();
+      renderCard(true);
+    });
+    btnShow.addEventListener('click', () => {
+      flip();
+      cardEl.focus({ preventScroll: true });
+    });
+    btnAgain.addEventListener('click', () => grade(false));
+    btnGot.addEventListener('click', () => grade(true));
+    cardEl.addEventListener('click', (e) => {
+      // Click turns the question over; on the answer side it does nothing, so
+      // selecting text or following the link never flips the card back.
+      if (flipped || (e.target as HTMLElement).closest('a')) return;
+      flip();
+    });
+    deck.addEventListener('keydown', (e) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement;
+      if (e.key === '1' || e.key === '2') {
+        if (!flipped) return;
+        e.preventDefault();
+        grade(e.key === '2');
+        return;
+      }
+      if (e.key === ' ' || e.key === 'Enter') {
+        if (target.closest('a, button, input, select, textarea, summary')) return;
+        if (!target.closest('[data-fc-card]')) return;
+        e.preventDefault();
+        flip();
+      }
+    });
+
+    // ---- start ----
+    $('[data-fc-nojs]').hidden = true;
+    deck.hidden = false;
+    buildQueue();
+    renderCard();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-fc]').forEach(init);
+</script>

@@ -228,6 +228,8 @@ Redis and Valkey approximate LRU and LFU by sampling a few keys rather than trac
 
 **W-TinyLFU**, used by the Caffeine library for Java, combines a small LRU "window" for new entries with a large segmented LRU main area, and admits an entry into the main area only if a compact frequency sketch says it is more popular than the entry it would evict. It resists scans and adapts the window size automatically, and it matches or beats other policies across many real traces.
 
+Two newer FIFO-based policies from CMU and Emory researchers, **S3-FIFO** (SOSP 2023) and **SIEVE** (NSDI 2024), quickly drop keys that are seen only once and need no locking on a hit. In the authors' trace studies they matched or beat LRU and other state-of-the-art policies on hit ratio while scaling better across threads, and SIEVE has already been added to several production cache libraries.
+
 ## Failure modes and fixes
 
 ### Cache stampede (thundering herd)

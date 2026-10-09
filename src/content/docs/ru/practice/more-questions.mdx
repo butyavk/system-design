@@ -10,7 +10,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 <Aside type="tip" title="Коротко">
 - У каждого вопроса есть одна **ключевая трудность** (рассылка по подписчикам, порядок сообщений, горячие ключи, exactly-once, география). Найдите её за первые пять минут и проведите там большую часть собеседования.
-- Тренируйтесь по [схеме собеседования](/start/interview-framework/): требования, оценки, высокоуровневый дизайн, углубление, масштабирование.
+- Тренируйтесь по [схеме собеседования](/start/interview-framework/): семь шагов — от требований и оценок до углубления, масштабирования и итогов.
 - Читайте ссылки после того, как набросали собственный ответ, а не до, и сравнивайте компромиссы, а не копируйте чужую архитектуру.
 </Aside>
 
@@ -42,7 +42,7 @@ import { Aside } from '@astrojs/starlight/components';
 | Key-value хранилище (Redis, DynamoDB) | Партиционирование плюс репликация с настраиваемой согласованностью; членство в кластере и обнаружение отказов | [NoSQL](/data/nosql/), [Шардирование](/data/partitioning-and-sharding/), [Репликация](/data/replication/) | [Dynamo (SOSP 2007)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf), [DynamoDB (USENIX ATC 2022)](https://www.usenix.org/conference/atc22/presentation/elhemali) |
 | Распределённый кэш (Memcached) | Горячие ключи, лавины при промахах, инвалидация между регионами | [Уровни кэширования](/caching/caching-layers/), [Стратегии кэширования](/caching/cache-strategies/) | [Scaling Memcache at Facebook (NSDI 2013)](https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala) |
 | Синхронизация файлов (Dropbox, Google Drive) | Разбиение на блоки и дедупликация, конфликты, клиент, корректно синхронизирующийся после работы офлайн | [Объектное хранилище](/data/object-storage/), [Модели согласованности](/fundamentals/consistency-patterns/) | [Dropbox: rewriting the sync engine](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine), [Inside the Magic Pocket](https://dropbox.tech/infrastructure/inside-the-magic-pocket) |
-| Генератор уникальных ID | 64-битные ID, примерно упорядоченные по времени, без центрального узкого места; рассинхронизация часов | [Шардирование](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
+| Генератор уникальных ID | 64-битные ID, примерно упорядоченные по времени, без центрального узкого места; рассинхронизация часов | [Сокращатель ссылок](/practice/url-shortener-pastebin/), [Шардирование](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
 | Данные в нескольких дата-центрах | Согласованность против задержки между регионами; failover без потери записей | [Репликация](/data/replication/), [Теорема CAP](/fundamentals/cap-theorem/) | [Spanner (OSDI 2012)](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett), [Transactions across datacenters](https://snarfed.org/transactions_across_datacenters_io.html) |
 | Распределённый планировщик задач (cron в масштабе) | Запустить каждую задачу ровно один раз при сбоях; выбор лидера; без пиков ровно в полночь | [Очереди](/async/queues-and-back-pressure/), [Паттерны устойчивости](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
 | Конвейер метрик и логов | Приём миллионов точек в секунду, сжатие, уровни хранения, быстрые запросы | [Наблюдаемость](/reliability/observability/), [Потоки событий](/async/event-streaming/) | [Gorilla (VLDB 2015)](https://www.vldb.org/pvldb/vol8/p1816-teller.pdf), [Monarch (VLDB 2020)](https://research.google/pubs/monarch-googles-planet-scale-in-memory-time-series-database/) |
@@ -90,7 +90,8 @@ import { Aside } from '@astrojs/starlight/components';
 
 | Вопрос | Ключевая сложность | На сайте | Ссылки |
 |---|---|---|---|
-| Сервис LLM-ассистента | Мощность GPU и батчинг, память под KV-кэш, потоковая выдача токенов, квоты токенов на пользователя | [Ограничение частоты запросов](/reliability/rate-limiting/), [HTTP](/communication/http/), [Очереди](/async/queues-and-back-pressure/) | [PagedAttention / vLLM (SOSP 2023)](https://arxiv.org/abs/2309.06180), [Orca (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu) |
+| Сервис LLM-ассистента | Мощность GPU и батчинг, память под KV-кэш, потоковая выдача токенов, квоты токенов на пользователя | [Системы на базе LLM](/architecture/llm-applications/), [Ограничение частоты запросов](/reliability/rate-limiting/), [Очереди](/async/queues-and-back-pressure/) | [PagedAttention / vLLM (SOSP 2023)](https://arxiv.org/abs/2309.06180), [Orca (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu) |
+| Ответы на вопросы по документам компании (RAG) | Конвейер нарезки и эмбеддингов, полнота векторного индекса против задержки, свежесть индекса, соблюдение прав доступа каждого пользователя к документам | [Системы на базе LLM](/architecture/llm-applications/), [Кэш поисковых запросов](/practice/search-query-cache/) | [RAG (Lewis и др., NeurIPS 2020)](https://arxiv.org/abs/2005.11401), [HNSW (Malkov и Yashunin)](https://arxiv.org/abs/1603.09320) |
 
 <Aside type="caution" title="Ссылки — не готовые ответы">
 Статьи компаний описывают ограничения одной команды в один момент времени. Discord ушёл с Cassandra на ScyllaDB, Dropbox переписал движок синхронизации после многих лет в продакшене, а доклад Twitter о лентах 2012 года старше большинства нынешних инструментов. Используйте их, чтобы понять, какие компромиссы были важны, а решения принимайте под свои требования.
@@ -100,7 +101,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 - **Убрано:** «спроектируйте сборщик мусора» (вопрос про рантайм языка, а не про system design) и поиск по графу Facebook (продукт давно свёрнут; суть покрывает разбор [социального графа](/practice/social-graph/)).
 - **Объединено:** чат Facebook — с общим вопросом о мессенджере; хроника Facebook — с лентой новостей.
-- **Добавлено:** система уведомлений, видеоплатформа, диспетчеризация такси, поиск поблизости, подсказки при вводе, распределённый планировщик задач, платёжная система, конвейер метрик и логов, агрегация рекламных кликов и обслуживание LLM — всё это теперь частые вопросы.
+- **Добавлено:** система уведомлений, видеоплатформа, диспетчеризация такси, поиск поблизости, подсказки при вводе, распределённый планировщик задач, платёжная система, конвейер метрик и логов, агрегация рекламных кликов, обслуживание LLM и генерация с извлечением (RAG) — всё это теперь частые вопросы.
 - **Заменены ссылки:** большинство исходных ссылок (ветки Quora, презентации на Slideshare, старые посты highscalability.com) умерли или были слабыми; в этом списке предпочтение отдано статьям и постам команд, построивших эти системы.
 
 <Aside type="note" title="На собеседовании">

@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
 ### The standard-library way
 
-Python's `OrderedDict` is itself a dict plus a doubly linked list. `move_to_end` and `popitem(last=False)` give the same operations in a few lines. For memoising a pure function, `functools.lru_cache` is the tool: it is thread-safe and reports hits and misses through `cache_info()`.
+Python's `OrderedDict` is itself a dict plus a doubly linked list. `move_to_end` and `popitem(last=False)` give the same operations in a few lines. For memoising a pure function, `functools.lru_cache` is the tool: its internal structure stays consistent across threads (though two threads may still compute the same missing value at once), and it reports hits and misses through `cache_info()`.
 
 ```python title="lru_stdlib.py"
 from collections import OrderedDict

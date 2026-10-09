@@ -105,7 +105,7 @@ These are guarantees for **one client's session**, and they are cheap.
   - pin the session to one replica (sticky routing);
   - return the write's log position (an LSN or version) to the client and have replicas wait until they have applied it before answering.
 - **Monotonic reads:** if you saw version 5, you never then see version 4. Refreshing a page must not make a new message vanish. The usual fix is to keep the client on the same replica, or send an "at least version V" token with each read.
-- Related guarantees: **monotonic writes** (a client's writes apply in order) and **writes-follow-reads** (a write is ordered after the data it was based on). Azure Cosmos DB's default **Session** level bundles these for a client.
+- Related guarantees: **monotonic writes** (a client's writes apply in order) and **writes-follow-reads** (a write is ordered after the data it was based on). Azure Cosmos DB's default **Session** level gives a client read-your-writes and writes-follow-reads through a session token it sends with each request.
 
 ### Bounded staleness
 
@@ -153,3 +153,4 @@ When several replicas accept writes independently (multi-leader, offline-first a
 - [Cache strategies](/caching/cache-strategies/) — caches are replicas too, with their own staleness.
 - [Event streaming](/async/event-streaming/) — ordered logs as a way to get consistent derived views.
 - [Availability patterns](/fundamentals/availability-patterns/) — what consistency you keep during fail-over.
+- [Consensus and coordination](/fundamentals/consensus-and-coordination/) — the consensus logs that make linearizable writes and reads possible.

@@ -359,11 +359,11 @@ flowchart TD
 ## What's different in 2026
 
 - **APIs instead of screen scraping.** Mint-era aggregators logged into bank websites with the user's stored password. Account access now increasingly goes through consent-based APIs:
-  - **EU:** PSD2 made bank APIs mandatory, and the PSD3 and Payment Services Regulation package reached a provisional deal in November 2025.
-  - **UK:** an open-banking regime that is moving onto a statutory footing.
-  - **US:** the industry-led FDX API standard. The CFPB's Section 1033 rule was finalised in October 2024, then put under reconsideration and blocked by a court in late 2025. A revised proposal went to OIRA review in August 2026.
+  - **EU:** PSD2 made bank APIs mandatory. The PSD3 and Payment Services Regulation package reached a provisional deal in November 2025 and cleared Parliament's ECON committee in May 2026. As of October 2026 it still awaits formal adoption, and most rules would apply about two years after that.
+  - **UK:** an open-banking regime that is moving onto a statutory footing under the Data (Use and Access) Act 2025.
+  - **US:** the industry-led FDX API standard. The CFPB's Section 1033 rule was finalised in October 2024, then put under reconsideration and blocked by a court in late 2025. A revised proposal went to OIRA review in August 2026 and had not been published by late September.
 
-  Design for **re-consent**, **consent expiry** and **per-call fees**, which some big US banks now negotiate with aggregators.
+  Design for **re-consent**, **consent expiry** and **per-call fees**: JPMorgan Chase began charging the major aggregators for data access under deals signed in autumn 2025.
 - **Buy the connectivity.** Few teams integrate thousands of institutions themselves. They use one or two aggregators behind an internal provider interface, so they can fail over or switch between them.
 - **Cursor sync and webhooks** replace "download the last 30 days every night". Providers report additions, changes and removals, so pending-to-posted churn is explicit.
 - **Streaming plus a lakehouse** replaces nightly MapReduce. A typical stack is Kafka or a managed log, simple consumers or Flink, and Iceberg or Delta tables queried from BigQuery, Snowflake or Redshift.

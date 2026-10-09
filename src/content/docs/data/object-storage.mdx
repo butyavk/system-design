@@ -27,7 +27,7 @@ Object storage — Amazon S3, Google Cloud Storage, Azure Blob Storage, Cloudfla
 | Interface | Disk device (SCSI, NVMe); a file system on top | POSIX via NFS or SMB | HTTP API (`PUT`, `GET`, `DELETE`, `LIST`) |
 | Updates | In place, any byte range | In place, with locks | Replace the whole object |
 | Shared access | One host at a time (usually) | Many hosts | Any number of clients over the network |
-| Latency | Sub-millisecond | Around a millisecond | Tens to hundreds of milliseconds to first byte |
+| Latency | Tens of µs (local NVMe) to ~1 ms (network volume) | Around a millisecond | ~10–200 ms to first byte (S3 median ~30 ms) |
 | Scale | Up to tens of TiB per volume | Up to petabytes per file system | Effectively unlimited |
 | Typical cost | Highest | Middle | Lowest per GB |
 | Examples | Amazon EBS, Persistent Disk, local NVMe | Amazon EFS, Filestore, Azure Files | S3, GCS, Azure Blob, R2, Ceph RGW |
@@ -38,7 +38,7 @@ Databases need block storage: they update pages in place and depend on low laten
 ## Object semantics
 
 - **Buckets and keys.** A bucket is a container with a globally or regionally unique name; inside it, the namespace is flat. `photos/2026/10/cat.jpg` is one key; the slashes only look like folders, and listing by prefix emulates directories.
-- **Immutable objects.** A `PUT` writes a complete object, and a later `PUT` to the same key replaces it atomically: readers see the old or the new version, never a mix. There is no append or partial update; to change one byte you rewrite the object.
+- **Immutable objects.** A `PUT` writes a complete object, and a later `PUT` to the same key replaces it atomically: readers see the old or the new version, never a mix. There is no partial update; to change one byte you rewrite the object. Appends are the narrow exception: S3 Express One Zone (since late 2024) and Azure append blobs can add data to the end of an object.
 - **Metadata.** Each object carries system metadata (size, `Content-Type`, `ETag`, last-modified) and user-defined key-value metadata. Tags drive lifecycle and access rules.
 - **Versioning.** With versioning on, overwrites and deletes keep previous versions, which protects against accidental deletion and ransomware (add object lock for write-once-read-many retention).
 - **Range reads.** `GET` with a `Range` header fetches part of an object; this is how video players seek and how analytics engines read one column of a Parquet file.
@@ -193,4 +193,4 @@ Managed offerings now bundle this layer, for example Amazon S3 Tables (S3 storag
 - [SQL or NoSQL](/data/sql-or-nosql/) — choosing the database that holds the metadata.
 - [Caching layers](/caching/caching-layers/) — HTTP caching and cache keys for immutable objects.
 - [Queues and back pressure](/async/queues-and-back-pressure/) — processing object-created events with workers.
-- [Security](/reliability/security/) — access control, encryption and signed URLs.
+- [Security](/reliability/security/) — access control, encryption at rest and envelope encryption with KMS.

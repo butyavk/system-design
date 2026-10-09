@@ -54,14 +54,14 @@ What the minority side does with Client 2's request is the CP/AP choice:
 ### CP examples
 
 - **etcd** runs Raft and serves **linearizable** reads and writes by default. Only a side holding a majority can commit. A client cut off with a minority gets errors, unless it explicitly asks for a *serializable* (possibly stale) read. This is why Kubernetes keeps its cluster state in etcd.
-- **ZooKeeper** needs a quorum for every write. Reads, though, are served by whichever server the client is connected to and can be stale. A client must call `sync()` first if it needs the latest value. So ZooKeeper is consistent for writes but not linearizable for reads by default. This is a good example of why the CP label is too coarse.
+- **ZooKeeper** needs a quorum for every write. Reads, though, are served by whichever server the client is connected to and can be stale. A client calls `sync()` first to catch up with the leader, and even that is not strictly linearizable, because `sync` is not a quorum operation. So ZooKeeper is consistent for writes but not linearizable for reads by default. This is a good example of why the CP label is too coarse.
 - **CockroachDB** describes itself as CP. Writes need a majority of replicas, reads are served by a leaseholder, and a range that loses its majority becomes unavailable rather than inconsistent.
 - **Google Spanner** is CP: a Paxos group that cannot form a quorum stops accepting writes. Brewer argues it is "effectively CA": Google's private network makes partitions rare, and he reports better than five nines of availability internally.
 
 ### AP and tunable examples
 
 - **Apache Cassandra** (and the original Dynamo design it borrows from) lets each request choose a consistency level. With `ONE`, any reachable replica can serve a read or write, so the system stays available and may return stale data. With `QUORUM` on both reads and writes, a majority of replicas must answer, so a minority partition cannot serve that request.
-- **Amazon DynamoDB** within one Region replicates each partition to three Availability Zones. A leader elected with Multi-Paxos handles writes and strongly consistent reads, and a write needs two of three replicas. Default reads are eventually consistent and can come from any replica. **Global tables** offer two modes. **Multi-Region eventual consistency** (the default) accepts writes in every Region and resolves conflicts with last-writer-wins — AP across Regions. **Multi-Region strong consistency** (generally available since June 2025) replicates each write synchronously to another Region before acknowledging it, across exactly three Regions — CP across Regions.
+- **Amazon DynamoDB** within one Region replicates each partition to three Availability Zones. A leader elected with Multi-Paxos handles writes and strongly consistent reads, and a write needs two of three replicas. Default reads are eventually consistent and can come from any replica. **Global tables** offer two modes. **Multi-Region eventual consistency** (the default) accepts writes in every Region and resolves conflicts with last-writer-wins — AP across Regions. **Multi-Region strong consistency** (generally available since June 2025) replicates each write synchronously to another Region before acknowledging it. It runs in exactly three Regions: three replicas, or two plus a DynamoDB-managed witness. That makes it CP across Regions.
 
 ## Common misconceptions
 
@@ -84,7 +84,7 @@ Daniel Abadi's **PACELC** extends CAP: *if there is a Partition, choose Availabi
 | Google Spanner | PC | EC | Externally consistent by default; stale reads are an opt-in EL path |
 | CockroachDB | PC | EC | Serializable by default; follower reads are an opt-in EL path |
 | etcd | PC | EC | Linearizable by default; serializable reads are an opt-in EL path |
-| HBase, Bigtable | PC | EC | Each key range is served by one server at a time |
+| HBase, Bigtable (one cluster) | PC | EC | Each key range is served by one server at a time. Bigtable replication across clusters is eventually consistent by default |
 
 The pattern in modern databases is **consistent by default, latency on request**. You get strong guarantees unless you explicitly ask for a stale read from a nearby replica (Spanner stale reads, CockroachDB follower reads, DynamoDB eventually consistent reads).
 
@@ -133,3 +133,4 @@ Overlap alone is not full linearizability. Concurrent writes, partially failed w
 - [Availability patterns](/fundamentals/availability-patterns/) — fail-over and redundancy, which CAP says nothing about.
 - [NoSQL](/data/nosql/) — the stores that made tunable consistency mainstream.
 - [SQL or NoSQL](/data/sql-or-nosql/) — choosing a datastore with these trade-offs in mind.
+- [Consensus and coordination](/fundamentals/consensus-and-coordination/) — how CP systems actually agree: majority quorums, Raft and what a partition costs the minority side.

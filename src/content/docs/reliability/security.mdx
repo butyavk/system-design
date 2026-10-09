@@ -41,7 +41,7 @@ flowchart LR
 
 ## Encryption in transit
 
-- **TLS everywhere,** not only at the public edge. Internal networks are shared, mirrored and misconfigured; "it's inside the VPC" is not a control. Use TLS 1.3 where you can, automate certificate issuance and renewal (ACME), and send HSTS so browsers never fall back to plain HTTP.
+- **TLS everywhere,** not only at the public edge. Internal networks are shared, mirrored and misconfigured; "it's inside the VPC" is not a control. Use TLS 1.3 where you can, automate certificate issuance and renewal (ACME), and send HSTS so browsers never fall back to plain HTTP. Automation is no longer optional: public TLS certificates are limited to 200 days from March 2026, falling to 100 days in 2027 and 47 days in 2029.
 - **Mutual TLS (mTLS)** authenticates *both* ends: each service presents a certificate that encodes its identity. Service meshes and SPIFFE-style workload identities issue short-lived certificates automatically, so services authenticate each other without shared passwords.
 - **Terminate deliberately.** If TLS ends at a load balancer or CDN, decide whether traffic is re-encrypted to the origin (it should be) and who can read it in between.
 
@@ -314,7 +314,7 @@ requirements that shape architecture:
 
 ## Further reading
 
-- [OWASP Top 10:2025](https://owasp.org/Top10/2025/) — the current list of web application risks.
+- [OWASP Top 10:2025](https://top10.owasp.org/2025/) — the current list of web application risks.
 - [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/) — concise, practical guidance on XSS, CSRF, SQL injection, secrets and password storage.
 - [RFC 9700: Best Current Practice for OAuth 2.0 Security](https://www.rfc-editor.org/rfc/rfc9700.html) — what to use and what to stop using in OAuth.
 - [RFC 8725: JSON Web Token Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html) — the JWT pitfalls above, with mitigations.

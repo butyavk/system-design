@@ -72,8 +72,9 @@ How big must the hot set be? Under a Zipf distribution with about 1 billion dist
 an ideal cache holding the top 1 M queries catches about 68 % of requests, the top 10 M about
 78 % and the top 100 M about 89 %. Each tenfold increase in memory adds only about 10
 percentage points, so **100 M entries (about 110–140 GB compressed, including overhead) is a
-sensible target.** Real LRU does worse than this ideal. In a simulation it lost about 7–10
-percentage points, because one-off queries keep pushing out useful entries.
+sensible target.** Real LRU does worse than this ideal. Che's approximation, checked against a
+simulation, puts the loss at about 4–8 percentage points, the gap shrinking as the cache grows,
+because one-off queries keep pushing out useful entries.
 
 ## Step 2 — High-level design
 
@@ -145,7 +146,7 @@ class QueryApi:
         return results
 ```
 
-Hashing the key gives a fixed size (16 bytes instead of an average of 50) and spreads keys
+Hashing the key gives a fixed size (a 16-byte digest, 32 hex characters, instead of an average of 50) and spreads keys
 evenly across shards. The cost is that debugging needs a log of key to query. Real systems
 normalise much more than this snippet: spelling correction, synonyms, stemming. Each extra
 rule merges more spellings into one key and raises the hit rate, but every rule must keep

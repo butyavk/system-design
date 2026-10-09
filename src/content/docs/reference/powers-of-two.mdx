@@ -38,7 +38,7 @@ The IEC introduced the binary names in 1999 to end the ambiguity, but both meani
 
 - **Drive makers, network speeds and most cloud storage prices use decimal units.** A "1 TB" drive holds 10¹² bytes, and 1 Gbit/s is 10⁹ bits per second.
 - **Memory is sized in binary units**, even when the label says "GB": a 16 GB DIMM holds 16 GiB.
-- **Operating systems differ.** Windows reports binary sizes with decimal labels, which is why a 1 TB disk appears as "931 GB". macOS and many Linux tools use decimal units or label binary ones correctly (`ls -lh` and `df -h` print powers of 1,024; `df -H` prints powers of 1,000).
+- **Operating systems differ.** Windows reports binary sizes with decimal labels, which is why a 1 TB disk appears as "931 GB". macOS uses decimal units. Linux tools vary: `ls -lh` and `df -h` print powers of 1,024 with bare K, M, G suffixes, while `df -H` prints powers of 1,000.
 - **Cloud services choose either.** Some bill block storage per GiB-month, others per GB-month; check the docs when a 7% difference matters.
 
 <Aside type="note">
@@ -50,10 +50,10 @@ Bits and bytes are a separate trap: network bandwidth is quoted in **bits** per 
 | Question | Powers of two at work |
 |---|---|
 | How many IDs fit in a 32-bit or 64-bit integer? | 2³² ≈ 4.3 × 10⁹ runs out at web scale; 2⁶⁴ ≈ 1.8 × 10¹⁹ does not. |
-| How long must a short URL key be? | Base62 with 7 characters gives 62⁷ ≈ 3.5 × 10¹² keys (about 2⁴²), enough for trillions of links. |
+| How long must a short URL key be? | Base62 with 7 characters gives 62⁷ ≈ 3.5 × 10¹² keys (about 2⁴²): plenty for billions of links issued by a counter; with random keys retries grow as the space fills, so the [URL shortener](/practice/url-shortener-pastebin/) moves to 8 characters at tens of billions. |
 | Will random IDs collide? | The birthday bound: collisions become likely after about `2^(n/2)` random n-bit IDs, so about 4 billion for 64-bit IDs. A random UUID has 122 random bits. |
 | How much memory does an index take? | 100 million entries × 64 bytes = 6.4 × 10⁹ bytes ≈ 6 GiB: one large server, not a cluster. |
-| How many shards or partitions? | Powers of two split evenly: going from 2ᵏ to 2ᵏ⁺¹ shards moves exactly half of each shard's keys. |
+| How many shards or partitions? | Powers of two split evenly: going from 2ᵏ to 2ᵏ⁺¹ shards splits each shard in two and moves about half of its keys. |
 | How big is a page or block? | Memory pages are usually 4 KiB, database pages 8–16 KiB, SSD reads 4 KiB, object-storage multipart parts at least 5 MiB. |
 
 When you estimate, keep units visible all the way through: "10⁸ objects × 1 KB = 10¹¹ bytes = 100 GB". Writing the exponent makes slips of a factor of 1,000 obvious.

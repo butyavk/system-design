@@ -12,7 +12,7 @@ Replication copies all the data to every node, so it cannot help once **writes**
 - **Federation** splits by function (users, orders, catalogue). **Sharding** splits one dataset by key (user 1–1M here, the rest there).
 - The **shard key** is the most important decision. It must spread load evenly and keep each common query on a single shard.
 - **Hash** sharding spreads load but loses range scans. **Range** sharding keeps ranges but invites hot spots. **Directory** sharding is flexible but adds a lookup service.
-- **Consistent hashing** with virtual nodes moves only about 1/N of keys when a node joins. Plain `hash % N` moves most of them.
+- **Consistent hashing** with virtual nodes moves only about 1/(N+1) of keys when an extra node joins. Plain `hash % N` moves most of them.
 - Before building it yourself, consider **Vitess** or **Citus**, or a distributed SQL database (**CockroachDB**, **Spanner**, **YugabyteDB**). They automate routing, splitting and rebalancing.
 </Aside>
 
@@ -58,7 +58,7 @@ flowchart LR
 | **Directory (lookup)** | A table maps key, or tenant, to shard | Any placement you like. Move one tenant at a time. Isolate big customers. | The lookup service must be fast, cached and highly available | Multi-tenant SaaS, Vitess lookup vindexes |
 | **Geographic** | User's region or country decides | Low latency for local users. Data-residency compliance (GDPR and similar). | Uneven region sizes. Users who travel or move need migration. | Multi-region SaaS, Spanner and CockroachDB row placement |
 
-Production systems often combine them. A common design hashes the key into a fixed set of **logical shards** (buckets), then keeps a small directory that maps buckets to physical servers. Notion did this in 2021: 480 logical shards on 32 physical PostgreSQL databases, 15 per machine, keyed by workspace ID. Growing the fleet then means moving whole logical shards between machines, not rehashing rows.
+Production systems often combine them. A common design hashes the key into a fixed set of **logical shards** (buckets), then keeps a small directory that maps buckets to physical servers. Notion did this in 2021: 480 logical shards on 32 physical PostgreSQL databases, 15 per machine, keyed by workspace ID. Growing the fleet then means moving whole logical shards between machines, not rehashing rows. In 2023 Notion did exactly that, going from 32 to 96 machines with 5 logical shards each.
 
 ## Choosing a shard key
 
@@ -72,7 +72,7 @@ A good shard key:
 Common choices are user ID for consumer apps, tenant or organisation ID for B2B SaaS, and device or entity ID for telemetry. Avoid using a raw timestamp as the whole key. Citus's documentation advises partitioning by time *within* each shard instead.
 
 <Aside type="caution" title="Sequential IDs and range sharding">
-Monotonic keys such as auto-increment IDs, timestamps or UUIDv7 are great for B-tree locality in a single database. In a **range**-partitioned cluster, they put every insert on the last range. Spanner's docs recommend UUIDv4, bit-reversed sequences, or a hash prefix there. In a **hash**-sharded system they are fine.
+Monotonic keys such as auto-increment IDs, timestamps or UUIDv7 (built into PostgreSQL 18 as `uuidv7()`) are great for B-tree locality in a single database. In a **range**-partitioned cluster, they put every insert on the last range. Spanner's docs recommend UUIDv4, bit-reversed sequences, or a hash prefix there. In a **hash**-sharded system they are fine.
 </Aside>
 
 ## Hot spots and the celebrity problem
@@ -104,7 +104,7 @@ With `shard = hash(key) % N`, adding one server changes N, and almost every key 
 
 Picture the hash space as a ring. Each server is hashed to positions on the ring. A key belongs to the first server position found by walking **clockwise** from the key's hash. When a server joins, it takes over only the keys between its positions and their predecessors: about 1/N of all keys. When a server leaves, only its keys move, to its clockwise neighbours.
 
-With one position per server, the arcs are very uneven. In our test with four servers, the busiest server got 2.2 times its fair share in a typical run. The fix is **virtual nodes**: each physical server is placed at many positions, say 100 to 256, so its total share averages out to about 1/N. Virtual nodes also let a bigger machine take more positions, and spread a failed server's load over all the survivors instead of one neighbour.
+With one position per server, the arcs are very uneven. In our test with four servers, the busiest server got about twice its fair share in a typical run. The fix is **virtual nodes**: each physical server is placed at many positions, say 100 to 256, so its total share averages out to about 1/N. Virtual nodes also let a bigger machine take more positions, and spread a failed server's load over all the survivors instead of one neighbour.
 
 ```mermaid
 flowchart LR
@@ -201,6 +201,7 @@ Hand-rolled sharding means owning routing, resharding, cross-shard queries and f
 | **Google Spanner** | Managed, globally distributed SQL | Key-range "splits", load-based splitting, interleaved tables | External consistency via TrueTime; GoogleSQL and PostgreSQL dialects |
 | **YugabyteDB** | Distributed SQL reusing PostgreSQL's query layer | Hash or range sharding into tablets, Raft per tablet, DocDB storage on RocksDB | Apache 2.0. Also offers a Cassandra-compatible API. |
 | **TiDB** | Distributed SQL, MySQL-compatible | Key ranges replicated with Multi-Raft | Open source; TiKV row store plus TiFlash columnar replicas for analytics |
+| **Aurora PostgreSQL Limitless** | Managed sharding for Aurora PostgreSQL; GA in October 2024 | Hash-sharded tables by shard key, reference tables, co-location; routers in front of the shards | AWS only. Routers coordinate distributed transactions. |
 
 These systems still need a good key design. A monotonic primary key creates a hot range in Spanner or CockroachDB just as surely as in a hand-built system. Cross-region transactions still pay the speed of light.
 
@@ -217,7 +218,7 @@ These systems still need a good key design. A monotonic primary key creates a ho
 - Shard only after estimating: show that writes or data size exceed one well-tuned primary, plus replicas.
 - Name the shard key and justify it against the top three queries. Then say what happens to the queries that do not include it.
 - Expect "one user is 1000× bigger than the rest" (hot key) and "we need to add shards" (resharding). Answer with logical shards, a directory, and online migration with a cutover.
-- Explain consistent hashing with numbers: about 1/N of keys move versus about 80% for `hash % N` going from 4 to 5 nodes, and why virtual nodes even out the load.
+- Explain consistent hashing with numbers: about 1/5 (20%) of keys move versus about 80% for `hash % N` going from 4 to 5 nodes, and why virtual nodes even out the load.
 - Common mistakes: sharding by timestamp; forgetting global secondary indexes; promising cross-shard ACID without mentioning 2PC's cost.
 </Aside>
 

@@ -25,7 +25,7 @@ Do not try to memorise numbers or internal APIs. A design paper is useful in an 
 4. **Shared patterns.** Compare papers in the same group. Chubby and ZooKeeper both expose consensus as a small service; Bigtable and Cassandra both store data in sorted immutable files plus an in-memory buffer.
 5. **Lessons learned.** The evaluation and "experience" sections are often the most practical part. They say what surprised the team in production.
 
-A three-pass approach works well: skim the abstract, headings and figures first (10 minutes); then read the design section closely; read the proofs and evaluation only if you need them. S. Keshav's short note [How to Read a Paper](https://ccr.sigcomm.org/online/files/p83-keshavA.pdf) describes this method.
+A three-pass approach works well: skim the abstract, headings and figures first (10 minutes); then read the design section closely; read the proofs and evaluation only if you need them. S. Keshav's short note [How to Read a Paper](https://svr-sk818-web.cl.cam.ac.uk/keshav/papers/07/paper-reading.pdf) describes this method.
 
 ## How the ideas connect
 
@@ -66,7 +66,7 @@ flowchart LR
 | **Dynamo** (Amazon) | 2007, SOSP | The classic leaderless, always-writable key-value store: consistent hashing, sloppy quorums, hinted handoff, vector clocks and Merkle-tree repair. | [allthingsdistributed.com (PDF)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf) |
 | **Cassandra** (Facebook) | 2009, LADIS | Dynamo's partitioning and replication combined with Bigtable's storage model. A good case study of tunable consistency and its costs. | [cornell.edu (PDF)](https://www.cs.cornell.edu/projects/ladis2009/papers/lakshman-ladis2009.pdf) |
 | **Spanner** (Google) | 2012, OSDI | Global SQL with externally consistent transactions. TrueTime bounds clock uncertainty, and data is split into Paxos-replicated groups. The ancestor of distributed SQL databases. | [usenix.org](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett) |
-| **Aurora** (Amazon) | 2017, SIGMOD | Sends only redo-log records to a shared storage tier and writes them to 4 of 6 copies across three Availability Zones. Separating compute from storage became the standard design for cloud databases. | [amazon.science](https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases) |
+| **Aurora** (Amazon) | 2017, SIGMOD | Sends only redo-log records to a shared storage tier that keeps six copies across three Availability Zones and confirms a write once 4 of the 6 have it. Separating compute from storage became the standard design for cloud databases. | [amazon.science](https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases) |
 | **Amazon DynamoDB** | 2022, USENIX ATC | Ten years of running a managed NoSQL service: predictable latency, partition splitting, admission control and Multi-Paxos replication. It differs a lot from the 2007 Dynamo design. | [usenix.org](https://www.usenix.org/conference/atc22/presentation/elhemali) |
 | **Memcache at Facebook** | 2013, NSDI | Look-aside caching at billions of requests per second: leases against stale sets and thundering herds, regional pools, and invalidations driven by the database's replication stream. | [usenix.org](https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala) |
 | **TAO** (Facebook) | 2013, USENIX ATC | A read-optimised, graph-aware cache over sharded MySQL that serves objects and their associations. Shows how to build a social graph store with eventual consistency. | [usenix.org](https://www.usenix.org/conference/atc13/technical-sessions/presentation/bronson) |
@@ -78,6 +78,7 @@ flowchart LR
 | **Google File System (GFS)** | 2003, SOSP | One master holds metadata, data lives in 64 MB chunks with three replicas, and consistency is relaxed for append-heavy workloads. It treats component failure as normal. | [research.google](https://research.google/pubs/the-google-file-system/) |
 | **HDFS architecture** (Apache Hadoop) | Design doc | The open-source counterpart of GFS: NameNode and DataNodes, rack-aware replica placement, and the write and read paths. | [hadoop.apache.org](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html) |
 | **Haystack** (Facebook) | 2010, OSDI | Packs billions of small photos into large volume files so that reading a photo needs about one disk seek. The same idea appears in many blob stores. | [usenix.org](https://www.usenix.org/conference/osdi10/finding-needle-haystack-facebooks-photo-storage) |
+| **Tectonic** (Facebook) | 2021, FAST | One exabyte-scale, multitenant file system that replaced Haystack, f4 and HDFS, with its metadata in the ZippyDB key-value store. Shows the move from special-purpose stores to one shared platform. | [usenix.org](https://www.usenix.org/conference/fast21/presentation/pan) |
 
 ## Coordination and consensus
 
@@ -114,14 +115,15 @@ flowchart LR
 |---|---|---|---|
 | **Zanzibar** (Google) | 2019, USENIX ATC | A global authorization service built on relation tuples and Spanner. Many open-source permission systems copy its model. | [usenix.org](https://www.usenix.org/conference/atc19/presentation/pang) |
 | **FoundationDB** (Apple) | 2021, SIGMOD | A transactional key-value store split into separate components, tested with deterministic simulation. It shows how to make a distributed database testable. | [foundationdb.org (PDF)](https://www.foundationdb.org/files/fdb-paper.pdf) |
+| **Metastable failures in the wild** (Penn State, UNH, Twitter) | 2022, OSDI | Studies 22 real incidents from 11 organisations in which a system stayed overloaded after the trigger was gone, because a feedback loop such as retries kept it there. Explains why load shedding and retry limits matter. | [usenix.org](https://www.usenix.org/conference/osdi22/presentation/huang-lexiang) |
 
 The original primer also linked introductory slides on HBase, MongoDB, Memcached and Redis. Those decks are gone. The [NoSQL](/data/nosql/) and [caching](/caching/caching-layers/) pages cover the same material.
 
 ## What changed by 2026
 
-- **GFS became Colossus.** Google moved file-system metadata into a scalable database and dropped the single master. [Google's overview of Colossus](https://cloud.google.com/blog/products/storage-data-transfer/a-peek-behind-colossus-googles-file-system) is a short follow-up to the GFS paper.
+- **GFS became Colossus.** Google moved file-system metadata into Bigtable, served by many metadata servers instead of a single master. [Google's overview of Colossus](https://cloud.google.com/blog/products/storage-data-transfer/a-peek-behind-colossus-googles-file-system) is a short follow-up to the GFS paper.
 - **MapReduce gave way to dataflow engines.** Spark, Flink, Beam and cloud data warehouses replaced hand-written map and reduce jobs. The ideas of partitioning work and re-running failed tasks are unchanged.
-- **Kafka no longer needs ZooKeeper.** Kafka now keeps its metadata in its own Raft-based quorum (KRaft), and Kafka 4.0 removed ZooKeeper mode. Consensus moved inside the system instead of living in a separate service.
+- **Kafka no longer needs ZooKeeper.** Kafka now keeps its metadata in its own Raft-based quorum (KRaft), and Kafka 4.0 removed ZooKeeper mode. Consensus moved inside the system instead of living in a separate service. In 2025 LinkedIn, where Kafka started, [announced Northguard](https://www.infoq.com/news/2025/06/linkedin-northguard-xinfra/), its own log store with sharded, Raft-backed metadata, to get past Kafka's limits at its scale.
 - **Leader-based replication won for new databases.** DynamoDB itself uses Multi-Paxos rather than the leaderless Dynamo design, and the distributed SQL databases inspired by Spanner use Raft or Paxos groups per range. The Dynamo paper is still the best explanation of the leaderless alternative.
 - **Storage was separated from compute.** The Aurora design, with a shared log-structured storage tier under stateless database nodes, is now common across managed Postgres and MySQL services.
 - **Borg led to Kubernetes, and Dapper led to OpenTelemetry.** Both papers explain why the open-source tools you use look the way they do.
@@ -136,7 +138,7 @@ Common mistakes: treating Dynamo (the 2007 paper) and DynamoDB (the service) as 
 
 ## Further reading
 
-- [How to Read a Paper](https://ccr.sigcomm.org/online/files/p83-keshavA.pdf) by S. Keshav: the three-pass method in two pages.
+- [How to Read a Paper](https://svr-sk818-web.cl.cam.ac.uk/keshav/papers/07/paper-reading.pdf) by S. Keshav: the three-pass method in two pages.
 - [Papers We Love](https://github.com/papers-we-love/papers-we-love): a large, community-curated index of computer science papers, sorted by topic.
 - [The Morning Paper archive](https://blog.acolyer.org/): Adrian Colyer's summaries of more than a thousand papers. No new posts since 2021, but the archive is excellent.
 - [Murat Demirbas's blog](https://muratbuffalo.blogspot.com/): regular, readable reviews of new distributed systems papers.

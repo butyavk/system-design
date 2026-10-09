@@ -117,7 +117,7 @@ Tweet IDs are Snowflake-style 64-bit integers: a millisecond timestamp in the hi
 
 - **Tweets:** `tweet_id` (primary key), `author_id`, `text`, `media_ids`, `reply_to`, `created_at`, plus counters (likes, reposts) kept in a separate, frequently updated table. Shard by `tweet_id`. A secondary index on `(author_id, tweet_id)` serves the user timeline, or a second table sharded by `author_id` does the same job.
 - **Follow graph:** two edge lists, `followers(user_id) → [ids]` and `following(user_id) → [ids]`, both sharded by `user_id`. Each `follow` writes both. A hot copy lives in memory because every fan-out reads it.
-- **Home timeline cache:** for each user, a sorted set (Redis/Valkey `ZADD`) keyed by tweet ID. Each entry holds `tweet_id` (8 B), `author_id` (8 B) and a flags byte (retweet, reply). The set is trimmed to about 800 entries. Twitter's 2013 talk described 800 entries per timeline, each timeline replicated 3 times. Mastodon still caps home feeds at 800.
+- **Home timeline cache:** for each user, a sorted set (Redis/Valkey `ZADD`) keyed by tweet ID. Each entry holds `tweet_id` (8 B), `author_id` (8 B) and a flags byte (retweet, reply). The set is trimmed to about 800 entries. Twitter's 2012 "Timelines at Scale" talk described 800 entries per timeline, each timeline replicated 3 times. Mastodon still caps home feeds at 800.
 
 ### Fan-out on write, fan-out on read, or both?
 
@@ -140,7 +140,7 @@ In the hybrid, the "pull" side is cheap. All celebrity tweets from the last two 
 
 The Feeding Frenzy paper (Silberstein et al., SIGMOD 2010) makes this precise. Decide **per producer–consumer pair**: push when the consumer reads more often than the producer posts, and pull otherwise. A celebrity who posts 20 times a day is pulled by fans who open the app 5 times a day, and pushed to fans who refresh 100 times a day. In practice, a single follower-count threshold, around 10⁵–10⁶, captures most of the benefit.
 
-Why push hurts so much for celebrities: Bluesky measured about 600 µs per timeline write. Fanning out sequentially to 2 M followers would take about 20 minutes. Twitter in 2013 reported fan-out to 1 M followers at about 3.5 s at p50 and up to 5 minutes at p99.
+Why push hurts so much for celebrities: Bluesky measured about 600 µs per timeline write. Fanning out sequentially to 2 M followers would take about 20 minutes. The same Twitter talk reported delivery to 1 M followers at about 3.5 s at p50 and up to 5 minutes at p99.
 
 ```python title="timeline.py"
 import bisect
@@ -302,7 +302,7 @@ flowchart LR
 
 ## What's different in 2026
 
-- **Most feeds are ranked.** X's "For You", Instagram and Threads build the feed per request: gather candidates, then rank them with a learned model. X's open-sourced recommendation code (twitter/the-algorithm in 2023; xai-org/x-algorithm, updated as recently as August 2026) describes in-network candidates fetched at read time from an in-memory store of recent posts, out-of-network candidates found by embedding retrieval, and a neural ranker. The chronological "Following" timeline in this case study is still the baseline, and it is what Mastodon and Bluesky's default following feed serve.
+- **Most feeds are ranked.** X's "For You", Instagram and Threads build the feed per request: gather candidates, then rank them with a learned model. X's open-sourced recommendation code (twitter/the-algorithm in 2023; xai-org/x-algorithm, released in January 2026 and updated as recently as September 2026) describes in-network candidates fetched at read time from an in-memory store of recent posts, out-of-network candidates found by embedding retrieval, and a transformer model that ranks both. The chronological "Following" timeline in this case study is still the baseline, and it is what Mastodon and Bluesky's default following feed serve.
 - **Open networks use the same patterns.** Mastodon fans out on write into Redis sorted sets of up to 800 items, and only for recently active users. Bluesky fans out on write into ScyllaDB timelines and added lossy fan-out for extreme follow counts.
 - **Managed building blocks:** a managed Kafka-compatible stream (MSK, Confluent, Redpanda) or Kinesis/Pub/Sub for the tweet log; Valkey or Redis clusters (ElastiCache, Memorystore) for timelines; ScyllaDB, Cassandra, DynamoDB or Bigtable for tweets and edges; OpenSearch, Elasticsearch or Vespa for search; object storage plus a CDN for media. Serverless functions fit side tasks (notification fan-out, media processing) better than the core fan-out, which runs continuously at a high rate.
 - **Search is hybrid.** Keyword (BM25) retrieval is combined with vector retrieval for semantic matches, and both are re-ranked. The inverted index is still the backbone for exact and fresh results.

@@ -132,11 +132,11 @@ An **Availability Zone** (AZ) is one or more data centres with independent power
 | | Multi-AZ | Multi-Region |
 |---|---|---|
 | Protects against | Data-centre failures: power, cooling, network, local disasters | Region-wide outages, large disasters, some control-plane failures |
-| Replication | Synchronous is practical (low single-digit ms) | Usually asynchronous (tens to hundreds of ms); synchronous costs write latency |
+| Replication | Synchronous is practical (about 1 ms round trip) | Usually asynchronous (tens to hundreds of ms); synchronous costs write latency |
 | Typical RPO / RTO | Zero / seconds to minutes | Seconds or more / minutes, unless designed active-active |
 | Cost and complexity | Moderate; most managed services do it for you | High: data residency, conflict handling, global routing, testing |
 
-**Static stability** is a key idea from AWS. Pre-provision enough capacity that losing a zone needs **no** emergency scaling, because the control plane you would call may be impaired too. With three AZs, run each at no more than about two thirds of its tested capacity. Losing one zone then leaves the other two at full but safe load. That means roughly 50% over-provisioning.
+**Static stability** is a key idea from AWS. Pre-provision enough capacity that losing a zone needs **no** emergency scaling, because the control plane you would call may be impaired too. With three AZs, run each at no more than about two thirds of its tested capacity. Losing one zone then leaves the other two at full but safe load. That means roughly 50% over-provisioning. The October 2025 us-east-1 outage showed why: a DNS fault in DynamoDB left new EC2 launches failing for hours, while instances that were already running kept working.
 
 ## Health checks
 

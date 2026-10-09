@@ -97,6 +97,7 @@ One gateway serving web, iOS, Android and partners becomes a compromise that sui
 - **Reverse proxies / L7 load balancers**: NGINX, HAProxy, Envoy, Caddy, Traefik, Varnish (caching). Managed: AWS ALB, Google Cloud Application Load Balancer, Azure Application Gateway and Front Door.
 - **Self-hosted API gateways**: Kong Gateway, Apache APISIX, Tyk, KrakenD, Envoy Gateway. Most Kubernetes-native options now implement the **Kubernetes Gateway API** (`Gateway`, `HTTPRoute`, `GRPCRoute`), the successor to the Ingress API.
 - **Managed API gateways**: Amazon API Gateway, Azure API Management, Google Cloud Apigee and API Gateway.
+- **AI gateways**: a newer variant for traffic to LLM providers (Kong AI Gateway, Cloudflare AI Gateway, Envoy AI Gateway). Same edge role, but quotas count tokens and cost rather than requests, and typical features are provider failover, response caching and usage logging.
 
 ## Trade-offs
 

@@ -32,7 +32,7 @@ flowchart LR
 - **No single server as SPOF.** Clients only know the balancer's address. Servers can be replaced, deployed one by one, or drained for maintenance.
 - **Extras.** TLS termination, connection reuse to backends, request logging and metrics, rate limits, retries, gradual traffic shifting for canary releases.
 
-Hardware appliances (F5, Citrix) still exist in data centres, but most traffic today goes through software: HAProxy, NGINX, Envoy, kernel-level balancers built on IPVS or eBPF/XDP (Facebook's Katran), and managed cloud balancers.
+Hardware appliances (F5 BIG-IP, NetScaler) still exist in data centres, but most traffic today goes through software: HAProxy, NGINX, Envoy, kernel-level balancers built on IPVS or eBPF/XDP (Facebook's Katran), and managed cloud balancers.
 
 ## Layer 4 vs layer 7
 
@@ -66,6 +66,8 @@ Large platforms stack them: an anycast or L4 tier spreads packets across a fleet
 The power-of-two-choices result, from Mitzenmacher's 1996 thesis, is remarkable: sampling just two servers removes most of the imbalance of pure random choice, at almost no cost. That is why it suits setups where many balancers decide independently, such as sidecars or client libraries, and none sees the global picture.
 
 The case for consistent hashing in numbers: with plain `hash mod N`, growing a pool from 10 to 11 servers moves about 91% of keys to a different server, which wipes out every server's local cache. With consistent hashing only about 9% (one eleventh) move. See [partitioning and sharding](/data/partitioning-and-sharding/) for how the ring works.
+
+Self-hosted LLM serving has pushed balancing one step further. Requests differ hugely in cost, and a server that already holds a prompt's prefix in its KV cache answers far faster. The Kubernetes Gateway API Inference Extension lets a gateway ask an endpoint picker that weighs prefix-cache state, load and loaded LoRA adapters, instead of counting connections.
 
 ## Health checks
 
@@ -122,7 +124,7 @@ Within a region, a balancer picks a server. Across regions, **global server load
 ## Examples
 
 - **HAProxy**: a mature, very fast L4/L7 proxy with rich algorithms, active health checks and detailed stats. An LTS branch ships each year.
-- **NGINX**: a web server, reverse proxy and load balancer. The open-source version covers round robin, least connections, hashing, random with two choices and least time. Active health checks and dynamic upstream reconfiguration are part of the commercial NGINX Plus. (Kubernetes' community *ingress-nginx* controller is a separate project and was retired in March 2026; the Gateway API is the suggested successor.)
+- **NGINX**: a web server, reverse proxy and load balancer. The open-source version covers round robin, least connections, hashing, random with two choices and, since 1.31 (2026), least time; since 1.27.3 it can also re-resolve upstream hostnames through DNS. Active health checks and API-driven upstream reconfiguration remain part of the commercial NGINX Plus. (Kubernetes' community *ingress-nginx* controller is a separate project and was retired in March 2026; the Gateway API is the suggested successor.)
 - **Envoy**: an L4/L7 proxy configured dynamically through xDS APIs. It offers P2C least-request, ring hash, Maglev, outlier detection and retries, and is the data plane of many service meshes and API gateways.
 - **Cloud**: AWS ALB (L7) and NLB (L4), Google Cloud Application and Network Load Balancers (global or regional), Azure Application Gateway and Azure Load Balancer, Azure Front Door, Cloudflare Load Balancing.
 

@@ -156,11 +156,11 @@ The design is cloud-agnostic. Service names as of October 2026:
 | Containers | ECS, EKS, Fargate | GKE, Cloud Run | AKS, Container Apps | Kubernetes, Nomad |
 | Functions | Lambda | Cloud Run functions | Azure Functions | Knative, OpenFaaS |
 | NoSQL key-value | DynamoDB | Bigtable, Firestore | Cosmos DB | Cassandra, ScyllaDB |
-| Distributed SQL | Aurora DSQL | Spanner | Elastic clusters (Citus) in Azure Database for PostgreSQL | CockroachDB, YugabyteDB, Vitess |
+| Distributed SQL, sharding | Aurora DSQL | Spanner | Elastic clusters (Citus) in Azure Database for PostgreSQL | CockroachDB, YugabyteDB, Vitess |
 | Data warehouse | Redshift | BigQuery | Microsoft Fabric, Synapse | ClickHouse, Trino on Iceberg |
 | Metrics and logs | CloudWatch | Cloud Monitoring, Cloud Logging | Azure Monitor | Prometheus, Grafana, OpenTelemetry |
 
-Names drift: Google renamed Cloud Functions to Cloud Run functions in 2024, Azure is retiring Azure Cache for Redis in favour of Azure Managed Redis and the classic Azure CDN in favour of Front Door, and AWS closed App Runner to new customers in 2026. Design with the generic component, then pick the product.
+Names drift: Google renamed Cloud Functions to Cloud Run functions in 2024; Azure is retiring Azure Cache for Redis (by September 2028) in favour of Azure Managed Redis and the classic Azure CDN (by September 2027) in favour of Front Door; Microsoft puts new analytics work into Fabric but has not retired Synapse; and AWS closed App Runner to new customers in April 2026, pointing them to ECS Express Mode. Design with the generic component, then pick the product.
 
 ## Step 4 — Scaling the design
 
@@ -217,7 +217,7 @@ flowchart LR
   primary --> replica1 & replica2
 ```
 
-- First tune the database: indexes, query plans, buffer pool size. Then add a **memory cache** with cache-aside for hot objects and query results, and move sessions into it. Memory reads are orders of magnitude faster than an SSD round trip through the database.
+- First tune the database: indexes, query plans, buffer pool size. Then add a **memory cache** with cache-aside for hot objects (assembled objects rather than raw query results; see [caching layers](/caching/caching-layers/)), and move sessions into it. A cache hit skips the query and any disk read, but a remote cache still costs a network round trip (about 0.25 ms in one zone), so the main win is taking load off the database rather than raw latency (see [latency numbers](/reference/latency-numbers/)).
 - Add **read replicas** for traffic the cache misses. At peak, a 90 % hit ratio leaves about 11,600 reads per second for the database tier; at 99 %, about 1,160. That gap is the difference between several replicas and none.
 - Route reads and writes in the data access layer (see `db_router.py`), with read-your-writes for the user who just wrote.
 
@@ -318,7 +318,7 @@ print(bigger.logical_shard(42), bigger.host_for(42))   # 458 pg-45
 
 ### Stage 8 — Multiple regions
 
-**Trigger.** Users on other continents see 150–300 ms round trips; the business can no longer accept a full regional outage; data residency laws require keeping some users' data in their region.
+**Trigger.** Users on other continents see 80–300 ms round trips; the business can no longer accept a full regional outage; data residency laws require keeping some users' data in their region.
 
 ```mermaid
 flowchart TB
@@ -332,7 +332,7 @@ flowchart TB
 
 - **Active-passive**: one region takes writes, the other holds an asynchronous replica and warm capacity. Simple; failover loses the last seconds of writes (RPO above zero) and takes minutes.
 - **Active-active with a home region**: each user's data lives in one region (a *cell*); requests are routed there. Reads can be served locally from replicas; writes go home.
-- **Active-active with a global database**: Spanner, Aurora DSQL or CockroachDB provide strongly consistent multi-region writes at the price of cross-region latency on every commit. Multi-master replication with conflict resolution is the alternative when eventual consistency is acceptable.
+- **Active-active with a global database**: Spanner, Aurora DSQL or CockroachDB provide strongly consistent multi-region writes at the price of cross-region latency on every commit. Multi-leader replication with conflict resolution is the alternative when eventual consistency is acceptable.
 - Practise failover regularly; an untested runbook does not count.
 
 **Cost.** Roughly double the infrastructure, cross-region data transfer fees, and the hardest consistency questions in the whole design.
@@ -354,7 +354,7 @@ flowchart TB
 
 **Containers and Kubernetes.** The deployable unit is a container image, not a hand-configured VM, and configuration management tools (Chef, Puppet, Ansible) have largely given way to immutable images, infrastructure as code (Terraform/OpenTofu, Pulumi) and GitOps. Teams that need full control run Kubernetes (EKS, GKE, AKS); others use simpler container platforms such as ECS on Fargate, Cloud Run or Azure Container Apps. Autoscaling in Stage 6 becomes the Horizontal Pod Autoscaler for services, **KEDA** for scaling workers on queue depth (down to zero), and Cluster Autoscaler or **Karpenter** for nodes.
 
-**Managed databases push Stage 7 out.** Instances with hundreds of cores and terabytes of RAM, storage that grows on its own (Aurora clusters now go up to 256 TiB), serverless capacity, and connection poolers mean a single primary with replicas carries far more than it did in 2016. When you do outgrow it, partitioning can be bought: Aurora PostgreSQL Limitless Database (GA in 2024), Aurora DSQL (GA in 2025), Spanner, Vitess, Citus. Figma's and Notion's write-ups show that teams still choose and plan sharding carefully, and late.
+**Managed databases push Stage 7 out.** Instances with hundreds of cores and terabytes of RAM, storage that grows on its own (Aurora MySQL and PostgreSQL clusters have gone up to 256 TiB since 2025), serverless capacity, and connection poolers mean a single primary with replicas carries far more than it did in 2016. When you do outgrow it, partitioning can be bought: Aurora PostgreSQL Limitless Database (GA in 2024), Aurora DSQL (GA in 2025), Spanner, Vitess, Citus. Figma's and Notion's write-ups show that teams still choose and plan sharding carefully, and late.
 
 **Serverless.** Functions (Lambda, Cloud Run functions, Azure Functions) and serverless containers fit Stage 6 workers, scheduled jobs and spiky or low-traffic APIs: they scale to zero and remove capacity planning. Watch for cold starts, execution-time limits, per-request pricing at sustained high load, and connection storms against relational databases (put a proxy such as RDS Proxy or PgBouncer in front).
 

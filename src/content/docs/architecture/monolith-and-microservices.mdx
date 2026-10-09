@@ -84,7 +84,7 @@ If none of these applies, the split mostly adds cost.
 
 ## What microservices cost
 
-- **Network calls instead of function calls.** Each hop adds latency (often a millisecond or more, versus nanoseconds in-process) and can fail. A request that touches 10 services in sequence, each at 99.9% availability, succeeds only about 99.0% of the time, roughly 87 hours of failure a year instead of under 9.
+- **Network calls instead of function calls.** Each hop adds latency (a few hundred microseconds within a zone, about a millisecond across zones, versus nanoseconds in-process) and can fail. A request that touches 10 services in sequence, each at 99.9% availability, succeeds only about 99.0% of the time, roughly 87 hours of failure a year instead of under 9.
 - **Partial failure.** Timeouts, retries, circuit breakers, idempotency and fallbacks become everyday code. See [resilience patterns](/reliability/resilience-patterns/).
 - **Distributed data.** No cross-service transactions or joins. You need sagas or outbox-based events, accept [eventual consistency](/fundamentals/consistency-patterns/), and duplicate some data for reads.
 - **Operations.** Dozens of pipelines, dashboards, alerts and on-call rotations; [service discovery](/architecture/service-discovery-and-mesh/); distributed tracing and centralised logs ([observability](/reliability/observability/)); version compatibility between services; a platform team to make it all bearable.
@@ -119,7 +119,7 @@ The same pattern works for extracting a module from a modular monolith, or for m
 Serverless fits event-driven glue (react to an upload, a queue message, a webhook), spiky or low-traffic workloads, and scheduled jobs. Watch for:
 
 - **Cold starts** on infrequently used functions (mitigated by provisioned concurrency or isolate-based runtimes);
-- **Execution limits**: Lambda caps a run at 15 minutes, for example;
+- **Execution limits**: a standard Lambda invocation still stops at 15 minutes. Since late 2025, durable functions checkpoint a workflow across many invocations for up to a year, and Lambda Managed Instances allow 90 minutes for asynchronous runs;
 - **Cost at high steady load**, where always-on containers are often cheaper;
 - **Downstream pressure**: thousands of concurrent functions can exhaust database connections;
 - **Fragmentation**: hundreds of tiny functions are a distributed system that is hard to reason about.

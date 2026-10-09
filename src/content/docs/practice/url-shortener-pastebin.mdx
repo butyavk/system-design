@@ -124,7 +124,7 @@ The `Idempotency-Key` header lets a client retry a timed-out create without prod
 
 ```sql title="pastes table (PostgreSQL)"
 CREATE TABLE pastes (
-  shortlink   CHAR(7)      PRIMARY KEY,           -- unique index for free
+  shortlink   VARCHAR(10)  PRIMARY KEY,           -- unique index for free; room for 8+ character keys
   object_key  VARCHAR(64)  NOT NULL,              -- e.g. 'p/aB3xY9q'
   size_bytes  INTEGER      NOT NULL,
   created_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -336,7 +336,7 @@ Scale iteratively: load-test, find the bottleneck, fix it, repeat. The bottlenec
 1. **Read hot spots.** A viral paste can get thousands of reads per second for a single key. Pastes are immutable, so the CDN can cache the rendered page and the API response with a long TTL (capped by expiry). An in-memory cache (Valkey or Redis) holds `key → metadata` with cache-aside reads. Request coalescing at the cache stops a stampede on a cold key. The 2.6 GB weekly hot set fits in one node, and a replica covers failover.
 2. **Object-store round trips.** A first-byte latency of tens of milliseconds and per-request pricing make object storage a poor fit for millions of 1 KB reads. Store small bodies inline, keep large bodies in the bucket, and let the CDN serve them.
 3. **Database reads.** Cache misses go to **read replicas**. Because a new paste is often opened right after creation, read your own write from the primary (or the cache populated at write time) to avoid a replica-lag `404`.
-4. **Database writes.** 40 writes/s is nothing for one primary with a synchronous standby. At 100× (≈ 3,900 writes/s at peak), hash-partition by key across shards or switch to a managed key-value store. Keys are random, so load spreads evenly without hot partitions.
+4. **Database writes.** 40 writes/s is nothing for one primary with a synchronous standby. At 100× (≈ 3,900 writes/s at peak) one well-tuned primary can still take the writes (see [estimation](/start/estimation/)), but 7.2 TB and growth make hash-partitioning by key, or a managed key-value store, the next step. Keys are random, so load spreads evenly without hot partitions.
 5. **Key generation.** Random keys scale horizontally for free. If you use counters, lease ranges so the coordinator is touched once per block.
 6. **Abuse.** Anonymous write endpoints attract spam, malware hosting and phishing redirects. Use per-IP and per-network [rate limiting](/reliability/rate-limiting/) at the edge, CAPTCHA on bursts, scanning of new destination URLs against reputation lists, and a takedown flag that the read path checks (this is where 302 pays off).
 7. **Multiple regions.** Serve reads from the nearest region with a replicated table. Random keys can be minted in any region safely. Counter schemes need region bits or per-region ranges.
@@ -371,8 +371,8 @@ flowchart LR
 
 - **Serverless fits this load.** Four writes per second is a natural fit for functions (Lambda, Cloud Run, Workers) in front of a managed key-value table. You pay per request rather than for idle servers. The design questions do not change: key generation, caching and expiry.
 - **Object storage has conditional writes.** Since August 2024, S3 supports `If-None-Match` on `PutObject`, so the bucket itself can enforce "create only if the key is new". GCS and Azure Blob have long had similar preconditions. A minimal pastebin can therefore store each paste as the object `p/<key>` and need no database at all.
-- **Redirects at the edge.** CloudFront Functions with KeyValueStore and Cloudflare Workers with KV can resolve `key → URL` inside the CDN, with no origin hop. Edge key-value stores are eventually consistent: Cloudflare documents up to about 60 seconds for a write to appear everywhere. A brand-new link must therefore fall back to the origin on a miss instead of returning `404`.
-- **Cache engines.** Redis 8 returned to an open-source licence (AGPLv3) in 2025. The Valkey fork, created in 2024 and backed by the Linux Foundation, is what several cloud providers now offer as managed caches. The cache design is the same with either.
+- **Redirects at the edge.** CloudFront Functions with KeyValueStore and Cloudflare Workers with KV can resolve `key → URL` inside the CDN, with no origin hop. Edge key-value stores are eventually consistent: Cloudflare documents that a write can take 60 seconds or more to appear everywhere. A brand-new link must therefore fall back to the origin on a miss instead of returning `404`.
+- **Cache engines.** Redis 8 (2025) added the open-source AGPLv3 as a licence option alongside RSALv2 and SSPLv1. The Valkey fork, created in 2024 and backed by the Linux Foundation, is what several cloud providers now offer as managed caches. The cache design is the same with either.
 - **Shorteners are a long-term promise.** On 25 August 2025 Google stopped serving goo.gl links that had shown no activity in late 2024, and kept the active ones. Durability, export and a plan for shutdown are part of the design.
 - **What still holds:** the read/write split, immutable content behind a CDN, the birthday math, and keeping analytics asynchronous.
 

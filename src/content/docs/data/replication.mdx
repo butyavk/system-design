@@ -39,7 +39,7 @@ Typical uses:
 
 Replicas can feed further replicas (**cascading**). This takes load off the leader, but each hop adds lag.
 
-The log comes in two flavours. **Physical** replication ships byte-level WAL: the whole cluster is copied, and the replica is read-only. **Logical** replication ships row changes: you can pick tables and even run different major versions. Logical replication also powers change data capture (CDC) tools that stream database changes into Kafka and search indexes.
+The log comes in two flavours. **Physical** replication ships byte-level WAL: the whole cluster is copied, and the replica is read-only. **Logical** replication ships row changes: you can pick tables and even run different major versions. Logical replication also powers change data capture (CDC) tools that stream database changes into Kafka and search indexes. Since PostgreSQL 17, logical replication slots can be synchronised to a standby, so a CDC pipeline survives a failover.
 
 ## Synchronous, asynchronous, semi-synchronous
 
@@ -82,7 +82,7 @@ With asynchronous replicas, a follower is always slightly behind. Lag is usually
 | **Monotonic reads** violated | A comment appears, then disappears on the next refresh (second read hit a more-lagged replica) | Pin each user or session to one replica (for example, hash the user ID). Or have the client send the last position it saw. |
 | **Consistent prefix** violated | Sees an answer before the question it replies to | Keep causally related writes on the same leader or partition. Or track dependencies. |
 
-The position-based fix is precise and cheap. After a write, the application stores the leader's log position: in PostgreSQL the LSN from `pg_current_wal_lsn()`, in MySQL the GTID set. On the next read, it picks a replica whose replayed position (`pg_last_wal_replay_lsn()`) is at least that value. MySQL can also block until a replica catches up with `WAIT_FOR_EXECUTED_GTID_SET()`. PostgreSQL's `synchronous_commit = remote_apply` gives the same effect at commit time, at the cost of slower commits.
+The position-based fix is precise and cheap. After a write, the application stores the leader's log position: in PostgreSQL the LSN from `pg_current_wal_lsn()`, in MySQL the GTID set. On the next read, it picks a replica whose replayed position (`pg_last_wal_replay_lsn()`) is at least that value. MySQL can also block until a replica catches up with `WAIT_FOR_EXECUTED_GTID_SET()`; PostgreSQL 19, in beta as of October 2026, adds a `WAIT FOR LSN` command for the same job. PostgreSQL's `synchronous_commit = remote_apply` gives the same effect at commit time, at the cost of slower commits.
 
 Also expose lag as a metric and alert on it. Take a replica out of the read pool when its lag exceeds what the product tolerates.
 
@@ -123,7 +123,7 @@ flowchart LR
 The price is **write conflicts**: two leaders change the same record concurrently. Strategies, from crude to careful:
 
 - **Avoid them.** Route all writes for a given record (a user, a tenant) to one "home" leader. This is the most common and most effective approach.
-- **Last-writer-wins (LWW).** Keep the version with the highest timestamp. Simple, but it **silently drops** the losing writes, and clock skew decides who "wins". DynamoDB global tables in their default multi-region eventual consistency mode resolve conflicts this way.
+- **Last-writer-wins (LWW).** Keep the version with the highest timestamp. Simple, but it **silently drops** the losing writes, and clock skew decides who "wins". DynamoDB global tables in their default multi-region eventual consistency mode resolve conflicts this way. Since mid-2025 they also offer multi-Region strong consistency: each write reaches a second Region before it returns, and a concurrent write to the same item fails instead of being overwritten.
 - **Merge.** Keep both versions (siblings, tracked by version vectors) and let the application or user merge them, like a shopping cart that unions items.
 - **CRDTs.** Conflict-free replicated data types (counters, sets, maps, text sequences) are designed so that concurrent updates always merge to the same result, with no coordination. They are used in collaborative editors, Redis Software's Active-Active databases and local-first apps.
 - **Detect and abort.** MySQL Group Replication in multi-primary mode certifies each transaction against concurrent ones. The first to be ordered commits everywhere, and the conflicting one rolls back. The result is consistent, but you get aborts under contention.
@@ -210,3 +210,4 @@ Note that the managed **Amazon DynamoDB** service shares the name but not this d
 - [Availability patterns](/fundamentals/availability-patterns/) — active-passive and active-active failover in general.
 - [CAP theorem and PACELC](/fundamentals/cap-theorem/) — the latency vs consistency trade-off behind sync and async replication.
 - [NoSQL databases](/data/nosql/) — wide-column and key-value stores built on leaderless replication.
+- [Consensus and coordination](/fundamentals/consensus-and-coordination/) — safe leader election and fencing during failover, so split brain cannot corrupt data.

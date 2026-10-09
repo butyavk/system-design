@@ -10,7 +10,7 @@ The worked case studies in this section cover a handful of classic problems in d
 
 <Aside type="tip" title="TL;DR">
 - Every question has one **core difficulty** (fan-out, ordering, hot keys, exactly-once, geography). Find it in the first five minutes and spend most of the interview there.
-- Practise with the [interview framework](/start/interview-framework/): requirements, estimates, high-level design, deep dive, scaling.
+- Practise with the [interview framework](/start/interview-framework/): seven steps from requirements and estimates to deep dives, scaling and wrap-up.
 - Use the references after you have sketched your own answer, not before, and compare trade-offs rather than copying a company's architecture.
 </Aside>
 
@@ -42,7 +42,7 @@ Questions already worked through on this site:
 | Key-value store (Redis, DynamoDB) | Partitioning plus replication with tunable consistency; membership and failure detection | [NoSQL](/data/nosql/), [Partitioning](/data/partitioning-and-sharding/), [Replication](/data/replication/) | [Dynamo (SOSP 2007)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf), [DynamoDB (USENIX ATC 2022)](https://www.usenix.org/conference/atc22/presentation/elhemali) |
 | Distributed cache (Memcached) | Hot keys, stampedes on miss, invalidation across regions | [Caching layers](/caching/caching-layers/), [Cache strategies](/caching/cache-strategies/) | [Scaling Memcache at Facebook (NSDI 2013)](https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala) |
 | File sync service (Dropbox, Google Drive) | Chunking and dedup, conflict handling, a client that syncs correctly offline | [Object storage](/data/object-storage/), [Consistency patterns](/fundamentals/consistency-patterns/) | [Dropbox: rewriting the sync engine](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine), [Inside the Magic Pocket](https://dropbox.tech/infrastructure/inside-the-magic-pocket) |
-| Unique ID generator | Roughly time-ordered 64-bit IDs with no central bottleneck; clock skew | [Partitioning](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
+| Unique ID generator | Roughly time-ordered 64-bit IDs with no central bottleneck; clock skew | [URL shortener](/practice/url-shortener-pastebin/), [Partitioning](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
 | Serving data from multiple data centers | Consistency vs latency across regions; failover without losing writes | [Replication](/data/replication/), [CAP theorem](/fundamentals/cap-theorem/) | [Spanner (OSDI 2012)](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett), [Transactions across datacenters](https://snarfed.org/transactions_across_datacenters_io.html) |
 | Distributed job scheduler (cron at scale) | Run each job exactly once despite failures; leader election; avoiding midnight spikes | [Queues](/async/queues-and-back-pressure/), [Resilience patterns](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
 | Metrics and logging pipeline | Ingesting millions of points per second, compression, retention tiers, fast queries | [Observability](/reliability/observability/), [Event streaming](/async/event-streaming/) | [Gorilla (VLDB 2015)](https://www.vldb.org/pvldb/vol8/p1816-teller.pdf), [Monarch (VLDB 2020)](https://research.google/pubs/monarch-googles-planet-scale-in-memory-time-series-database/) |
@@ -90,7 +90,8 @@ Questions already worked through on this site:
 
 | Question | Key challenge | On this site | References |
 |---|---|---|---|
-| LLM chat assistant serving | GPU capacity and batching, KV-cache memory, streaming tokens, per-user token quotas | [Rate limiting](/reliability/rate-limiting/), [HTTP](/communication/http/), [Queues](/async/queues-and-back-pressure/) | [PagedAttention / vLLM (SOSP 2023)](https://arxiv.org/abs/2309.06180), [Orca (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu) |
+| LLM chat assistant serving | GPU capacity and batching, KV-cache memory, streaming tokens, per-user token quotas | [LLM-powered systems](/architecture/llm-applications/), [Rate limiting](/reliability/rate-limiting/), [Queues](/async/queues-and-back-pressure/) | [PagedAttention / vLLM (SOSP 2023)](https://arxiv.org/abs/2309.06180), [Orca (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu) |
+| Question answering over company documents (RAG) | Chunking and embedding pipeline, vector index recall vs latency, keeping the index fresh, enforcing each user's document permissions | [LLM-powered systems](/architecture/llm-applications/), [Search query cache](/practice/search-query-cache/) | [RAG (Lewis et al., NeurIPS 2020)](https://arxiv.org/abs/2005.11401), [HNSW (Malkov and Yashunin)](https://arxiv.org/abs/1603.09320) |
 
 <Aside type="caution" title="References are not answers">
 Company write-ups describe one team's constraints at one point in time. Discord moved from Cassandra to ScyllaDB, Dropbox rewrote its sync engine after years in production, and Twitter's 2012 timeline talk predates most of today's tooling. Use them to see which trade-offs mattered, then make your own choices for the requirements in front of you.
@@ -100,7 +101,7 @@ Company write-ups describe one team's constraints at one point in time. Discord 
 
 - **Dropped:** "design a garbage collector" (a language-runtime question, not system design) and Facebook graph search (the product was wound down long ago; the [social graph](/practice/social-graph/) case study covers the core).
 - **Merged:** Facebook chat into the general chat app question; Facebook timeline into news feed.
-- **Added:** notification system, video streaming, ride-hailing dispatch, proximity search, typeahead, distributed job scheduler, payment system, metrics and logging pipeline, ad click aggregation and LLM serving — all now common in interviews.
+- **Added:** notification system, video streaming, ride-hailing dispatch, proximity search, typeahead, distributed job scheduler, payment system, metrics and logging pipeline, ad click aggregation, LLM serving and retrieval-augmented generation (RAG) — all now common in interviews.
 - **References replaced:** most of the original links (Quora threads, Slideshare decks, old highscalability.com posts) were dead or low quality; this list prefers papers and posts by the teams that built the systems.
 
 <Aside type="note" title="In the interview">

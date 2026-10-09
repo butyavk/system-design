@@ -101,6 +101,7 @@ The names of the levels are shared, but the behaviour is not:
 | Oracle | Read committed | Its "serializable" is snapshot isolation, so write skew is possible. |
 | SQL Server | Read committed (locking) | Row-versioned read committed (RCSI) is the default on Azure SQL Database. A separate `SNAPSHOT` level exists. |
 | CockroachDB, Spanner | Serializable | Weaker levels are opt-in (read committed in CockroachDB, repeatable read in Spanner). |
+| Aurora DSQL | Repeatable read (fixed) | Snapshot isolation with optimistic concurrency: conflicts surface at commit as SQLSTATE `40001`, so clients must retry. |
 
 <Aside type="caution" title="Do not trust level names">
 The same name can mean different guarantees in different engines. The open-source Hermitage test suite documents what each engine actually prevents. Check your engine before relying on a level for correctness.

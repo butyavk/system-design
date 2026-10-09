@@ -25,7 +25,7 @@ import { Aside } from '@astrojs/starlight/components';
 4. **Общие паттерны.** Сравнивайте статьи одной группы. Chubby и ZooKeeper оформляют консенсус в небольшой сервис; Bigtable и Cassandra хранят данные в отсортированных неизменяемых файлах плюс буфер в памяти.
 5. **Извлечённые уроки.** Разделы с оценкой и «опытом эксплуатации» часто самые практичные: в них написано, что удивило команду в продакшене.
 
-Хорошо работает чтение в три прохода. Сначала просмотрите аннотацию, заголовки и рисунки (минут 10). Затем внимательно прочитайте раздел с архитектурой. Доказательства и оценку читайте, только если они нужны. Этот метод описан в короткой заметке С. Кешава [How to Read a Paper](https://ccr.sigcomm.org/online/files/p83-keshavA.pdf).
+Хорошо работает чтение в три прохода. Сначала просмотрите аннотацию, заголовки и рисунки (минут 10). Затем внимательно прочитайте раздел с архитектурой. Доказательства и оценку читайте, только если они нужны. Этот метод описан в короткой заметке С. Кешава [How to Read a Paper](https://svr-sk818-web.cl.cam.ac.uk/keshav/papers/07/paper-reading.pdf).
 
 ## Как связаны идеи
 
@@ -66,7 +66,7 @@ flowchart LR
 | **Dynamo** (Amazon) | 2007, SOSP | Классическое хранилище «ключ — значение» без лидера, всегда доступное для записи: консистентное хеширование, нестрогие кворумы (sloppy quorum), hinted handoff, векторные часы и восстановление через деревья Меркла. | [allthingsdistributed.com (PDF)](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf) |
 | **Cassandra** (Facebook) | 2009, LADIS | Партиционирование и репликация из Dynamo плюс модель хранения из Bigtable. Хороший пример настраиваемой согласованности и её цены. | [cornell.edu (PDF)](https://www.cs.cornell.edu/projects/ladis2009/papers/lakshman-ladis2009.pdf) |
 | **Spanner** (Google) | 2012, OSDI | Глобальный SQL с внешне согласованными транзакциями. TrueTime ограничивает неопределённость часов, а данные разбиты на группы, реплицируемые через Paxos. Предок распределённых SQL-баз. | [usenix.org](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett) |
-| **Aurora** (Amazon) | 2017, SIGMOD | Отправляет в общий слой хранения только записи redo-лога и пишет их в 4 копии из 6 в трёх зонах доступности. Разделение вычислений и хранения стало стандартом для облачных баз данных. | [amazon.science](https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases) |
+| **Aurora** (Amazon) | 2017, SIGMOD | Отправляет только записи redo-лога в общий слой хранения, который держит шесть копий в трёх зонах доступности и подтверждает запись, когда её получили 4 из 6. Разделение вычислений и хранения стало стандартом для облачных баз данных. | [amazon.science](https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases) |
 | **Amazon DynamoDB** | 2022, USENIX ATC | Десять лет эксплуатации управляемого NoSQL-сервиса: предсказуемая задержка, разделение партиций, контроль допуска нагрузки и репликация через Multi-Paxos. Сильно отличается от Dynamo 2007 года. | [usenix.org](https://www.usenix.org/conference/atc22/presentation/elhemali) |
 | **Memcache в Facebook** | 2013, NSDI | Кэш сбоку от базы (look-aside) на миллиардах запросов в секунду: аренды (leases) против устаревших записей и «стада» запросов (thundering herd), региональные пулы и инвалидация по потоку репликации базы. | [usenix.org](https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala) |
 | **TAO** (Facebook) | 2013, USENIX ATC | Оптимизированный для чтения кэш над шардированным MySQL, который понимает структуру графа и отдаёт объекты и связи между ними. Показывает, как построить хранилище социального графа с согласованностью в конечном счёте. | [usenix.org](https://www.usenix.org/conference/atc13/technical-sessions/presentation/bronson) |
@@ -78,6 +78,7 @@ flowchart LR
 | **Google File System (GFS)** | 2003, SOSP | Один мастер хранит метаданные, данные лежат в чанках по 64 МБ с тремя репликами, а согласованность ослаблена ради нагрузки, где файлы в основном дописываются. Отказы компонентов считаются нормой. | [research.google](https://research.google/pubs/the-google-file-system/) |
 | **Архитектура HDFS** (Apache Hadoop) | Проектный документ | Открытый аналог GFS: NameNode и DataNode, размещение реплик с учётом стоек, пути записи и чтения. | [hadoop.apache.org](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html) |
 | **Haystack** (Facebook) | 2010, OSDI | Складывает миллиарды мелких фотографий в большие файлы-тома, чтобы чтение фото требовало примерно одного обращения к диску. Та же идея используется во многих хранилищах блобов. | [usenix.org](https://www.usenix.org/conference/osdi10/finding-needle-haystack-facebooks-photo-storage) |
+| **Tectonic** (Facebook) | 2021, FAST | Единая мультиарендная файловая система эксабайтного масштаба, заменившая Haystack, f4 и HDFS; метаданные хранятся в хранилище «ключ — значение» ZippyDB. Показывает переход от специализированных хранилищ к одной общей платформе. | [usenix.org](https://www.usenix.org/conference/fast21/presentation/pan) |
 
 ## Координация и консенсус
 
@@ -114,14 +115,15 @@ flowchart LR
 |---|---|---|---|
 | **Zanzibar** (Google) | 2019, USENIX ATC | Глобальный сервис авторизации на кортежах отношений поверх Spanner. Его модель повторяют многие открытые системы управления правами. | [usenix.org](https://www.usenix.org/conference/atc19/presentation/pang) |
 | **FoundationDB** (Apple) | 2021, SIGMOD | Транзакционное хранилище «ключ — значение», разделённое на независимые компоненты и проверяемое детерминированной симуляцией. Показывает, как сделать распределённую базу тестируемой. | [foundationdb.org (PDF)](https://www.foundationdb.org/files/fdb-paper.pdf) |
+| **Metastable failures in the wild** (Penn State, UNH, Twitter) | 2022, OSDI | Разбор 22 реальных инцидентов в 11 организациях, где система оставалась перегруженной и после того, как исходная причина исчезла: её удерживала петля обратной связи, например повторные попытки. Объясняет, почему важны сброс нагрузки и ограничение повторов. | [usenix.org](https://www.usenix.org/conference/osdi22/presentation/huang-lexiang) |
 
 В оригинальном Primer также были ссылки на вводные слайды по HBase, MongoDB, Memcached и Redis. Этих презентаций больше нет; тот же материал есть на страницах о [NoSQL](/data/nosql/) и [кэшировании](/caching/caching-layers/).
 
 ## Что изменилось к 2026 году
 
-- **GFS превратилась в Colossus.** Google перенесла метаданные файловой системы в масштабируемую базу данных и отказалась от единственного мастера. [Обзор Colossus от Google](https://cloud.google.com/blog/products/storage-data-transfer/a-peek-behind-colossus-googles-file-system) — короткое продолжение статьи о GFS.
+- **GFS превратилась в Colossus.** Google перенесла метаданные файловой системы в Bigtable, и их обслуживает множество серверов метаданных вместо единственного мастера. [Обзор Colossus от Google](https://cloud.google.com/blog/products/storage-data-transfer/a-peek-behind-colossus-googles-file-system) — короткое продолжение статьи о GFS.
 - **MapReduce уступил место dataflow-движкам.** Spark, Flink, Beam и облачные хранилища данных заменили написанные вручную задачи map и reduce. Идеи разбиения работы и перезапуска упавших задач остались прежними.
-- **Kafka больше не нужен ZooKeeper.** Теперь Kafka хранит метаданные в собственном кворуме на Raft (KRaft), а в Kafka 4.0 режим ZooKeeper удалён. Консенсус переехал из отдельного сервиса внутрь самой системы.
+- **Kafka больше не нужен ZooKeeper.** Теперь Kafka хранит метаданные в собственном кворуме на Raft (KRaft), а в Kafka 4.0 режим ZooKeeper удалён. Консенсус переехал из отдельного сервиса внутрь самой системы. В 2025 году LinkedIn, где родилась Kafka, [представил Northguard](https://www.infoq.com/news/2025/06/linkedin-northguard-xinfra/) — собственное хранилище логов с шардированными метаданными на Raft, чтобы обойти ограничения Kafka на своём масштабе.
 - **В новых базах победила репликация с лидером.** Сама DynamoDB использует Multi-Paxos, а не схему Dynamo без лидера, а распределённые SQL-базы, вдохновлённые Spanner, используют группы Raft или Paxos на каждый диапазон ключей. При этом статья о Dynamo остаётся лучшим объяснением подхода без лидера.
 - **Хранение отделилось от вычислений.** Схема Aurora — общий слой хранения на основе лога под вычислительными узлами без состояния — теперь распространена в управляемых сервисах Postgres и MySQL.
 - **Из Borg вырос Kubernetes, из Dapper — OpenTelemetry.** Обе статьи объясняют, почему открытые инструменты, которыми вы пользуетесь, устроены именно так.
@@ -136,7 +138,7 @@ flowchart LR
 
 ## Что почитать
 
-- [How to Read a Paper](https://ccr.sigcomm.org/online/files/p83-keshavA.pdf), С. Кешав: метод трёх проходов на двух страницах.
+- [How to Read a Paper](https://svr-sk818-web.cl.cam.ac.uk/keshav/papers/07/paper-reading.pdf), С. Кешав: метод трёх проходов на двух страницах.
 - [Papers We Love](https://github.com/papers-we-love/papers-we-love): большой каталог статей по информатике, который ведёт сообщество, с разбивкой по темам.
 - [Архив The Morning Paper](https://blog.acolyer.org/): разборы более тысячи статей от Адриана Колиера. Новых записей нет с 2021 года, но архив превосходный.
 - [Блог Мурата Демирбаша](https://muratbuffalo.blogspot.com/): регулярные понятные обзоры новых статей по распределённым системам.

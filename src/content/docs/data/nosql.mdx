@@ -28,7 +28,7 @@ The line has blurred since the original primer was written. MongoDB has supporte
 
 ## BASE vs ACID
 
-**ACID** (atomicity, consistency, isolation, durability) is the contract of a classic relational transaction. **BASE** was coined as its counterpart for large, partitioned systems, most famously in Dan Pritchett's 2008 ACM Queue article:
+**ACID** (atomicity, consistency, isolation, durability) is the contract of a classic relational transaction. **BASE** was coined as its counterpart for large cluster services by Eric Brewer's group at Berkeley in 1997, and popularised by Dan Pritchett's 2008 ACM Queue article:
 
 - **Basically available** — the system keeps answering, even if some answers are partial or stale.
 - **Soft state** — replicas may hold different values at a given moment; state changes as replication catches up.
@@ -37,7 +37,7 @@ The line has blurred since the original primer was written. MongoDB has supporte
 | Property | ACID | BASE |
 |---|---|---|
 | Unit of correctness | Transaction across many rows | Single item or partition |
-| On a network partition | Prefers consistency (may reject writes) | Prefers availability (may serve stale data) |
+| Typical CAP behaviour on a partition (not part of ACID itself) | Prefers consistency (may reject writes) | Prefers availability (may serve stale data) |
 | Conflict handling | Prevented by locks or MVCC | Detected and resolved later (last-writer-wins, version vectors, CRDTs) |
 | Who keeps invariants | The database | Largely the application |
 
@@ -51,7 +51,7 @@ In practice, the choice is per operation, not per product. Cassandra lets each q
 
 - **Strengths:** simplest model to partition and replicate; constant-time lookups; very high throughput; values can be anything.
 - **Weaknesses:** the store cannot query inside values; secondary access paths mean maintaining extra keys yourself.
-- **Examples:** Redis and Valkey (in-memory, rich data structures), Amazon DynamoDB, etcd (small, strongly consistent configuration data), FoundationDB, and embedded engines such as RocksDB that sit underneath many other databases.
+- **Examples:** Redis and Valkey (in-memory, rich data structures; Valkey is the BSD-licensed fork made after Redis's 2024 licence change, and Redis 8 added an AGPLv3 option in 2025), Amazon DynamoDB, etcd (small, strongly consistent configuration data), FoundationDB, and embedded engines such as RocksDB that sit underneath many other databases.
 - **Use for:** sessions, caches, feature flags, counters, shopping carts, idempotency keys.
 
 ### Document stores
@@ -69,7 +69,7 @@ In practice, the choice is per operation, not per product. Cassandra lets each q
 
 - **Strengths:** massive write throughput (log-structured, LSM-tree storage); linear scale-out to hundreds of nodes; multi-datacentre replication; tunable consistency.
 - **Weaknesses:** you must design one table per query; no joins; deletes create tombstones that slow reads until compaction; unbounded partitions become hot spots.
-- **Examples:** Apache Cassandra (5.0 added storage-attached secondary indexes and vector search), ScyllaDB (Cassandra-compatible; in late 2024 it announced a move to a source-available licence), Google Cloud Bigtable, Apache HBase.
+- **Examples:** Apache Cassandra (5.0 added storage-attached secondary indexes and vector search), ScyllaDB (Cassandra-compatible; source-available since version 2025.1, with 6.2 the last AGPL release), Google Cloud Bigtable, Apache HBase.
 - **Use for:** time-ordered data at scale — messaging history, IoT telemetry, activity feeds, fraud signals.
 
 ### Graph databases
@@ -186,3 +186,4 @@ A query on `PK = CUSTOMER#42` with `SK` beginning with `ORDER#` returns the cust
 - [Replication](/data/replication/) — leader-based and leaderless replication behind BASE behaviour.
 - [CAP theorem and PACELC](/fundamentals/cap-theorem/) — the consistency/availability trade-off in formal terms.
 - [Event streaming](/async/event-streaming/) — how change streams keep search and vector indexes in sync.
+- [LLM-powered systems](/architecture/llm-applications/) — vector and hybrid search as the retrieval layer for RAG.

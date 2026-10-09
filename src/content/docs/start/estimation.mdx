@@ -11,7 +11,7 @@ A back-of-the-envelope estimate is a quick calculation, done with round numbers,
 
 <Aside type="tip" title="TL;DR">
 - Start from users and actions, then derive **QPS, bandwidth and storage**, in that order.
-- One day ≈ 10⁵ seconds, so **1 million per day ≈ 12 per second**. Multiply the average by 2–10 for the peak.
+- One day is 86,400 s ≈ 10⁵ s, and **1 million per day ≈ 12 per second**. Multiply the average by 2–10 for the peak.
 - Round to one significant figure and keep the units on every number.
 - An estimate is worth nothing until you say what it means: "fits in one database", "needs a CDN", "storage is the cost driver".
 </Aside>
@@ -22,7 +22,7 @@ A back-of-the-envelope estimate is a quick calculation, done with round numbers,
 
 1. **Write down the assumptions.** Daily active users, actions per user per day, read-to-write ratio, average object size, how long data is kept. If the interviewer does not give them, propose round numbers and say them out loud.
 
-2. **Turn daily counts into rates.** Divide by 86,400 s, or by 10⁵ for a quick estimate (that underestimates by about 15%, which rarely matters). Do it separately for writes and reads.
+2. **Turn daily counts into rates.** Divide by 86,400 s, or by 10⁵ for a quick estimate (that underestimates by about 14%, which rarely matters). Do it separately for writes and reads.
 
 3. **Find the peak.** Traffic is not flat: a daily peak is typically 2–3× the average, and launches or events can reach 10×. Size the servers for the peak, and the storage for the average.
 
@@ -69,7 +69,7 @@ Handy products: 1 KB × 1 million = 1 GB, 1 MB × 1 million = 1 TB, 1 GB × 1,00
 | Valkey or Redis node | 100,000+ operations/s (more with I/O threads); dataset limited by RAM |
 | Kafka-style broker | Hundreds of MB/s of writes |
 | Server memory | 256 GB – 2 TB |
-| Local NVMe | 1–30 TB per drive, about a million random reads/s |
+| Local NVMe | 1–30 TB per drive (QLC drives up to 122 TB), about a million random reads/s |
 | Network port | 25–100 Gbit/s |
 
 These figures vary a lot with the workload, but they tell you whether you need one machine, ten or a thousand. For the time each operation takes, see [latency numbers](/reference/latency-numbers/).
@@ -88,7 +88,7 @@ Assumptions: 10 million daily users, of whom one in ten creates a short link eac
 | Storage for 5 years, 3 copies | 180 GB × 5 × 3 | ≈ 2.7 TB |
 | Links stored after 5 years | 1 M × 365 × 5 | ≈ 1.8 billion |
 
-**What it means.** The write rate is tiny and the whole dataset fits on one database server with replicas. Reads are where the load is, and they are highly cacheable: the hot set of recent links fits in a few gigabytes of cache memory. Short keys need to cover about 2 billion links, which 7 Base62 characters do with room to spare. A sharded NoSQL cluster is not needed here; a CDN or cache in front of a replicated relational database is. The full design is in [Design Pastebin or a URL shortener](/practice/url-shortener-pastebin/).
+**What it means.** The write rate is tiny and the whole dataset fits on one database server with replicas. Reads are where the load is, and they are highly cacheable: the hot set of recent links fits in a few gigabytes of cache memory. Short keys need to cover about 2 billion links, which 7 Base62 characters do with room to spare. A sharded NoSQL cluster is not needed here; a CDN or cache in front of a replicated relational database is. The full design, with somewhat different assumptions, is in [Design Pastebin or a URL shortener](/practice/url-shortener-pastebin/).
 
 ## Worked example 2: photo sharing
 

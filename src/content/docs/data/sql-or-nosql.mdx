@@ -72,7 +72,7 @@ Before adding a new datastore, check whether the database you already run can do
 |---|---|---|
 | Flexible documents | `jsonb` type with GIN indexes and JSON path queries | Documents are large and rewritten often, or writes outgrow one primary |
 | Full-text search | `tsvector`, `tsquery`, GIN indexes, ranking | You need typo tolerance, rich relevance tuning, facets at scale |
-| Vector search | `pgvector` extension: HNSW and IVFFlat indexes, L2, inner-product and cosine distance | Hundreds of millions of vectors, or heavy filtered ANN load |
+| Vector search | `pgvector` extension: HNSW and IVFFlat indexes; L2, inner-product, cosine, L1, Hamming and Jaccard distance; half-precision and sparse vectors | Hundreds of millions of vectors, or heavy filtered ANN load |
 | Time-series | Declarative partitioning; the TimescaleDB extension | Very high cardinality or ingest rates that need a dedicated TSDB |
 | Queues | `SELECT … FOR UPDATE SKIP LOCKED` | Thousands of messages per second or fan-out to many consumers |
 | Key-value cache | Unlogged tables | Sub-millisecond latency or very high QPS (use Redis or Valkey) |
@@ -99,7 +99,7 @@ FROM products
 WHERE attrs @> '{"color": "red", "waterproof": true}';
 ```
 
-Typed columns hold what every row has and what you join or constrain on; `jsonb` holds the long tail of optional attributes. Similarly, `pgvector` adds a `vector(n)` column type and nearest-neighbour operators (`<->` for L2, `<=>` for cosine distance), so an embedding can sit next to the row it describes and be filtered with ordinary `WHERE` clauses in the same transaction.
+Typed columns hold what every row has and what you join or constrain on; `jsonb` holds the long tail of optional attributes. Similarly, `pgvector` adds a `vector(n)` column type and nearest-neighbour operators (`<->` for L2, `<=>` for cosine distance), so an embedding can sit next to the row it describes and be filtered with ordinary `WHERE` clauses in the same transaction. Since version 0.8, iterative index scans keep reading the ANN index until enough rows pass the filter, so a selective `WHERE` no longer returns too few results.
 
 The limits are real: one primary takes all writes, large `jsonb` values are rewritten in full on every update, and vacuum, connection limits and replication lag need attention at scale. But "one well-run PostgreSQL plus a cache" carries a surprising number of products a long way.
 

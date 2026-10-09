@@ -10,7 +10,7 @@ A "Best Sellers in Books" list looks like a simple `ORDER BY units DESC LIMIT 10
 
 <Aside type="tip" title="TL;DR">
 - Sales events land in a durable log and in object storage; nothing on the checkout path waits for ranking.
-- An aggregation job counts units per `(category, product)` over a sliding 7-day window: an hourly batch job (MapReduce/Spark) in the classic design, a windowed streaming job (Flink/Kafka Streams) with hourly panes today.
+- An aggregation job counts units per `(category, product)` over a sliding 7-day window: an hourly batch job (MapReduce/Spark) in the classic design, a streaming job (Flink, Kafka Streams) that keeps hourly panes today.
 - Top-N per category is a bounded heap per key, not a global sort. Approximate sketches (Count-Min, Space-Saving) are for unbounded key spaces, not for 25 million product–category pairs.
 - The read side is tiny (top 100 × 1,000 categories ≈ 1.6 MB): publish versioned snapshots to a key-value store, cache them in memory and at the CDN.
 </Aside>
@@ -307,7 +307,7 @@ flowchart LR
 
 ### Windows in event time
 
-The stream job works in **event time** (when the sale happened), not processing time, and uses **watermarks** to decide when an hour is complete. A sliding 7-day window that advances every hour would put each event into 168 overlapping windows if implemented naively. Engines avoid that copy by storing **hourly panes** and combining them: the weekly total is the sum of 168 pane totals, updated by adding the newest pane and retracting the oldest.
+The stream job works in **event time** (when the sale happened), not processing time, and uses **watermarks** to decide when an hour is complete. A sliding 7-day window that advances every hour would put each event into 168 overlapping windows if implemented naively. Flink SQL's window aggregation avoids that by splitting hopping windows into shared slices; Flink's DataStream windows and Kafka Streams hopping windows still update every overlapping window. The portable fix is to store **hourly panes** yourself and combine them: the weekly total is the sum of 168 pane totals, updated by adding the newest pane and retracting the oldest.
 
 ```python title="sliding_topk.py"
 from collections import Counter, defaultdict
@@ -351,7 +351,7 @@ Cancellations and refunds arrive as negative quantities in the same stream, so t
 ### Top-K per category, at scale
 
 - **Exact, partitioned.** Partition the stream by `product_id`, keep exact totals, and let each partition emit its local top N per category. Because every product lives in exactly one partition, the global top N is contained in the union of local top-N lists, so a small merge step is exact. This also defuses hot categories: "Books" is spread over all partitions instead of one.
-- **Approximate, bounded memory.** When the key space is unbounded — search queries, URLs, hashtags, or every product × every region × every window — exact counters stop fitting. A **Count-Min Sketch** estimates any item's count with a one-sided error of at most `ε × N` (N = total count), using `⌈e/ε⌉ × ⌈ln(1/δ)⌉` counters. Pair it with a small heap of candidates to get **heavy hitters**. Sketches with the same width, depth and hash functions merge by adding cells, so per-partition sketches combine cleanly. **Space-Saving** and the frequent-items sketch in Apache DataSketches solve the same problem with tighter guarantees for the top items.
+- **Approximate, bounded memory.** When the key space is unbounded — search queries, URLs, hashtags, or every product × every region × every window — exact counters stop fitting. A **Count-Min Sketch** estimates any item's count with a one-sided error of at most `ε × N` (N = total count) with probability at least `1 − δ`, using `⌈e/ε⌉ × ⌈ln(1/δ)⌉` counters. Pair it with a small heap of candidates to get **heavy hitters**. Sketches with the same width, depth and hash functions merge by adding cells, so per-partition sketches combine cleanly. **Space-Saving** solves the same problem deterministically with about `1/ε` counters, and Apache DataSketches ships a production frequent-items sketch.
 
 ```python title="cms_topk.py"
 import hashlib
@@ -398,7 +398,7 @@ print(sketch.width, sketch.depth, sketch.top())
 # 2719 5 [('p0', 21958), ('p1', 11208), ('p2', 7338)]
 ```
 
-With `ε = 0.001` and `δ = 0.01` the sketch has 2,719 × 5 = 13,595 counters, about 54 KB per category. On this skewed sample the estimates for the top three match the exact counts; the guarantee is only that no estimate exceeds the truth by more than 0.1 % of all sales. Two limits matter: a plain sketch cannot subtract expired windows cleanly (keep one sketch per pane), and its error is relative to the *total*, so it is precise for best-sellers and useless for the long tail.
+With `ε = 0.001` and `δ = 0.01` the sketch has 2,719 × 5 = 13,595 counters, about 54 KB per category. On this skewed sample the estimates for the top three match the exact counts; the guarantee is only that, with 99 % probability, an estimate exceeds the truth by no more than 0.1 % of all sales. Two limits matter: a plain sketch cannot subtract expired windows cleanly (keep one sketch per pane), and its error is relative to the *total*, so it is precise for best-sellers and useless for the long tail.
 
 ### Serving
 
@@ -424,7 +424,7 @@ With `ε = 0.001` and `δ = 0.01` the sketch has 2,719 × 5 = 13,595 counters, a
 - [MapReduce: Simplified Data Processing on Large Clusters](https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf) — Dean and Ghemawat, OSDI 2004: the model behind the batch job.
 - [The Dataflow Model](https://research.google/pubs/the-dataflow-model-a-practical-approach-to-balancing-correctness-latency-and-cost-in-massive-scale-unbounded-out-of-order-data-processing/) — Akidau et al., VLDB 2015: event time, windows, watermarks and triggers.
 - [Streaming 101: The world beyond batch](https://www.oreilly.com/radar/the-world-beyond-batch-streaming-101/) — Tyler Akidau's readable introduction to the same ideas.
-- [An Improved Data Stream Summary: The Count-Min Sketch](https://dsf.berkeley.edu/cs286/papers/countmin-latin2004.pdf) — Cormode and Muthukrishnan, the original paper.
+- [An Improved Data Stream Summary: The Count-Min Sketch and its Applications](https://dsf.berkeley.edu/cs286/papers/countmin-latin2004.pdf) — Cormode and Muthukrishnan, the original paper.
 - [Efficient Computation of Frequent and Top-k Elements in Data Streams](https://www.cs.ucsb.edu/sites/default/files/documents/2005-23.pdf) — Metwally, Agrawal and El Abbadi: the Space-Saving algorithm.
 - [Apache DataSketches: frequency sketches](https://datasketches.apache.org/docs/Frequency/FrequencySketches.html) — production-grade heavy-hitter sketches.
 

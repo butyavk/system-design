@@ -4,10 +4,10 @@
 // All values are in nanoseconds. They are *typical, order-of-magnitude* figures
 // for 2026-era hardware and cloud networks, not guarantees: `low`/`high` give the
 // spread you will meet in practice. `value2012` is the classic "numbers every
-// programmer should know" table (Jeff Dean / Peter Norvig, as published in the
-// 2012 gist) where it has a comparable row.
+// programmer should know" table (Peter Norvig's and Jeff Dean's figures from the
+// 2000s, as compiled in Jonas Bonér's 2012 gist) where it has a comparable row.
 //
-// Research notes (2026-10-08):
+// Research notes (2026-10-08, values and links re-checked 2026-10-09):
 // - CPU caches: L1D is 4–5 cycles on Zen 5, Lion Cove, Neoverse V2 and Xeon 6;
 //   L2 is 11–16 cycles; L3 is ~9 ns (Zen 5 client) to ~33 ns (Xeon 6 mesh).
 //   At 2.8–5.7 GHz that is ~0.7–1.8 ns for L1 and ~2.5–5.5 ns for L2.
@@ -16,15 +16,17 @@
 // - Branch mispredict: LLVM scheduling models use 13 cycles (Zen 4, "11 to 18")
 //   and 14 cycles (Golden Cove) → ~3 ns at 4–5 GHz.
 // - Mutex / thread wake-up: ~18 ns uncontended on Zen 4 (nazquadri.com);
-//   9 ns lock+unlock and ~6–10 µs per thread hand-off measured for this page on a
+//   6–9 ns lock+unlock and ~6–17 µs per thread hand-off measured for this page on a
 //   2-vCPU cloud VM (Xeon @ 2.8 GHz, glibc, gcc -O2).
-// - Compression: zstd -1 510 MB/s, LZ4 675 MB/s compress / 3,850 MB/s
-//   decompress, Snappy 520 MB/s (zstd README, i7-9700K @ 4.9 GHz).
+// - Compression: zstd 1.5.7 -1 510 MB/s compress / 1,550 MB/s decompress,
+//   LZ4 1.10.0 675 MB/s / 3,850 MB/s, Snappy 1.2.1 520 MB/s (one lzbench table in
+//   the zstd README: i7-9700K @ 4.9 GHz, Silesia corpus). The LZ4 README's own
+//   table is older (LZ4 1.9.0, gcc 8) and not used here.
 // - NVMe: Samsung 990 PRO (PCIe 4) is rated 22K IOPS at QD1 → ~45 µs per 4 KB
-//   read; enterprise TLC drives sit around 60–100 µs; PCIe 5 drives read
+//   read; enterprise TLC drives show 78–123 µs under heavy load; PCIe 5 drives read
 //   ~14 GB/s sequentially (Samsung 9100 PRO measured 14.7 GB/s).
-// - HDD: 7,200 rpm → 4.16 ms average rotational latency plus ~5–9 ms seek;
-//   ~285 MB/s on outer tracks (Seagate Exos X24).
+// - HDD: 7,200 rpm → 4.16 ms average rotational latency plus ~5–9 ms seek,
+//   i.e. ~75–110 random IOPS at QD1; ~285 MB/s on outer tracks (Seagate Exos X24).
 // - Network: wire time is arithmetic (bits / line rate). Same-AZ RTT in AWS is
 //   "typically sub-millisecond" (300 µs p50 in AWS's own example; 50–260 µs
 //   measured with netperf), cross-AZ ~1–1.5 ms. Inter-region medians from
@@ -90,8 +92,8 @@ export const latencyItems: LatencyItem[] = [
     high: 2 * NS,
     value2012: 0.5 * NS,
     note: {
-      en: '4–5 cycles on current x86 and Arm cores. Clock speeds plateaued at 3–6 GHz, so this has not shrunk in nanoseconds since 2012; the classic 0.5 ns was a rounded-down figure.',
-      ru: '4–5 тактов на современных ядрах x86 и Arm. Частоты упёрлись в 3–6 ГГц, поэтому в наносекундах L1 с 2012 года не ускорился; классические 0,5 нс — округление вниз.',
+      en: '4–5 cycles on current x86 and Arm cores. Clock speeds plateaued at 3–6 GHz, so this has not shrunk in nanoseconds since 2012; the classic 0.5 ns is optimistic for today’s cores.',
+      ru: '4–5 тактов на современных ядрах x86 и Arm. Частоты упёрлись в 3–6 ГГц, поэтому в наносекундах L1 с 2012 года не ускорился; классические 0,5 нс для нынешних ядер слишком оптимистичны.',
     },
     sources: ['cnc-strix', 'cnc-graviton4', 'cnc-xeon6'],
   },
@@ -128,7 +130,7 @@ export const latencyItems: LatencyItem[] = [
     label: { en: 'Mutex lock/unlock (uncontended)', ru: 'Захват и освобождение мьютекса (без конкуренции)' },
     category: 'cpu',
     value2026: 15 * NS,
-    low: 8 * NS,
+    low: 6 * NS,
     high: 25 * NS,
     value2012: 25 * NS,
     classicLabel: 'Mutex lock/unlock',
@@ -162,7 +164,7 @@ export const latencyItems: LatencyItem[] = [
       en: 'LZ4 decompresses at ~3.9 GB/s per core, zstd at ~1.5 GB/s. Decompression is several times cheaper than compression.',
       ru: 'LZ4 распаковывает ~3,9 ГБ/с на ядро, zstd — ~1,5 ГБ/с. Распаковка в разы дешевле сжатия.',
     },
-    sources: ['zstd', 'lz4'],
+    sources: ['zstd'],
   },
   {
     id: 'dram',
@@ -192,7 +194,7 @@ export const latencyItems: LatencyItem[] = [
       en: 'Fast codecs compress ~500–700 MB/s per core. Zippy is today’s Snappy. Single cores got only modestly faster since 2012.',
       ru: 'Быстрые кодеки сжимают ~500–700 МБ/с на ядро. Zippy — это нынешний Snappy. Одно ядро с 2012 года ускорилось лишь умеренно.',
     },
-    sources: ['zstd', 'lz4'],
+    sources: ['zstd'],
   },
   {
     id: 'wake',
@@ -200,10 +202,10 @@ export const latencyItems: LatencyItem[] = [
     category: 'cpu',
     value2026: 5 * US,
     low: 2 * US,
-    high: 10 * US,
+    high: 20 * US,
     note: {
-      en: 'What a contended lock or a blocking queue really costs: futex syscall, scheduler, cold caches. Higher in VMs.',
-      ru: 'Реальная цена захваченной блокировки или блокирующей очереди: системный вызов futex, планировщик, холодные кэши. В виртуальных машинах — больше.',
+      en: 'What a contended lock or a blocking queue really costs: futex syscall, scheduler, cold caches. 3–10 µs on a Zen 4 machine; 6–17 µs measured on a small cloud VM.',
+      ru: 'Реальная цена захваченной блокировки или блокирующей очереди: системный вызов futex, планировщик, холодные кэши. 3–10 мкс на машине с Zen 4; 6–17 мкс в замерах на небольшой облачной ВМ.',
     },
     sources: ['nazquadri', 'local'],
   },
@@ -212,13 +214,13 @@ export const latencyItems: LatencyItem[] = [
     label: { en: 'Read 1 MB sequentially from memory (one core)', ru: 'Последовательно прочитать 1 МБ из памяти (одно ядро)' },
     category: 'cpu',
     value2026: 30 * US,
-    low: 15 * US,
+    low: 19 * US,
     high: 100 * US,
     value2012: 250 * US,
     classicLabel: 'Read 1 MB sequentially from memory',
     note: {
-      en: 'One core streams roughly 10–70 GB/s: ~52 GB/s on a Zen 5 server core, far less on older cloud VMs. The whole socket reaches hundreds of GB/s.',
-      ru: 'Одно ядро читает потоком примерно 10–70 ГБ/с: ~52 ГБ/с у серверного Zen 5, намного меньше на старых облачных ВМ. Весь сокет — сотни ГБ/с.',
+      en: 'One core streams anywhere from ~10 GB/s (a small cloud VM, measured) to ~52 GB/s (a Zen 5 server core). The whole socket reaches hundreds of GB/s.',
+      ru: 'Одно ядро читает потоком от ~10 ГБ/с (небольшая облачная ВМ, замер) до ~52 ГБ/с (серверное ядро Zen 5). Весь сокет — сотни ГБ/с.',
     },
     sources: ['cnc-turin', 'local'],
   },
@@ -247,8 +249,8 @@ export const latencyItems: LatencyItem[] = [
     value2012: 1 * MS,
     classicLabel: 'Read 1 MB sequentially from SSD',
     note: {
-      en: '~7 GB/s on PCIe 4, ~14 GB/s on PCIe 5 drives — ten times the ~1 GB/s SSDs of 2012.',
-      ru: '~7 ГБ/с на PCIe 4, ~14 ГБ/с на PCIe 5 — в десять раз больше, чем ~1 ГБ/с у SSD 2012 года.',
+      en: '~7 GB/s on PCIe 4, ~14 GB/s on PCIe 5 drives — 7–14 times the ~1 GB/s of the classic row (SATA SSDs of 2012 were capped near 0.55 GB/s).',
+      ru: '~7 ГБ/с на PCIe 4, ~14 ГБ/с на PCIe 5 — в 7–14 раз больше ~1 ГБ/с из классической строки (SATA SSD 2012 года упирались примерно в 0,55 ГБ/с).',
     },
     sources: ['samsung-990pro', 'pcper-9100pro'],
   },
@@ -290,8 +292,8 @@ export const latencyItems: LatencyItem[] = [
     value2012: 10 * MS,
     classicLabel: 'Disk seek',
     note: {
-      en: 'Mechanics did not change: 4.16 ms average rotational latency at 7,200 rpm plus a ~5–9 ms seek. Still ~100–200 random IOPS per drive.',
-      ru: 'Механика не изменилась: 4,16 мс средней задержки вращения на 7200 об/мин плюс ~5–9 мс позиционирования головки. По-прежнему ~100–200 случайных IOPS на диск.',
+      en: 'Mechanics did not change: 4.16 ms average rotational latency at 7,200 rpm plus a ~5–9 ms seek. That is only ~75–110 random reads per second per drive at queue depth 1.',
+      ru: 'Механика не изменилась: 4,16 мс средней задержки вращения на 7200 об/мин плюс ~5–9 мс позиционирования головки. Это всего ~75–110 случайных чтений в секунду на диск при глубине очереди 1.',
     },
     sources: ['storagereview-x24', 'wiki-hdd'],
   },
@@ -371,11 +373,11 @@ export const latencyItems: LatencyItem[] = [
     label: { en: 'Round trip between availability zones (same region)', ru: 'Круговая задержка между зонами доступности (один регион)' },
     category: 'network',
     value2026: 1 * MS,
-    low: 300 * US,
+    low: 200 * US,
     high: 2 * MS,
     note: {
-      en: 'AZs are up to ~100 km apart; AWS quotes “single-digit millisecond” and uses ~1–1.5 ms per crossing in its examples. Fine for synchronous replication.',
-      ru: 'Зоны разнесены до ~100 км; AWS говорит о «единицах миллисекунд» и в примерах закладывает ~1–1,5 мс на пересечение. Достаточно для синхронной репликации.',
+      en: 'AZs are up to ~100 km apart; AWS quotes “single-digit millisecond” and uses ~1–1.5 ms per crossing in its examples; netperf measured 0.2–1.8 ms depending on the pair. Fine for synchronous replication.',
+      ru: 'Зоны разнесены до ~100 км; AWS говорит о «единицах миллисекунд» и в примерах закладывает ~1–1,5 мс на пересечение; netperf показывает 0,2–1,8 мс в зависимости от пары зон. Достаточно для синхронной репликации.',
     },
     sources: ['aws-az-affinity', 'aws-fault-isolation', 'zenn-az'],
   },
@@ -387,8 +389,8 @@ export const latencyItems: LatencyItem[] = [
     low: 500 * US,
     high: 2 * MS,
     note: {
-      en: 'One extra round trip (TLS 1.2 needed two) plus ~0.1–0.7 ms of crypto. Across an ocean the round trip dominates: add ~80–150 ms. Resumption with 0-RTT removes it.',
-      ru: 'Один дополнительный сетевой круг (TLS 1.2 требовал двух) плюс ~0,1–0,7 мс криптографии. Через океан доминирует круг: +80–150 мс. Возобновление сессии с 0-RTT убирает его.',
+      en: 'One extra round trip (TLS 1.2 needed two) plus ~0.3 ms of crypto on both ends with an ECDSA certificate, ~1 ms with RSA-2048. Across an ocean the round trip dominates: add ~80–150 ms. Resumption with 0-RTT removes it.',
+      ru: 'Один дополнительный сетевой круг (TLS 1.2 требовал двух) плюс ~0,3 мс криптографии на обеих сторонах с сертификатом ECDSA и ~1 мс с RSA-2048. Через океан доминирует круг: +80–150 мс. Возобновление сессии с 0-RTT убирает его.',
     },
     sources: ['cloudflare-tls13', 'local'],
   },
@@ -397,11 +399,11 @@ export const latencyItems: LatencyItem[] = [
     label: { en: 'DNS lookup, resolver cache hit', ru: 'DNS-запрос, попадание в кэш резолвера' },
     category: 'ops',
     value2026: 10 * MS,
-    low: 1 * MS,
+    low: 500 * US,
     high: 30 * MS,
     note: {
-      en: 'Roughly one round trip to the recursive resolver: under 1 ms inside a cloud VPC, 5–30 ms from home or mobile networks. OS and browser caches answer in microseconds.',
-      ru: 'Примерно один сетевой круг до рекурсивного резолвера: меньше 1 мс внутри облачной VPC, 5–30 мс из домашних и мобильных сетей. Кэши ОС и браузера отвечают за микросекунды.',
+      en: 'Roughly one round trip to the recursive resolver: inside a cloud VPC that is a same-zone hop (under 1 ms), from home or mobile networks 5–30 ms. OS and browser caches answer in microseconds.',
+      ru: 'Примерно один сетевой круг до рекурсивного резолвера: внутри облачной VPC это переход в пределах зоны (меньше 1 мс), из домашних и мобильных сетей — 5–30 мс. Кэши ОС и браузера отвечают за микросекунды.',
     },
     sources: ['oreilly-dns', 'google-dns'],
   },
@@ -410,7 +412,7 @@ export const latencyItems: LatencyItem[] = [
     label: { en: 'Object storage GET, time to first byte', ru: 'GET из объектного хранилища, время до первого байта' },
     category: 'ops',
     value2026: 30 * MS,
-    low: 10 * MS,
+    low: 5 * MS,
     high: 200 * MS,
     note: {
       en: 'S3 Standard: ~30 ms median measured in-region, with a tail to 200 ms (AWS says plan for 100–200 ms). S3 Express One Zone: single-digit ms.',
@@ -484,8 +486,8 @@ export const latencySources: LatencySource[] = [
   {
     key: 'dean',
     title: 'Jeff Dean — Designs, Lessons and Advice from Building Large Distributed Systems (LADIS 2009)',
-    url: 'http://www.cs.cornell.edu/projects/ladis2009/talks/dean-keynote-ladis2009.pdf',
-    used: { en: 'Original “Numbers everyone should know” slide', ru: 'Исходный слайд «Numbers everyone should know»' },
+    url: 'https://research.cs.cornell.edu/ladis2009/talks/dean-keynote-ladis2009.pdf',
+    used: { en: '“Numbers everyone should know” slide (2009 version, which the gist follows)', ru: 'Слайд «Numbers everyone should know» (версия 2009 года, на которую опирается гист)' },
   },
   {
     key: 'primer',
@@ -503,7 +505,7 @@ export const latencySources: LatencySource[] = [
     key: 'hwcooling-zen5',
     title: 'HWCooling — Zen 5 tested: mobile core differs considerably from desktop one',
     url: 'https://www.hwcooling.net/en/zen-5-tested-mobile-core-differs-considerably-from-desktop-one/',
-    used: { en: 'Zen 5: L3 ≈ 46 cycles', ru: 'Zen 5: L3 ≈ 46 тактов' },
+    used: { en: 'Zen 5 (mobile, Ryzen AI 9 365): L3 ≈ 46 cycles', ru: 'Zen 5 (мобильный Ryzen AI 9 365): L3 ≈ 46 тактов' },
   },
   {
     key: 'cnc-9950x',
@@ -557,13 +559,7 @@ export const latencySources: LatencySource[] = [
     key: 'zstd',
     title: 'Zstandard README — benchmark table',
     url: 'https://github.com/facebook/zstd',
-    used: { en: 'zstd -1, LZ4, Snappy compression and decompression speeds', ru: 'Скорости сжатия и распаковки zstd -1, LZ4, Snappy' },
-  },
-  {
-    key: 'lz4',
-    title: 'LZ4 README — benchmarks',
-    url: 'https://github.com/lz4/lz4',
-    used: { en: 'LZ4 vs Snappy vs zstd speeds', ru: 'Скорости LZ4, Snappy и zstd' },
+    used: { en: 'zstd -1, LZ4 and Snappy compression and decompression speeds (one lzbench run, i7-9700K)', ru: 'Скорости сжатия и распаковки zstd -1, LZ4 и Snappy (один прогон lzbench, i7-9700K)' },
   },
   {
     key: 'samsung-990pro',
@@ -592,7 +588,7 @@ export const latencySources: LatencySource[] = [
   {
     key: 'storagereview-x24',
     title: 'StorageReview — Seagate Exos X24 (spec table)',
-    url: 'https://www.storagereview.com/?p=131160',
+    url: 'https://www.storagereview.com/review/seagate-exos-x24-24tb-hdd-review',
     used: { en: '4.16 ms average latency; 285 MB/s max sustained', ru: '4,16 мс средней задержки; до 285 МБ/с последовательно' },
   },
   {
@@ -682,8 +678,8 @@ export const latencySources: LatencySource[] = [
     key: 'local',
     title: 'Measured for this page (2-vCPU cloud VM, Xeon @ 2.8 GHz, Linux, glibc, OpenSSL 3.0)',
     used: {
-      en: 'Mutex lock+unlock 9 ns; thread hand-off 6–10 µs; DRAM pointer chase 180 ns and 1 MB memcpy 160 µs (VM); X25519 ~42 µs, ECDSA P-256 sign ~29 µs, RSA-2048 sign ~0.7 ms',
-      ru: 'Мьютекс lock+unlock 9 нс; передача управления потоку 6–10 мкс; случайный обход DRAM 180 нс и memcpy 1 МБ за 160 мкс (ВМ); X25519 ~42 мкс, подпись ECDSA P-256 ~29 мкс, RSA-2048 ~0,7 мс',
+      en: 'Mutex lock+unlock 6–9 ns; thread hand-off 6–17 µs; DRAM pointer chase 150–250 ns and one-core sequential read ~11 GB/s (VM); X25519 ~38–42 µs, ECDSA P-256 sign ~25–29 µs / verify ~74 µs, RSA-2048 sign ~0.75 ms',
+      ru: 'Мьютекс lock+unlock 6–9 нс; передача управления потоку 6–17 мкс; случайный обход DRAM 150–250 нс и последовательное чтение одним ядром ~11 ГБ/с (ВМ); X25519 ~38–42 мкс, подпись ECDSA P-256 ~25–29 мкс / проверка ~74 мкс, подпись RSA-2048 ~0,75 мс',
     },
   },
 ];

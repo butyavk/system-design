@@ -45,7 +45,7 @@ Latency is skewed, so averages hide the slow requests users notice. Use percenti
 
 - **Prometheus summaries** compute quantiles inside the process, so they cannot be combined across instances. Prefer histograms.
 - **Classic histograms** with fixed buckets are only as precise as the bucket containing the percentile. Choose boundaries around your SLO threshold, roughly exponential (Google's SRE book suggests about ×3 apart).
-- **Exponential or native histograms** (OpenTelemetry exponential histograms, Prometheus native histograms) adjust bucket boundaries automatically, with bounded relative error and lower storage cost. Prometheus recommends them where your client libraries support them.
+- **Exponential or native histograms** (OpenTelemetry exponential histograms, Prometheus native histograms) adjust bucket boundaries automatically, with bounded relative error and lower storage cost. Native histograms have been a stable Prometheus feature since 3.8 (scraping them is still opt-in), and Prometheus recommends them where your client libraries support them.
 - **Exemplars** attach a trace ID to a bucket sample, so you can jump from "p99 spiked" to a real slow trace.
 
 ## SLIs, SLOs and burn-rate alerting

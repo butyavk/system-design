@@ -1,0 +1,77 @@
+---
+title: Flashcards
+description: 150 flashcards on system design with spaced repetition in the browser, plus Anki decks in English and Russian to download and study offline.
+sidebar:
+  order: 4
+  badge:
+    text: New
+    variant: tip
+---
+import { Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+import Flashcards from '~/components/Flashcards.astro';
+
+Reading a page once is not the same as being able to recall it in an interview. This deck turns the key ideas of every section into questions you answer from memory, and schedules each card so that you see the hard ones often and the easy ones rarely. The original System Design Primer shipped Anki decks; this deck replaces them and stays in sync with the pages on this site.
+
+<Aside type="tip" title="TL;DR">
+- 150 cards cover every section, from fundamentals to case studies and object-oriented design. Each answer links to the page it comes from.
+- Say the answer out loud **before** you flip the card. Recall is what makes the memory stick, not rereading.
+- Press **Got it** only if your answer was complete. Cards you know move to later boxes and come back after 1, 3, 7 and 16 days.
+- Ten minutes a day beats an hour once a week. Prefer Anki? Download the decks at the bottom of the page.
+</Aside>
+
+## Why spaced repetition
+
+You forget most of what you read within days, and each successful recall slows that forgetting down. Spaced repetition uses this: review a fact just before you would forget it, and the gap before the next review can grow. Two habits make it work. **Active recall**: answer from memory before seeing the answer. **Spacing**: return to each card at growing intervals instead of cramming them all in one evening.
+
+Flashcards suit facts, definitions, numbers and short trade-offs: what PACELC adds to CAP, how many round trips a new HTTPS connection costs, when a write-behind cache loses data. They do not replace practising whole designs out loud; use them alongside the [study plan](/start/study-plan/) and the [interview framework](/start/interview-framework/).
+
+## The deck
+
+<Flashcards />
+
+## How the deck works
+
+The deck uses the **Leitner system**: five boxes, and a card's box sets how long it waits before it is due again.
+
+| Box | How long a card waits there |
+|---|---|
+| New | Due now |
+| 1 | Today, at the end of the round |
+| 2 | 1 day |
+| 3 | 3 days |
+| 4 | 7 days |
+| 5 | 16 days, and it stays in box 5 |
+
+- **Got it** (key `2`) moves the card up one box, where it waits that box's interval; a new card goes straight to box 2. **Again** (key `1`) sends it back to box 1, and it returns at the end of the current round.
+- **Due** counts cards to review now in the selected section; **Learned** counts cards in box 2 or higher.
+- By default the weakest cards come first. **Shuffle** mixes the order instead.
+- When nothing is due, you can run a practice round over every card in the section. Practice rounds do not change the schedule.
+- Progress is saved in your browser, separately for English and Russian. Clearing site data or using a private window starts from scratch. **Reset progress** puts every card back to new.
+- Without JavaScript, open **Browse all cards** to read every question and answer.
+
+<Aside type="note" title="Grade honestly">
+"Got it" means you said the whole answer, including the number or the trade-off, before flipping. If you only recognised it once you saw it, press "Again". Recognition feels like knowledge, but it does not help when the interviewer asks a follow-up.
+</Aside>
+
+## Use them in Anki
+
+[Anki](https://apps.ankiweb.net/) is a free spaced-repetition app for desktop and mobile. Both decks have the same cards as the deck above; each answer ends with a link to the page on this site.
+
+<CardGrid>
+  <LinkCard title="English deck (.tsv)" description="150 cards, tab-separated, with HTML formatting" href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/flashcards/system-design-en.tsv`} download="system-design-en.tsv" />
+  <LinkCard title="Russian deck (.tsv)" description="The same 150 cards in Russian" href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/flashcards/system-design-ru.tsv`} download="system-design-ru.tsv" />
+</CardGrid>
+
+To import a deck:
+
+1. Download the file and open Anki on a computer (version 2.1.54 or later).
+2. Choose **File → Import** and select the file.
+3. Anki reads the settings from the file header: tab-separated, HTML allowed, note type **Basic**, deck **System Design Primer**. Check them in the dialog and click **Import**.
+
+Each card is tagged `system-design` plus a section tag such as `sdp::data`, so you can study one section with a filtered deck. Cards carry stable IDs: when the site publishes a new version of the deck, importing it again updates the existing notes and keeps your review history.
+
+## Related topics
+
+- [Study plan](/start/study-plan/) — when to review the cards and what to practise alongside them.
+- [Latency numbers](/reference/latency-numbers/) — the numbers behind many cards, with an interactive explorer.
+- [Interview framework](/start/interview-framework/) — the structure to use when the cards turn into a real question.

@@ -8,7 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 import LatencyExplorer from '~/components/LatencyExplorer.astro';
 import LatencySources from '~/components/LatencySources.astro';
 
-How long does it take to read a cache line, a row from a database in the same zone, or a file from object storage? A designer who knows these costs to within a factor of ten can rule designs in or out before writing any code. This page updates the famous table that Jeff Dean and Peter Norvig popularised around 2012 with measurements from current CPUs, NVMe drives and public clouds.
+How long does it take to read a cache line, a row from a database in the same zone, or a file from object storage? A designer who knows these costs to within a factor of ten can rule designs in or out before writing any code. This page updates the famous table, built from Peter Norvig's and Jeff Dean's figures and made popular by a 2012 gist, with measurements from current CPUs, NVMe drives and public clouds.
 
 <Aside type="tip" title="TL;DR">
 - Learn **orders of magnitude**, not digits: about 1 ns for an L1 hit, 100 ns for memory, 50 µs for an NVMe read, 200 µs for a round trip inside a zone, 1 ms across zones, 10 ms for a disk seek, 80–150 ms across an ocean.
@@ -42,7 +42,7 @@ Most design questions only need you to place an operation on the right rung of t
 | ~10 ns | L2/L3 cache hit, uncontended mutex |
 | ~100 ns | Main memory (DRAM) access |
 | ~1–10 µs | Compressing 1 KB, waking a blocked thread, a system call with real work |
-| ~50–100 µs | Random 4 KB read from NVMe, reading 1 MB from memory or NVMe |
+| ~30–100 µs | Random 4 KB read from NVMe, reading 1 MB from memory (~30 µs) or NVMe (~100 µs) |
 | ~200–500 µs | Round trip inside an availability zone; a cache or primary-key lookup over the network |
 | ~1 ms | Round trip between zones; TLS handshake inside a region; cloud block-volume I/O |
 | ~10 ms | Disk seek; DNS answered by a resolver cache; object storage first byte with a fast tier |
@@ -52,19 +52,19 @@ Most design questions only need you to place an operation on the right rung of t
 
 ### CPUs stopped getting faster per operation
 
-Clock speeds have been stuck at 3–6 GHz for almost twenty years. Cache latency is a fixed number of cycles (4–5 for L1, 11–16 for L2), so in nanoseconds it has not moved. The classic 0.5 ns for L1 was a rounded figure even in 2012; about 1 ns is a better rule today. The real progress went elsewhere: **more cores**, larger caches (1–3 MB of L2 per core, hundreds of MB of L3 on server chips) and wider execution units.
+Clock speeds have been stuck at 3–6 GHz for about twenty years. Cache latency is a fixed number of cycles (4–5 for L1, 11–16 for L2), so in nanoseconds it has not moved. The classic 0.5 ns for L1 is optimistic for today's cores; about 1 ns is a better rule. The real progress went elsewhere: **more cores**, larger caches (1–3 MB of L2 per core, hundreds of MB of L3 on server chips) and wider execution units.
 
 **DRAM latency** is flat at about 100 ns. A desktop with DDR5 measures around 70 ns; big server chips with many memory channels and a mesh between cores sit at 110–130 ns. Memory **bandwidth** grew a lot, so streaming 1 MB now takes tens of microseconds instead of 250.
 
 ### Storage changed the most
 
-In 2012, an SSD was a SATA device doing about 1 GB/s at best, and many servers still used spinning disks. Today local storage is NVMe on PCIe 4 or 5:
+In 2012, a typical SSD was a SATA device capped at about 0.5 GB/s (the classic table rounds it to 1 GB/s), and many servers still used spinning disks. Today local storage is NVMe on PCIe 4 or 5:
 
 - A random 4 KB read takes about **50 µs** at queue depth 1 (20–100 µs depending on the drive). With deep queues a single drive serves a million or more IOPS.
-- Sequential reads run at **7 GB/s (PCIe 4) to 14 GB/s (PCIe 5)**, ten times the classic SSD row.
-- **Hard disks** kept the same mechanics: about 10 ms per random read and 100–200 random IOPS per drive. Denser platters raised sequential speed to about 250 MB/s, so they remain good for large sequential data and bad for anything random.
+- Sequential reads run at **7 GB/s (PCIe 4) to 14 GB/s (PCIe 5)**, 7–14 times the classic SSD row.
+- **Hard disks** kept the same mechanics: about 10 ms per random read, so only about 100 random IOPS per drive. Denser platters raised sequential speed to about 250 MB/s, so they remain good for large sequential data and bad for anything random.
 
-In the cloud, many volumes are **network-attached** (EBS, Persistent Disk). Each I/O crosses the network, which puts them around 0.5–2 ms, ten times slower than a local NVMe drive. Instance-store NVMe is fast but disappears with the instance.
+In the cloud, many volumes are **network-attached** (EBS, Persistent Disk). Each I/O crosses the network, which puts them between about 0.5 ms (EBS io2 Block Express) and a few milliseconds (gp3), ten times slower than a local NVMe drive or more. Instance-store NVMe is fast but disappears with the instance.
 
 ### Networks got wider, not much closer
 
@@ -92,7 +92,7 @@ The classic table predates managed services, so this version adds the costs you 
 
 | Source | Throughput | Time for 1 GB |
 |---|---|---|
-| Memory, one core | 10–70 GB/s | ~30 ms |
+| Memory, one core | 10–50 GB/s | 20–100 ms |
 | NVMe SSD | 7–14 GB/s | ~0.1 s |
 | 25 Gbit/s network | ~3 GB/s | ~0.35 s |
 | Hard disk, sequential | ~250 MB/s | ~4 s |
@@ -135,13 +135,13 @@ Nobody expects exact figures. Interviewers check that you put operations in the 
 
 ## Sources
 
-Values were collected on 8 October 2026 from the measurements and documentation below. Where only cycle counts were published, nanoseconds assume 3–5 GHz. A few rows were cross-checked with microbenchmarks on a small cloud VM.
+Values were collected on 8 October 2026 and re-checked against the sources below on 9 October 2026. Where only cycle counts were published, nanoseconds assume 3–5 GHz. A few rows were cross-checked with microbenchmarks on a small cloud VM.
 
 <LatencySources />
 
 ## Further reading
 
-- [Software Engineering Advice from Building Large-Scale Distributed Systems](https://static.googleusercontent.com/media/research.google.com/en//people/jeff/stanford-295-talk.pdf) — Jeff Dean's talk with the original table and a thumbnail-page estimate.
+- [Software Engineering Advice from Building Large-Scale Distributed Systems](https://static.googleusercontent.com/media/research.google.com/en//people/jeff/stanford-295-talk.pdf) — Jeff Dean's 2007 Stanford talk with an early version of the table (the source of the primer's 10 µs and 30 ms rows) and a thumbnail-page estimate.
 - [Latency numbers every programmer should know](https://gist.github.com/jboner/2841832) — the gist that made the table famous.
 - [Napkin Math](https://github.com/sirupsen/napkin-math) — a maintained set of performance figures and benchmarks for estimates.
 - [Chips and Cheese](https://chipsandcheese.com/) — detailed cache and memory measurements of current CPUs.

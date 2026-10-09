@@ -97,6 +97,7 @@ flowchart LR
 - **Обратные прокси / L7-балансировщики**: NGINX, HAProxy, Envoy, Caddy, Traefik, Varnish (кэширование). Управляемые: AWS ALB, Application Load Balancer в Google Cloud, Azure Application Gateway и Front Door.
 - **Самостоятельно разворачиваемые API-шлюзы**: Kong Gateway, Apache APISIX, Tyk, KrakenD, Envoy Gateway. Большинство решений для Kubernetes теперь реализуют **Kubernetes Gateway API** (`Gateway`, `HTTPRoute`, `GRPCRoute`) — преемника Ingress API.
 - **Управляемые API-шлюзы**: Amazon API Gateway, Azure API Management, Google Cloud Apigee и API Gateway.
+- **AI-шлюзы**: более новая разновидность для трафика к LLM-провайдерам (Kong AI Gateway, Cloudflare AI Gateway, Envoy AI Gateway). Роль на границе та же, но квоты считают токены и стоимость, а не запросы, а типичные функции — переключение между провайдерами, кэширование ответов и учёт использования.
 
 ## Компромиссы
 

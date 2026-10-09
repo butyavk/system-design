@@ -112,7 +112,7 @@ GET /{code}
   302 Location: https://example.com/very/long/path
 ```
 
-A few details that interviewers notice: version the API, use cursor pagination for lists, accept an idempotency key on writes that clients may retry, and say which calls are public and which are internal. REST over HTTP is the safe default for public APIs; gRPC is common between internal services (see [API styles](/communication/api-styles/)).
+A few details that interviewers notice: version the API, use cursor pagination for lists, accept an idempotency key on writes that clients may retry, and say which calls are public and which are internal. REST over HTTP is the safe default for public APIs; gRPC is common between internal services (see [RPC and REST](/communication/rpc-and-rest/)).
 
 For the data model, list the core entities, their key fields and, above all, the **access patterns**: which queries run, how often, and by what key. The choice between a relational and a NoSQL store follows from those patterns, not from fashion (see [SQL or NoSQL](/data/sql-or-nosql/)).
 
@@ -253,5 +253,5 @@ ALWAYS: think aloud · numbers over adjectives · name the trade-off
 
 - [Back-of-the-envelope estimation](/start/estimation/): the method behind step 2.
 - [Study plan](/start/study-plan/): how much to read before you start practising.
-- [URL shortener and Pastebin](/practice/url-shortener-pastebin/): the full case study behind this page's examples.
+- [URL shortener and Pastebin](/practice/url-shortener-pastebin/): the same problem designed end to end, with its own assumptions.
 - [Latency numbers](/reference/latency-numbers/): numbers you will use in every estimate.

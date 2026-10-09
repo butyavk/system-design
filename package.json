@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "flashcards": "node scripts/export-flashcards.mjs",
     "check:links": "python3 scripts/check_links.py dist"
   },
   "license": "CC-BY-4.0",

@@ -121,6 +121,8 @@ On 21 October 2016 the managed DNS provider Dyn was hit by three waves of DDoS t
 
 In October 2021 Facebook showed the opposite failure. A backbone outage made its own DNS servers withdraw their BGP routes by design. Every Facebook domain stopped resolving, and so did internal tools engineers needed to fix the problem.
 
+In October 2025 the failure came from automation instead. A race condition in AWS's DNS management for DynamoDB left the `us-east-1` endpoint with an empty record for nearly three hours, and the outage spread to EC2, load balancers and many services that depend on DynamoDB.
+
 Mitigations:
 
 - **Two independent authoritative providers.** List both sets of `NS` records at the registrar and keep the zones identical, either through zone transfers (primary/secondary) or by pushing the same zone to both from code (octoDNS, Terraform). Proprietary routing policies rarely carry over between providers, so keep critical records simple or accept different behaviour on each side.
@@ -131,7 +133,7 @@ Mitigations:
 
 ## Encrypted DNS: DoT and DoH
 
-Classic DNS travels in plaintext over UDP port 53, so anyone on the path can read or tamper with it. **DNS over TLS** (DoT, RFC 7858, 2016) wraps queries in TLS on port 853. **DNS over HTTPS** (DoH, RFC 8484, 2018) sends them as HTTPS requests on port 443, where they are hard to tell apart from web traffic. **DNS over QUIC** (RFC 9250, 2022) followed. Major browsers and operating systems support encrypted DNS. This protects only the hop from the client to its resolver, and it can bypass corporate split-horizon DNS and filtering, which matters in enterprise networks. Encryption gives privacy, not authenticity. DNSSEC addresses authenticity by signing records, and it is a separate decision.
+Classic DNS travels in plaintext over UDP port 53, so anyone on the path can read or tamper with it. **DNS over TLS** (DoT, RFC 7858, 2016) wraps queries in TLS on port 853. **DNS over HTTPS** (DoH, RFC 8484, 2018) sends them as HTTPS requests on port 443, where they are hard to tell apart from web traffic. **DNS over QUIC** (RFC 9250, 2022) followed. Major browsers and operating systems support encrypted DNS. This protects only the hop from the client to its resolver, and it can bypass corporate split-horizon DNS and filtering, which matters in enterprise networks. The server name still leaks in the TLS handshake unless the site uses Encrypted Client Hello (RFC 9849, 2026), whose keys are published in the `HTTPS` record. Encryption gives privacy, not authenticity. DNSSEC addresses authenticity by signing records, and it is a separate decision.
 
 ## Managed DNS services
 

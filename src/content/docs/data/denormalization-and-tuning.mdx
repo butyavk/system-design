@@ -76,7 +76,7 @@ CREATE UNIQUE INDEX ON daily_revenue (day);
 REFRESH MATERIALIZED VIEW CONCURRENTLY daily_revenue;   -- e.g. every 5 minutes from a scheduler
 ```
 
-PostgreSQL's built-in refresh always recomputes the whole query. Oracle and SQL Server (indexed views) can maintain some views incrementally. At larger scale, the same idea becomes a stream processor or a CDC pipeline maintaining read models. See [event streaming](/async/event-streaming/).
+PostgreSQL's built-in refresh always recomputes the whole query; the `pg_ivm` extension adds incremental maintenance for simpler views. Oracle and SQL Server (indexed views) can maintain some views incrementally. At larger scale, the same idea becomes a stream processor or a CDC pipeline maintaining read models. See [event streaming](/async/event-streaming/).
 
 **Costs of denormalization:** more storage, slower and more complex writes, and the permanent risk of copies drifting apart. Under a heavy write load, a denormalised schema can be slower overall than the normalised one. Denormalize specific hot paths, not the whole schema.
 
@@ -178,7 +178,7 @@ CREATE TABLE events_2026_10 PARTITION OF events
   FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');
 ```
 
-Queries filtered on `created_at` touch only the matching partitions (**partition pruning**). Retention becomes `DROP TABLE events_2025_10`, which is instant and creates no `VACUUM` debt, instead of a huge `DELETE`. The PostgreSQL docs suggest partitioning pays off mainly when a table is larger than the server's memory. Too many partitions (thousands) slow planning. Primary and unique keys must include the partition key.
+Queries filtered on `created_at` touch only the matching partitions (**partition pruning**). Retention becomes `DROP TABLE events_2025_10`, which is instant and creates no `VACUUM` debt, instead of a huge `DELETE`. The PostgreSQL docs suggest partitioning pays off mainly when a table is larger than the server's memory. The planner copes with a few thousand partitions only when queries prune most of them; otherwise planning time and memory grow. Primary and unique keys must include the partition key.
 
 ### 7. Pool connections
 
@@ -187,7 +187,7 @@ PostgreSQL runs one operating-system process per connection. Thousands of mostly
 | PgBouncer mode | A server connection is held for | Caveats |
 |---|---|---|
 | Session | The client's whole session | Safe for everything, but saves little |
-| Transaction | One transaction | The usual choice. Breaks session state: `SET`, `LISTEN`, session advisory locks, `WITH HOLD` cursors. Protocol-level prepared statements need `max_prepared_statements` (PgBouncer 1.21+). |
+| Transaction | One transaction | The usual choice. Breaks session state: `SET`, `LISTEN`, session advisory locks, `WITH HOLD` cursors. Protocol-level prepared statements work since PgBouncer 1.21 via `max_prepared_statements`, on by default (200) since 1.24. |
 | Statement | One statement | No multi-statement transactions |
 
 Size the server-side pool near the number of cores times a small factor, not by the number of clients. MySQL's thread-per-connection model copes with more connections, but pooling in the application or with ProxySQL still helps.
