@@ -60,7 +60,7 @@ Out of scope: moving money, bill pay, credit scores, investment advice, product 
 | Daily background syncs | 30 M accounts × ~50 % active | 15 M/day ≈ 175/s, or ≈ 700/s in a 6-hour window |
 | Transaction row | ids, amount, currency, merchant, category, flags | ≈ 175 B, ≈ 350 B with indexes |
 | New transaction data | 5 B × 350 B | ≈ 1.75 TB/month, ≈ 63 TB in 3 years |
-| Monthly aggregates | 10 M users × 10 categories | ≤ 100 M rows/month (≈ 4.6 GB) |
+| Monthly aggregates | 10 M users × 10 categories | ≤ 100 M rows/month (≈ 5 GB at ~50 B a row) |
 | Merchant dictionary | 50,000 × 255 B | ≈ 12.8 MB, fits in every worker's memory |
 
 <Aside type="note" title="About the classic numbers">
@@ -74,18 +74,18 @@ hot in the database.
 ## Step 2 — High-level design
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client app"] --> api["API gateway"]
   api --> accounts["Accounts API"]
-  accounts --> db[("SQL database")]
+  accounts --> db[("SQL<br/>database")]
   accounts --> queue["Sync job queue"]
   queue --> sync["Sync workers"]
-  sync --> provider["Aggregator / bank API"]
-  sync --> raw[("Object store: raw payloads")]
-  sync --> categorize["Category service"]
+  sync --> provider["Aggregator /<br/>bank API"]
+  sync --> raw[("Object store:<br/>raw payloads")]
+  sync --> categorize["Category<br/>service"]
   sync --> db
-  sync --> budget["Budget service"]
-  budget --> notify["Notification service"]
+  sync --> budget["Budget<br/>service"]
+  budget --> notify["Notification<br/>service"]
 ```
 
 1. The **Accounts API** handles linking. It stores the account metadata and a reference to the access token, then enqueues a backfill job.
@@ -109,19 +109,17 @@ and exchanges it for a long-lived access token.
 sequenceDiagram
   participant U as Client app
   participant A as Accounts API
-  participant P as Aggregator
-  participant B as Bank
+  participant P as Aggregator<br/>or bank
   participant V as Secrets vault
   U->>A: Start linking
-  A->>P: Create link session
+  A->>P: Create link<br/>session
   P-->>U: Hosted consent screen
-  U->>B: Sign in, approve read scopes
-  B-->>P: Consent granted
+  U->>P: Sign in, approve<br/>read scopes
   P-->>U: One-time public token
   U->>A: POST /v1/accounts/link
-  A->>P: Exchange for access token
-  A->>V: Store token, receive token_ref
-  A-->>U: 202 Accepted, status syncing
+  A->>P: Exchange for<br/>access token
+  A->>V: Store token,<br/>receive token_ref
+  A-->>U: 202 Accepted,<br/>status syncing
 ```
 
 ```http title="Link request"
@@ -330,22 +328,24 @@ Benchmark first, then fix bottlenecks one at a time.
 5. **Aggregation.** Replace nightly MapReduce over log files with a stream: an event log feeds budget consumers within seconds. A batch job in the warehouse handles reconciliation and analytics.
 
 ```mermaid
-flowchart TD
+flowchart TB
   client["Client app"] --> lb["Load balancer / API gateway"]
   lb --> read["Read API"]
   lb --> accounts["Accounts API"]
-  read --> cache["Cache (Valkey / Redis)"]
-  read --> replicas[("Read replicas")]
+  read --> cache["Cache<br/>(Valkey / Redis)"]
+  read --> replicas[("Read<br/>replicas")]
   accounts --> sched["Scheduler + job queue"]
   sched --> sync["Sync workers"]
-  sync --> vault["Secrets vault + KMS"]
-  sync --> provider["Aggregators / bank APIs"]
-  sync --> shards[("SQL shards by user_id")]
+  sync --> vault["Secrets vault<br/>+ KMS"]
+  sync --> provider["Aggregators /<br/>bank APIs"]
+  sync --> shards[("SQL shards<br/>by user_id")]
   shards --> replicas
   sync --> log["Event log"]
-  log --> budget["Budget + alert consumers"]
-  log --> lake[("Object store / warehouse")]
+  log --> budget["Budget + alert<br/>consumers"]
+  log --> lake[("Object store /<br/>warehouse")]
   budget --> notify["Notification service"]
+  read ~~~ sched
+  vault ~~~ log
 ```
 
 | Added component | What it buys | What it costs |
@@ -359,9 +359,9 @@ flowchart TD
 ## What's different in 2026
 
 - **APIs instead of screen scraping.** Mint-era aggregators logged into bank websites with the user's stored password. Account access now increasingly goes through consent-based APIs:
-  - **EU:** PSD2 made bank APIs mandatory. The PSD3 and Payment Services Regulation package reached a provisional deal in November 2025 and cleared Parliament's ECON committee in May 2026. As of October 2026 it still awaits formal adoption, and most rules would apply about two years after that.
+  - **EU:** PSD2 made bank APIs mandatory. The PSD3 and Payment Services Regulation package reached a provisional deal in November 2025 and cleared Parliament's ECON committee in May 2026. The latest status reports we found (late August 2026) still listed the plenary vote and formal adoption as pending; most rules would apply about two years after publication.
   - **UK:** an open-banking regime that is moving onto a statutory footing under the Data (Use and Access) Act 2025.
-  - **US:** the industry-led FDX API standard. The CFPB's Section 1033 rule was finalised in October 2024, then put under reconsideration and blocked by a court in late 2025. A revised proposal went to OIRA review in August 2026 and had not been published by late September.
+  - **US:** the industry-led FDX API standard. The CFPB's Section 1033 rule was finalised in October 2024, then put under reconsideration and blocked by a court in late 2025. A revised proposal went to OIRA review on 6 August 2026 and was still there in mid-October, so its details are not public yet.
 
   Design for **re-consent**, **consent expiry** and **per-call fees**: JPMorgan Chase began charging the major aggregators for data access under deals signed in autumn 2025.
 - **Buy the connectivity.** Few teams integrate thousands of institutions themselves. They use one or two aggregators behind an internal provider interface, so they can fail over or switch between them.

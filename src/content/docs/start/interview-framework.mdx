@@ -18,7 +18,7 @@ A system design interview is an open-ended conversation that you are expected to
 
 ## The framework at a glance
 
-This expands the classic four steps (use cases, high-level design, core components, scaling) into seven, because estimates, the API and failure handling each deserve their own moment.
+This expands the classic four steps (use cases, high-level design, core components, scaling) into seven: estimates and the API get their own steps, scaling also covers failures, and a wrap-up closes the interview. The [case studies](/practice/url-shortener-pastebin/) keep the four classic headings, and the seven steps sit inside them: Step 1 holds the requirements and estimates, Step 2 the high-level design, Step 3 the API, data model and deep dives, and Step 4 scaling and failures.
 
 <Steps>
 
@@ -131,7 +131,7 @@ CREATE TABLE links (
 Draw the simplest system that satisfies the functional requirements, then walk each main request path out loud, end to end. Add a component only when you can say what it is for.
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> lb["Load balancer"]
   lb --> api["API service<br/>(stateless)"]
   api --> cache["Cache<br/>(Redis / Valkey)"]
@@ -219,7 +219,7 @@ Copy this, print it, or keep it next to you while you practise.
    [ ] Scale: DAU, QPS (avg/peak), read:write, data size, growth
    [ ] Latency target (p99), availability, consistency, durability
    [ ] Geography, clients, constraints (compliance, cost)
-2. ESTIMATES (≈5%)
+2. ESTIMATES (≈7%)
    [ ] QPS, storage, bandwidth, cache size
    [ ] One sentence on what the numbers imply
 3. API + DATA MODEL (≈10%)
@@ -229,7 +229,7 @@ Copy this, print it, or keep it next to you while you practise.
    [ ] Simplest design covering all use cases
    [ ] Walk write path and read path end to end
    [ ] Check in: "Where should we go deeper?"
-5. DEEP DIVES (≈30%)
+5. DEEP DIVES (≈28%)
    [ ] 1–2 hardest components, 2–3 options each
    [ ] Pick one, state what you give up
 6. SCALE + FAILURES (≈15%)

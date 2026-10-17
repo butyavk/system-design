@@ -40,6 +40,7 @@ classDiagram
     -order: DoublyLinkedList
     +get(key) value
     +put(key, value)
+    +\_\_len\_\_() int
   }
   class DoublyLinkedList {
     -head: Node
@@ -55,9 +56,9 @@ classDiagram
     +prev: Node
     +next: Node
   }
-  LRUCache *-- DoublyLinkedList
-  LRUCache --> Node : значения словаря
-  DoublyLinkedList o-- Node : связи
+  LRUCache "1" *-- "1" DoublyLinkedList
+  LRUCache "1" --> "0..*" Node : значения словаря
+  DoublyLinkedList "1" o-- "0..*" Node : связи
 ```
 
 Зачем обе структуры? Словарь находит ключ за `O(1)`, но не знает, какой ключ самый старый, без полного просмотра. Список хранит порядок, но ищет ключ за `O(n)`. Словарь указывает прямо на узлы списка, поэтому узел можно отцепить из середины, не проходя список. Список нужен именно двусвязный: чтобы отцепить узел, нужен и предыдущий узел.

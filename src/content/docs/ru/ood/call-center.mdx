@@ -40,29 +40,41 @@ classDiagram
     +dispatch(call) Employee
     +escalate(employee) Employee
     +complete(employee) Call
+    +queued() int
+    -assign(call, employee)
+    -release(employee) Call
     -serve_queue(employee)
   }
   class Employee {
     +name: str
     +rank: Rank
     +call: Call
-    +is_free() bool
+    +is_free: bool
   }
   class Call {
     +caller: str
     +min_rank: Rank
+    +call_id: int
     +state: CallState
     +handler: Employee
   }
   class Rank {
-    OPERATOR
-    SUPERVISOR
-    DIRECTOR
+    <<IntEnum>>
+    OPERATOR = 0
+    SUPERVISOR = 1
+    DIRECTOR = 2
   }
-  CallCenter o-- Employee : сотрудники
-  CallCenter o-- Call : очереди
-  Employee --> Call : ведёт
+  class CallState {
+    <<enumeration>>
+    QUEUED
+    IN_PROGRESS
+    COMPLETE
+  }
+  CallCenter "1" o-- "1..*" Employee : сотрудники
+  CallCenter "1" o-- "0..*" Call : очереди
+  Employee "0..1" <--> "0..1" Call : ведёт
   Call --> Rank : min_rank
+  Call --> CallState : state
 ```
 
 Маршрутизация в `CallCenter` — сознательное решение. В некоторых вариантах сотрудник сам вызывает колл-центр (`employee.escalate()` → `center.notify_escalated()`). Это создаёт цикл между классами и размазывает логику очередей. Здесь сотрудники — просто данные, а любое изменение состояния проходит через один объект, который видит всех сотрудников и все очереди.

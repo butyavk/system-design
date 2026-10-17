@@ -44,6 +44,7 @@ classDiagram
     +free_spots() int
   }
   class Level {
+    +CODES: dict$
     +floor: int
     +rows: list
     +free_spots: int
@@ -61,8 +62,14 @@ classDiagram
   }
   class Vehicle {
     +plate: str
-    +size: Size
-    +spots_needed: int
+    +size: Size$
+    +spots_needed: int$
+  }
+  class Size {
+    <<IntEnum>>
+    MOTORCYCLE = 1
+    COMPACT = 2
+    LARGE = 3
   }
   class Ticket {
     +plate: str
@@ -70,11 +77,12 @@ classDiagram
     +spots: tuple
     +issued_at: datetime
   }
-  ParkingLot *-- Level
-  Level *-- ParkingSpot
-  ParkingLot --> Ticket : активные
-  Ticket --> ParkingSpot
-  ParkingSpot --> Vehicle : стоит
+  ParkingLot "1" *-- "1..*" Level
+  Level "1" *-- "1..*" ParkingSpot
+  ParkingLot "1" --> "0..*" Ticket : активные
+  Level <-- Ticket
+  ParkingSpot "1..*" <-- "1" Ticket : места
+  ParkingSpot "0..*" --> "0..1" Vehicle : стоит
   Vehicle <|-- Motorcycle
   Vehicle <|-- Car
   Vehicle <|-- Bus
@@ -233,7 +241,7 @@ if __name__ == "__main__":
 | `free_spots` | `O(L)` | Счётчики по этажам |
 
 - **Перебор или списки свободных мест.** Перебрать несколько сотен мест на этаже — мгновенно. Для гаража на 10 000 мест держат множество свободных мест для каждого размера на каждом этаже, и парковка на одно место становится `O(1)`. Автобусу всё равно нужен непрерывный участок: его проще всего искать перебором рядов больших мест (или хранить свободные участки в структуре интервалов).
-- **Наилучшее или первое подходящее.** Best fit бережёт большие места, но просматривает весь этаж. First fit быстрее, но может оставить автобус без места. Автобусу нужен целый ряд больших мест, поэтому здесь best fit стоит своих затрат.
+- **Наилучшее или первое подходящее.** Best fit бережёт большие места, но просматривает весь этаж. First fit быстрее, но может оставить автобус без места. Автобусу нужны пять больших мест подряд, поэтому здесь best fit стоит своих затрат.
 - **Сначала нижний этаж** — простое правило. Реальный гараж может предпочитать этаж поближе к въезду или распределять машины равномерно, чтобы не было очередей на пандусах. Если интервьюер туда клонит, сделайте это стратегией.
 
 ## Возможные расширения

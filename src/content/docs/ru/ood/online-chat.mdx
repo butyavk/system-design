@@ -44,14 +44,22 @@ classDiagram
   class ChatService {
     +users: dict
     +chats: dict
-    -inbox: dict
+    -ids: count
+    -inbox: defaultdict
     -private: dict
-    +send_friend_request(from_id, to_id)
-    +respond(from_id, to_id, accept)
+    +add_user(name) User
+    +send_friend_request(from_id, to_id) FriendRequest
+    +pending_requests(user_id) list
+    +respond(from_id, to_id, accept) FriendRequest
+    +remove_friend(user_id, friend_id)
     +private_chat(user_id, friend_id) PrivateChat
     +create_group(owner_id, title, invitee_ids) GroupChat
+    +invite(inviter_id, chat_id, invitee_id)
+    +leave_group(user_id, chat_id)
     +post(author_id, chat_id, text) Message
-    +history(user_id, chat_id) list
+    +history(user_id, chat_id, limit) list
+    -register(chat)
+    -chat_of_member(chat_id, user_id) Chat
   }
   class User {
     +user_id: int
@@ -63,23 +71,37 @@ classDiagram
     +from_id: int
     +to_id: int
     +status: RequestStatus
+    +created_at: datetime
+  }
+  class RequestStatus {
+    <<enumeration>>
+    PENDING
+    ACCEPTED
+    REJECTED
   }
   class Chat {
     +chat_id: int
     +member_ids: set
     +messages: list
   }
+  class GroupChat {
+    +title: str
+    +owner_id: int
+  }
   class Message {
+    +message_id: int
+    +chat_id: int
     +author_id: int
     +text: str
     +sent_at: datetime
   }
-  ChatService o-- User
-  ChatService o-- Chat
-  ChatService o-- FriendRequest : ожидающие
+  ChatService "1" *-- "0..*" User
+  ChatService "1" *-- "0..*" Chat
+  ChatService "1" *-- "0..*" FriendRequest : ожидающие
+  RequestStatus <-- FriendRequest
+  Chat "1" *-- "0..*" Message
   Chat <|-- PrivateChat
   Chat <|-- GroupChat
-  Chat *-- Message
 ```
 
 В исходном дизайне методы вроде `message_user` и `approve_friend_request` были и у `User`, и у `UserService`, а каждый пользователь хранил объекты других `User`. Логика дублировалась, и принятие заявки означало правку двух объектов изнутри одного из них. С id и единым сервисом каждое правило живёт в одном методе, а проверка доступа (`_chat_of_member`) общая для всех операций.
@@ -309,6 +331,6 @@ if __name__ == "__main__":
 ## Связанные темы
 
 - [Социальный граф](/practice/social-graph/): дружба и запросы к графу в масштабе.
-- [Потоковая обработка событий](/async/event-streaming/): журналы для истории чата и рассылки.
+- [Потоковая передача событий](/async/event-streaming/): журналы для истории чата и рассылки.
 - [Стили API](/communication/api-styles/): WebSocket, SSE и long polling для доставки сообщений.
 - [Ещё задачи для практики](/practice/more-questions/): вопрос о распределённой системе чата.

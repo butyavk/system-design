@@ -36,10 +36,14 @@ classDiagram
     -buckets: list
     -size: int
     -max_load_factor: float
+    +capacity: int
+    +load_factor: float
     +set(key, value)
     +get(key) value
     +remove(key) value
-    +load_factor() float
+    +items() Iterator
+    +\_\_len\_\_() int
+    +\_\_contains\_\_(key) bool
     -bucket_for(key) list
     -resize(new_capacity)
   }
@@ -47,7 +51,7 @@ classDiagram
     +key
     +value
   }
-  HashMap "1" *-- "many" Entry : buckets hold
+  HashMap "1" *-- "0..*" Entry : buckets hold
 ```
 
 The map **composes** its entries: they have no life outside it. The index depends on the capacity, so a resize cannot just copy the old buckets into a longer list. Every entry has to be hashed again into its new position.
@@ -150,7 +154,7 @@ if __name__ == "__main__":
 | Operation | Average | Worst case |
 |---|---|---|
 | `get`, `set`, `remove` | `O(1)` | `O(n)`: all keys in one bucket |
-| Resize | `O(n)` for that insert | Amortised `O(1)` per insert |
+| Resize | Amortised `O(1)` per insert | `O(n)` for the insert that triggers it |
 | Memory | `O(n + capacity)` | — |
 
 The average case assumes the hash spreads keys evenly. Then the expected chain length equals the load factor, which stays below 0.75. Two things break that assumption:

@@ -29,14 +29,14 @@ Queues also carry work that nobody requested: nightly aggregates, cache warming,
 ## How a message queue works
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] -->|"POST /exports"| api["API server"]
   api -->|"publish job"| queue[["Queue"]]
   api -->|"202 + job id"| client
-  queue -->|"receive (lease)"| w1["Worker 1"]
-  queue -->|"receive (lease)"| w2["Worker 2"]
+  queue -->|"receive<br/>(lease)"| w1["Worker 1"]
+  queue -->|"receive<br/>(lease)"| w2["Worker 2"]
   w1 & w2 -->|"write result"| db[("Database")]
-  w1 & w2 -.->|"ack / delete"| queue
+  w1 & w2 -.->|"ack /<br/>delete"| queue
   client -.->|"GET /exports/id"| api
 ```
 

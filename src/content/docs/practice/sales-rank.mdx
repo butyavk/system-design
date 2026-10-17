@@ -69,7 +69,7 @@ The original primer listed field sizes that add up to 42 bytes but called the to
 ## Step 2 — High-level design
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> web["Web server<br/>(reverse proxy)"]
   web --> readapi["Read API"]
   readapi --> rankdb[("SQL DB<br/>sales_rank")]
@@ -85,6 +85,81 @@ flowchart LR
 
 ## Step 3 — Core components
 
+### Read API
+
+```http
+GET /v1/categories/1234/best-sellers?limit=3
+```
+
+```json
+{
+  "category_id": 1234,
+  "snapshot_id": 88231,
+  "window": {"start": "2026-10-01T12:00:00Z", "end": "2026-10-08T12:00:00Z"},
+  "items": [
+    {"rank": 1, "product_id": 50,  "units_sold": 100000, "rank_change": 0},
+    {"rank": 2, "product_id": 200, "units_sold": 90000,  "rank_change": 3},
+    {"rank": 3, "product_id": 3,   "units_sold": 80000,  "rank_change": -1}
+  ],
+  "next_cursor": "eyJyYW5rIjozfQ"
+}
+```
+
+```http
+GET /v1/products/50/sales-rank
+→ {"snapshot_id": 88231, "ranks": [{"category_id": 1234, "rank": 1}, {"category_id": 77, "rank": 412}]}
+```
+
+Responses carry the `snapshot_id`, so they are cacheable with `Cache-Control: max-age=60, stale-while-revalidate=300`. Internal services can call the same operations over gRPC.
+
+### Data model
+
+Keep hourly aggregates as the source of truth and publish rankings as **immutable snapshots**, so readers never see a half-written list:
+
+```sql
+CREATE TABLE sales_hourly (            -- one row per product, category and hour
+  hour_start   TIMESTAMP NOT NULL,
+  category_id  INTEGER   NOT NULL,
+  product_id   BIGINT    NOT NULL,
+  units        INTEGER   NOT NULL,     -- net of cancellations and refunds
+  PRIMARY KEY (hour_start, category_id, product_id)
+);
+
+CREATE TABLE rank_snapshot (
+  snapshot_id  BIGINT PRIMARY KEY,
+  window_start TIMESTAMP NOT NULL,
+  window_end   TIMESTAMP NOT NULL,
+  published_at TIMESTAMP              -- NULL until the snapshot is complete
+);
+
+CREATE TABLE sales_rank (
+  snapshot_id  BIGINT  NOT NULL REFERENCES rank_snapshot (snapshot_id),
+  category_id  INTEGER NOT NULL,
+  rank         INTEGER NOT NULL,
+  product_id   BIGINT  NOT NULL,
+  units_sold   INTEGER NOT NULL,
+  PRIMARY KEY (snapshot_id, category_id, rank)
+);
+CREATE INDEX sales_rank_by_product ON sales_rank (snapshot_id, product_id);
+```
+
+The weekly ranking is one window-function query over the hourly table:
+
+```sql
+SELECT category_id, product_id, units, rnk
+FROM (
+  SELECT category_id, product_id, SUM(units) AS units,
+         ROW_NUMBER() OVER (PARTITION BY category_id
+                            ORDER BY SUM(units) DESC, product_id) AS rnk
+  FROM sales_hourly
+  WHERE hour_start >= :window_start
+  GROUP BY category_id, product_id
+) AS ranked
+WHERE rnk <= :top_n;
+```
+
+Publishing is a pointer flip: write all rows for the new `snapshot_id`, then set `published_at`. Readers always use the latest published snapshot, and a bad run is rolled back by un-publishing it.
+
 ### The batch job
 
 The original solution used a two-step MapReduce: map each log line to `((category, product), quantity)`, reduce by summing, then re-key by `(category, quantity)` so the framework's distributed sort orders the output. Two details are worth improving:
@@ -92,7 +167,7 @@ The original solution used a two-step MapReduce: map each log line to `((categor
 - A global sort is wasted work: we only need the top N of each category, which a **bounded heap per category** gives in `O(n log N)`.
 - Logs are delivered **at least once**, so the job must drop duplicate order lines first, and a product in several categories must be counted in each of them.
 
-The version below runs on a tiny sample with plain Python; the three functions are exactly what a Spark or Beam job would distribute across workers.
+The version below runs on a tiny sample with plain Python; the dedupe, map and reduce functions are exactly what a Spark or Beam job would distribute across workers.
 
 ```python title="sales_rank_batch.py"
 from collections import defaultdict
@@ -179,82 +254,7 @@ if __name__ == "__main__":
 
 Note the tie in `books`: two products sold three units each. Pick a deterministic tie-breaker (higher revenue, then product id) so the list does not flicker between runs.
 
-Rescanning the whole week every hour reads about 15 GB per run. A cheaper variant aggregates **one hour at a time** into an `sales_hourly` table and computes the week as the sum of the last 168 hourly rows — the same idea that streaming engines call *panes*.
-
-### Data model
-
-Keep hourly aggregates as the source of truth and publish rankings as **immutable snapshots**, so readers never see a half-written list:
-
-```sql
-CREATE TABLE sales_hourly (            -- one row per product, category and hour
-  hour_start   TIMESTAMP NOT NULL,
-  category_id  INTEGER   NOT NULL,
-  product_id   BIGINT    NOT NULL,
-  units        INTEGER   NOT NULL,     -- net of cancellations and refunds
-  PRIMARY KEY (hour_start, category_id, product_id)
-);
-
-CREATE TABLE rank_snapshot (
-  snapshot_id  BIGINT PRIMARY KEY,
-  window_start TIMESTAMP NOT NULL,
-  window_end   TIMESTAMP NOT NULL,
-  published_at TIMESTAMP              -- NULL until the snapshot is complete
-);
-
-CREATE TABLE sales_rank (
-  snapshot_id  BIGINT  NOT NULL REFERENCES rank_snapshot (snapshot_id),
-  category_id  INTEGER NOT NULL,
-  rank         INTEGER NOT NULL,
-  product_id   BIGINT  NOT NULL,
-  units_sold   INTEGER NOT NULL,
-  PRIMARY KEY (snapshot_id, category_id, rank)
-);
-CREATE INDEX sales_rank_by_product ON sales_rank (snapshot_id, product_id);
-```
-
-The weekly ranking is one window-function query over the hourly table:
-
-```sql
-SELECT category_id, product_id, units, rnk
-FROM (
-  SELECT category_id, product_id, SUM(units) AS units,
-         ROW_NUMBER() OVER (PARTITION BY category_id
-                            ORDER BY SUM(units) DESC, product_id) AS rnk
-  FROM sales_hourly
-  WHERE hour_start >= :window_start
-  GROUP BY category_id, product_id
-) AS ranked
-WHERE rnk <= :top_n;
-```
-
-Publishing is a pointer flip: write all rows for the new `snapshot_id`, then set `published_at`. Readers always use the latest published snapshot, and a bad run is rolled back by un-publishing it.
-
-### Read API
-
-```http
-GET /v1/categories/1234/best-sellers?limit=3
-```
-
-```json
-{
-  "category_id": 1234,
-  "snapshot_id": 88231,
-  "window": {"start": "2026-10-01T12:00:00Z", "end": "2026-10-08T12:00:00Z"},
-  "items": [
-    {"rank": 1, "product_id": 50,  "units_sold": 100000, "rank_change": 0},
-    {"rank": 2, "product_id": 200, "units_sold": 90000,  "rank_change": 3},
-    {"rank": 3, "product_id": 3,   "units_sold": 80000,  "rank_change": -1}
-  ],
-  "next_cursor": "eyJyYW5rIjozfQ"
-}
-```
-
-```http
-GET /v1/products/50/sales-rank
-→ {"snapshot_id": 88231, "ranks": [{"category_id": 1234, "rank": 1}, {"category_id": 77, "rank": 412}]}
-```
-
-Responses carry the `snapshot_id`, so they are cacheable with `Cache-Control: max-age=60, stale-while-revalidate=300`. Internal services can call the same operations over gRPC.
+Rescanning the whole week every hour reads about 15 GB per run. A cheaper variant aggregates **one hour at a time** into the `sales_hourly` table and computes the week as the sum of the last 168 hourly rows — the same idea that streaming engines call *panes*.
 
 ## Step 4 — Scaling the design
 
@@ -267,7 +267,7 @@ Benchmark, find the bottleneck, fix it, repeat. In order of appearance:
 5. **Write path.** 1,900 events/s at peak is small for a log; the risk is coupling. Checkout writes an event (outbox table or change data capture) and never calls the ranking service synchronously.
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> cdn["CDN"]
   cdn --> lb["Load balancer"]
   lb --> readapi["Read API"]
@@ -292,7 +292,7 @@ flowchart LR
 The batch design still works and is easy to reason about. What changed is that **streaming is now the default for "top N over a sliding window"**: every major cloud sells a managed Kafka-compatible log, and managed Flink is available from AWS and from several Flink vendors, so the "updated hourly" constraint can become "updated every minute" without a bigger team.
 
 ```mermaid
-flowchart LR
+flowchart TB
   shop["Checkout service"] --> outbox["Outbox / CDC"]
   outbox --> log[["Event log<br/>(Kafka-compatible)"]]
   catalog["Catalog CDC<br/>product → categories"] --> flink

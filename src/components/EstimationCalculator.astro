@@ -23,7 +23,7 @@ const T = {
     results: 'Results',
     steps: 'Show the arithmetic',
     rules: 'Rules of thumb',
-    rule1: '1 day = 86,400 s ≈ 10⁵ s — divide a daily count by 10⁵ to get an average per second (the true value is ~15% higher).',
+    rule1: '1 day = 86,400 s ≈ 10⁵ s — divide a daily count by 10⁵ to get an average per second (the true value is ~16% higher).',
     rule2: '1 million requests/day ≈ 12 per second; 1 billion/day ≈ 12,000 per second.',
     rule3: '1 year ≈ 3 × 10⁷ s; 1 KB × 1 million = 1 GB; 1 MB × 1 million = 1 TB.',
     rule4: 'Round aggressively: the goal is the order of magnitude, not three significant digits.',
@@ -59,7 +59,7 @@ const T = {
     results: 'Результаты',
     steps: 'Показать вычисления',
     rules: 'Эмпирические правила',
-    rule1: '1 сутки = 86 400 с ≈ 10⁵ с — делим дневное количество на 10⁵ и получаем среднее в секунду (точное значение на ~15% больше).',
+    rule1: '1 сутки = 86 400 с ≈ 10⁵ с — делим дневное количество на 10⁵ и получаем среднее в секунду (точное значение на ~16% больше).',
     rule2: '1 млн запросов в сутки ≈ 12 в секунду; 1 млрд в сутки ≈ 12 000 в секунду.',
     rule3: '1 год ≈ 3 × 10⁷ с; 1 КБ × 1 млн = 1 ГБ; 1 МБ × 1 млн = 1 ТБ.',
     rule4: 'Округляйте смело: важен порядок величины, а не три значащие цифры.',
@@ -83,7 +83,8 @@ const T = {
 
 const sizeUnits = locale === 'ru' ? ['Б', 'КБ', 'МБ'] : ['B', 'KB', 'MB'];
 
-// URL shortener defaults (see the estimation page): 100M DAU... kept modest:
+// Presets: the URL shortener (default) and photo sharing match the two worked examples
+// on the estimation page; the chat app is an extra.
 const presets = {
   shortener: { dau: 10_000_000, actions: 0.1, ratio: 100, size: 500, sizeUnit: 0, retention: 5, peak: 3, replication: 3 },
   chat: { dau: 50_000_000, actions: 40, ratio: 1, size: 200, sizeUnit: 0, retention: 2, peak: 3, replication: 3 },
@@ -158,18 +159,18 @@ const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid
 
     <section class="est-results" aria-labelledby={`${uid}-res`}>
       <h3 class="est-h" id={`${uid}-res`}>{T.results}</h3>
-      <dl class="est-out" aria-live="polite">
+      <div class="est-out" aria-live="polite">
         {outputs.map((pair) => (
-          <div class="est-out-row">
+          <dl class="est-out-row">
             {pair.map((k) => (
               <div class="est-out-cell">
                 <dt>{T.out[k]}</dt>
                 <dd data-out={k}>—</dd>
               </div>
             ))}
-          </div>
+          </dl>
         ))}
-      </dl>
+      </div>
     </section>
   </div>
 
@@ -269,6 +270,7 @@ const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid
 
   .est-out { margin: 0; display: grid; gap: 0; }
   .est-out-row {
+    margin: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
@@ -372,14 +374,15 @@ const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid
     const fmtIn = (v: number) => nf(locale, { maximumFractionDigits: 3 }).format(v);
     const S = (v: number, d = 3) => sig(v, locale, d);
     const qps = (v: number) => {
-      if (v >= 1e6) return `${S(v / 1e6, 2)}${ru ? ' млн' : 'M'}`;
-      if (v >= 1e4) return `${S(v / 1e3, 3)}${ru ? ' тыс.' : 'K'}`;
+      // Thresholds just below 10⁶ and 10⁴, so rounding never shows "1,000K".
+      if (v >= 999_500) return `${S(v / 1e6, 2)}${ru ? ' млн' : 'M'}`;
+      if (v >= 9_999.5) return `${S(v / 1e3, 3)}${ru ? ' тыс.' : 'K'}`;
       return v >= 10 ? int(v, locale) : S(v, 2);
     };
     const bytes = (b: number) => formatBytes(b, locale, 'si');
     const rate = (bps: number) => {
       const bits = bps * 8;
-      const units = ru ? ['бит/с', 'Кбит/с', 'Мбит/с', 'Гбит/с', 'Тбит/с'] : ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s', 'Tbit/s'];
+      const units = ru ? ['бит/с', 'кбит/с', 'Мбит/с', 'Гбит/с', 'Тбит/с'] : ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s', 'Tbit/s'];
       let i = 0;
       let v = bits;
       while (v >= 999.5 && i < units.length - 1) { v /= 1000; i++; }
@@ -390,6 +393,17 @@ const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid
       if (v >= 1e9) return `${S(v / 1e9)}${ru ? ' млрд' : ' billion'}`;
       if (v >= 1e6) return `${S(v / 1e6)}${ru ? ' млн' : ' million'}`;
       return int(v, locale);
+    };
+
+    // "3 replicas" / "3 реплики", "5 реплик", "1 реплика", "1,5 реплики".
+    const replicaWord = (n: number) => {
+      if (!ru) return n === 1 ? 'replica' : 'replicas';
+      if (!Number.isInteger(n)) return 'реплики';
+      const m10 = n % 10;
+      const m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return 'реплика';
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'реплики';
+      return 'реплик';
     };
 
     const read = (): Record<string, number> | null => {
@@ -445,7 +459,7 @@ const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid
             `<b>Пик:</b> <code>${qps(wAvg)} ${x} ${S(v.peak)} ≈ ${qps(wPeak)}</code> записей/с, <code>${qps(rAvg)} ${x} ${S(v.peak)} ≈ ${qps(rPeak)}</code> чтений/с`,
             `<b>Входящий трафик:</b> <code>${qps(wAvg)}/с ${x} ${bytes(sizeB)} ≈ ${bytes(ingest)}/с</code>; исходящий: <code>${qps(rAvg)}/с ${x} ${bytes(sizeB)} ≈ ${bytes(egress)}/с</code> (в пике умножьте на ${S(v.peak)})`,
             `<b>Данных в сутки:</b> <code>${big(writesDay)} ${x} ${bytes(sizeB)} = ${bytes(perDay)}</code>; в год: <code>${bytes(perDay)} ${x} 365 ≈ ${bytes(perYear)}</code>`,
-            `<b>Всего:</b> <code>${bytes(perYear)} ${x} ${S(v.retention)} г. ${x} ${S(v.replication)} реплики ≈ ${bytes(total)}</code> — без индексов, метаданных и запаса на рост`,
+            `<b>Всего:</b> <code>${bytes(perYear)} ${x} ${S(v.retention)} г. ${x} ${S(v.replication)} ${replicaWord(v.replication)} ≈ ${bytes(total)}</code> — без индексов, метаданных и запаса на рост`,
           ]
         : [
             `<b>Writes per day:</b> <code>${big(v.dau)} ${x} ${S(v.actions)} = ${big(writesDay)}</code>`,
@@ -455,7 +469,7 @@ const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid
             `<b>Peak:</b> <code>${qps(wAvg)} ${x} ${S(v.peak)} ≈ ${qps(wPeak)}</code> writes/s, <code>${qps(rAvg)} ${x} ${S(v.peak)} ≈ ${qps(rPeak)}</code> reads/s`,
             `<b>Ingest:</b> <code>${qps(wAvg)}/s ${x} ${bytes(sizeB)} ≈ ${bytes(ingest)}/s</code>; egress: <code>${qps(rAvg)}/s ${x} ${bytes(sizeB)} ≈ ${bytes(egress)}/s</code> (multiply by ${S(v.peak)} for peak)`,
             `<b>Data per day:</b> <code>${big(writesDay)} ${x} ${bytes(sizeB)} = ${bytes(perDay)}</code>; per year: <code>${bytes(perDay)} ${x} 365 ≈ ${bytes(perYear)}</code>`,
-            `<b>Total:</b> <code>${bytes(perYear)} ${x} ${S(v.retention)} y ${x} ${S(v.replication)} replicas ≈ ${bytes(total)}</code> — before indexes, metadata and growth headroom`,
+            `<b>Total:</b> <code>${bytes(perYear)} ${x} ${S(v.retention)} y ${x} ${S(v.replication)} ${replicaWord(v.replication)} ≈ ${bytes(total)}</code> — before indexes, metadata and growth headroom`,
           ];
       steps.innerHTML = lines.map((l) => `<li>${l}</li>`).join('');
     }

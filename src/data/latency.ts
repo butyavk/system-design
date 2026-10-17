@@ -5,7 +5,9 @@
 // for 2026-era hardware and cloud networks, not guarantees: `low`/`high` give the
 // spread you will meet in practice. `value2012` is the classic "numbers every
 // programmer should know" table (Peter Norvig's and Jeff Dean's figures from the
-// 2000s, as compiled in Jonas Bonér's 2012 gist) where it has a comparable row.
+// 2000s, as compiled in Jonas Bonér's 2012 gist) where it has a comparable row;
+// the one exception is "Read 1 MB sequentially from 1 Gbps" (10 ms), which only the
+// primer's copy of the table has.
 //
 // Research notes (2026-10-08, values and links re-checked 2026-10-09):
 // - CPU caches: L1D is 4–5 cycles on Zen 5, Lion Cove, Neoverse V2 and Xeon 6;
@@ -23,7 +25,9 @@
 //   the zstd README: i7-9700K @ 4.9 GHz, Silesia corpus). The LZ4 README's own
 //   table is older (LZ4 1.9.0, gcc 8) and not used here.
 // - NVMe: Samsung 990 PRO (PCIe 4) is rated 22K IOPS at QD1 → ~45 µs per 4 KB
-//   read; enterprise TLC drives show 78–123 µs under heavy load; PCIe 5 drives read
+//   read; under heavy load (VDBench 4K random read, 128 threads) StorageReview measured
+//   78 µs (KIOXIA CM7-R) and 123 µs (Samsung PM1743) at ~0.7M IOPS and 183 µs
+//   (Memblaze 7940) at 1.09M IOPS; PCIe 5 drives read
 //   ~14 GB/s sequentially (Samsung 9100 PRO measured 14.7 GB/s).
 // - HDD: 7,200 rpm → 4.16 ms average rotational latency plus ~5–9 ms seek,
 //   i.e. ~75–110 random IOPS at QD1; ~285 MB/s on outer tracks (Seagate Exos X24).
@@ -577,7 +581,10 @@ export const latencySources: LatencySource[] = [
     key: 'storagereview-cm7',
     title: 'StorageReview — KIOXIA CM7-R E3.S SSD review',
     url: 'https://www.storagereview.com/review/kioxia-cm7-r-e3-s-ssd-review',
-    used: { en: 'Enterprise 4K random read: 78–123 µs under load', ru: 'Случайное чтение 4K у серверных SSD: 78–123 мкс под нагрузкой' },
+    used: {
+      en: '4K random read under load (128 threads): 78 µs for the CM7-R and 123 µs for a Samsung PM1743 at ~0.7M IOPS, 183 µs for a Memblaze 7940 at 1.09M IOPS',
+      ru: 'Случайное чтение 4K под нагрузкой (128 потоков): 78 мкс у CM7-R и 123 мкс у Samsung PM1743 при ~0,7 млн IOPS, 183 мкс у Memblaze 7940 при 1,09 млн IOPS',
+    },
   },
   {
     key: 'aws-ebs',

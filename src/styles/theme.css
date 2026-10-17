@@ -49,7 +49,7 @@
   --sl-color-gray-7: #f3f6f6;
   --sl-color-black: #ffffff;
 
-  --sdp-signal: #b86e05;
+  --sdp-signal: #9a5900;
   --sdp-signal-low: #fbefd9;
   --sdp-tip-bg: #ecf7f5;
   --sdp-note-bg: #eef3f9;
@@ -221,6 +221,127 @@
   text-align: center;
 }
 
+/* Diagrams never shrink below ~70% of their natural size (labels stay ≥ 11px):
+   a wider diagram scrolls sideways instead. --sdp-natural is set by DiagramTools. */
+.sl-markdown-content pre.mermaid {
+  justify-content: flex-start;
+}
+.sl-markdown-content .sdp-diagram > pre.mermaid {
+  margin: 0;
+}
+.sl-markdown-content pre.mermaid > svg {
+  min-width: calc(var(--sdp-natural, 0px) * 0.7);
+  margin-inline: auto;
+  flex-shrink: 0;
+}
+.sdp-diagram {
+  position: relative;
+  margin-block: 1.5rem;
+}
+.sdp-diagram__open {
+  position: absolute;
+  top: 0.45rem;
+  inset-inline-end: 0.45rem;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  padding: 0.3rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.4rem;
+  background: var(--sl-color-bg);
+  color: var(--sl-color-gray-2);
+  cursor: pointer;
+  opacity: 0;
+}
+.sdp-diagram__open:hover,
+.sdp-diagram__open:focus-visible {
+  color: var(--sl-color-white);
+  border-color: var(--sl-color-accent);
+}
+.sdp-diagram__open svg,
+.sdp-diagram__hint svg { width: 0.85rem; height: 0.85rem; flex: none; }
+.sdp-diagram__label { display: none; }
+/* Diagrams that fit: an expand icon on hover (mouse) or keyboard focus. */
+@media (hover: hover) {
+  .sdp-diagram:not(.is-scrollable) .sdp-diagram__open { display: inline-flex; }
+  .sdp-diagram:not(.is-scrollable):hover .sdp-diagram__open { opacity: 0.9; }
+}
+.sdp-diagram__open:focus-visible { display: inline-flex; opacity: 1; }
+/* Diagrams wider than the column: a line under them with the expand button. */
+.sdp-diagram__hint {
+  margin: 0.4rem 0 0;
+  font-size: var(--sl-text-xs);
+  color: var(--sl-color-gray-3);
+  text-align: center;
+}
+.sdp-diagram__hint button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sl-color-accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+.sdp-diagram:not(.is-scrollable) .sdp-diagram__hint { display: none; }
+
+.sdp-dlg {
+  width: min(100vw - 1rem, 120rem);
+  height: min(100dvh - 1rem, 80rem);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.75rem;
+  background: var(--sl-color-bg);
+  color: var(--sl-color-text);
+}
+.sdp-dlg::backdrop { background: rgb(0 0 0 / 0.6); }
+.sdp-dlg { margin: auto; }
+@media (max-width: 30rem) {
+  .sdp-dlg__bar span { display: none; }
+  .sdp-dlg__bar { justify-content: flex-end; gap: 0.3rem; }
+  .sdp-dlg__bar button { min-width: 2rem; padding: 0.25rem 0.45rem; }
+}
+.sdp-dlg[open] { display: flex; flex-direction: column; }
+.sdp-dlg__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--sl-color-gray-6);
+  font-size: var(--sl-text-sm);
+}
+.sdp-dlg__bar span { margin-inline-end: auto; color: var(--sl-color-gray-3); }
+.sdp-dlg__bar button {
+  min-width: 2.25rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--sl-color-white);
+  font: inherit;
+  cursor: pointer;
+}
+.sdp-dlg__bar button:hover,
+.sdp-dlg__bar button:focus-visible { border-color: var(--sl-color-accent); }
+.sdp-dlg__body {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+}
+.sdp-dlg__body > svg {
+  margin: auto;
+  flex-shrink: 0;
+  max-width: none !important;
+  height: auto;
+}
+
 /* ---------- Footer attribution spacing ---------- */
 footer .sdp-attribution {
   max-width: var(--sl-content-width);
@@ -228,4 +349,77 @@ footer .sdp-attribution {
 
 @media (prefers-reduced-motion: reduce) {
   .sl-link-card { transition: none; }
+}
+
+/* ---------- Skill map status glyphs (map, study plan, topic footer) ---------- */
+.sm-glyph {
+  --g: var(--sl-color-gray-4);
+  position: relative;
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1.5px solid var(--g);
+  border-radius: 50%;
+  background: var(--sl-color-bg);
+}
+.sm-glyph.is-locked,
+.is-locked > .sm-glyph {
+  border-style: dashed;
+}
+.sm-glyph.is-ready,
+.is-ready > .sm-glyph {
+  --g: var(--sl-color-accent);
+}
+.sm-glyph.is-opened,
+.is-opened > .sm-glyph {
+  --g: var(--sl-color-accent);
+  background: linear-gradient(90deg, var(--g) 50%, var(--sl-color-bg) 50%);
+}
+.sm-glyph.is-learned,
+.is-learned > .sm-glyph {
+  --g: var(--sl-color-accent);
+  background: var(--g);
+}
+.sm-glyph.is-learned::after,
+.is-learned > .sm-glyph::after {
+  content: '';
+  position: absolute;
+  left: 0.26rem;
+  top: 0.1rem;
+  width: 0.22rem;
+  height: 0.42rem;
+  border: solid var(--sl-color-bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.sm-glyph.is-gap,
+.is-gap > .sm-glyph {
+  --g: var(--sdp-signal);
+  background: var(--sdp-signal);
+}
+.sm-glyph.is-gap::after,
+.is-gap > .sm-glyph::after {
+  content: '!';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--sl-color-bg);
+}
+
+
+/* Mermaid's dark theme puts #ccc edge labels on #585858 (contrast 4.4:1); darken the chip. */
+:root[data-theme='dark'] pre.mermaid :is(.labelBkg, .edgeLabel, .edgeLabel p, .edgeLabel rect) {
+  background-color: #3b4246 !important;
+}
+:root[data-theme='dark'] pre.mermaid .edgeLabel rect {
+  fill: #3b4246 !important;
+}
+
+/* Inline code inside links: the accent on the code background is below 4.5:1 in light mode. */
+:root[data-theme='light'] .sl-markdown-content a > code {
+  color: var(--sl-color-accent-high);
 }

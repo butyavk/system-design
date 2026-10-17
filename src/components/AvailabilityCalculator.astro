@@ -48,7 +48,8 @@ const T = {
     targetTitle: 'Бюджет простоя',
     targetLabel: 'Доступность, %',
     presets: 'Типовые значения',
-    nines: (n: string) => `${n} ${n === '2' || n === '3' || n === '4' ? 'девятки' : 'девяток'}`,
+    // 2–4 and fractions ("3,5 девятки") take «девятки»; 5 and more take «девяток».
+    nines: (n: string) => `${n} ${n.includes(',') || n === '2' || n === '3' || n === '4' ? 'девятки' : 'девяток'}`,
     period: 'Период',
     allowed: 'Допустимый простой',
     year: 'Год',
@@ -425,7 +426,10 @@ const clientData = {
       // Number of leading 9s after "99" determines how many decimals are meaningful.
       const nines = Math.floor(-Math.log10(1 - fraction));
       const digits = Math.min(8, Math.max(2, nines + 1));
-      return pctFmt(Math.floor(fraction * 100 * 10 ** digits) / 10 ** digits, digits);
+      // Truncate rather than round (99.98999% must not show as 99.99%), but strip float noise
+      // first: 99.96 / 100 * 100 * 1e4 is 999599.99…, and Math.floor would show 99.9599%.
+      const s = (fraction * 100).toFixed(digits + 3);
+      return pctFmt(Number(s.slice(0, -3)), digits);
     };
 
     // ---- (a) downtime budget ----

@@ -1,0 +1,250 @@
+---
+// "On the skill map" block at the end of every topic page: what to read first, what this
+// topic leads to, a "mark as learned" toggle and a link to the page's place on the map.
+// Also records the visit, so the map can show "opened" and "you are here".
+import { stages, tracks, MAP_PATH } from '~/data/skill-map';
+import { mapNodes, pageHref } from '../lib/skill-map-data';
+import type { Locale } from '../lib/format';
+
+const route = Astro.locals.starlightRoute;
+const locale: Locale = route?.locale === 'ru' ? 'ru' : 'en';
+const id = (route?.id ?? '').replace(/^ru(\/|$)/, '');
+const path = id && id !== 'index' ? `${id.replace(/\/$/, '')}/` : '';
+const nodes = path ? await mapNodes(locale) : [];
+const node = nodes.find((n) => n.p === path);
+const byPath = new Map(nodes.map((n) => [n.p, n]));
+const stageIdx = node ? stages.findIndex((s) => s.tracks.includes(node.tr)) : -1;
+
+const T = {
+  en: {
+    aria: 'This topic on the skill map',
+    map: 'Skill map',
+    first: 'Read first',
+    leads: 'Leads to',
+    none: 'Nothing — you can start here.',
+    end: 'An end point: practise or pick the next topic on the map.',
+    mark: 'Mark as learned',
+    marked: 'Learned',
+    stage: 'Stage',
+  },
+  ru: {
+    aria: 'Эта тема на карте навыков',
+    map: 'Карта навыков',
+    first: 'Сначала прочитать',
+    leads: 'Ведёт к',
+    none: 'Ничего — можно начинать отсюда.',
+    end: 'Конечная точка: тренируйтесь или выберите следующую тему на карте.',
+    mark: 'Отметить изученным',
+    marked: 'Изучено',
+    stage: 'Этап',
+  },
+}[locale];
+const trackTitle = node ? tracks.find((t) => t.id === node.tr)!.title[locale] : '';
+const mapHref = `${pageHref(MAP_PATH, locale)}?focus=${path}`;
+---
+
+{
+  node && (
+    <nav class="sdp-topic not-content" data-topic={node.p} data-marked={T.marked} data-mark={T.mark} aria-label={T.aria}>
+      <div class="sdp-topic__head">
+        <a class="sdp-topic__map" href={mapHref}>
+          <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="4.5" cy="4.5" r="2.2" />
+            <circle cx="15.5" cy="10" r="2.2" />
+            <circle cx="4.5" cy="15.5" r="2.2" />
+            <path d="M6.6 5.3 13.4 9.2M6.6 14.7l6.8-3.9" />
+          </svg>
+          {T.map}
+        </a>
+        <span class="sdp-topic__where">
+          {T.stage} {stageIdx + 1} · {stages[stageIdx].title[locale]} / {trackTitle}
+        </span>
+      </div>
+      <div class="sdp-topic__cols">
+        <div>
+          <p class="sdp-topic__k">{T.first}</p>
+          {node.needs.length ? (
+            <ul>
+              {node.needs.map((p) => (
+                <li>
+                  <a href={pageHref(p, locale)} data-p={p}>
+                    <span class="sm-glyph" aria-hidden="true" />
+                    {byPath.get(p)!.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="sdp-topic__none">{T.none}</p>
+          )}
+        </div>
+        <div>
+          <p class="sdp-topic__k sdp-topic__k--dep">{T.leads}</p>
+          {node.deps.length ? (
+            <ul>
+              {node.deps.map((p) => (
+                <li>
+                  <a href={pageHref(p, locale)} data-p={p}>
+                    <span class="sm-glyph" aria-hidden="true" />
+                    {byPath.get(p)!.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="sdp-topic__none">{T.end}</p>
+          )}
+        </div>
+      </div>
+      <button type="button" class="sdp-topic__learn" data-learn aria-pressed="false">
+        <span class="sdp-topic__box" aria-hidden="true" />
+        <span data-learn-label>{T.mark}</span>
+      </button>
+    </nav>
+  )
+}
+
+<style>
+  .sdp-topic {
+    margin-top: 2.5rem;
+    padding: 1rem 1.15rem 1.1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.85rem;
+    background: color-mix(in srgb, var(--sl-color-gray-7) 60%, var(--sl-color-bg));
+  }
+  .sdp-topic :where(p, ul) {
+    margin: 0;
+  }
+  .sdp-topic ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.3rem;
+  }
+  .sdp-topic__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+  }
+  .sdp-topic__map {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 650;
+    color: var(--sl-color-accent);
+    text-decoration: none;
+  }
+  .sdp-topic__map svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    align-self: center;
+  }
+  .sdp-topic__map:hover {
+    text-decoration: underline;
+  }
+  .sdp-topic__where {
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .sdp-topic__cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.9rem 1.5rem;
+    margin-top: 0.85rem;
+  }
+  .sdp-topic__k {
+    margin-bottom: 0.4rem !important;
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sl-color-accent);
+  }
+  .sdp-topic__k--dep {
+    color: var(--sdp-signal);
+  }
+  .sdp-topic li a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: var(--sl-text-sm);
+    line-height: 1.35;
+    color: var(--sl-color-white);
+    text-decoration: none;
+  }
+  .sdp-topic li a:hover {
+    color: var(--sl-color-accent);
+  }
+  .sdp-topic__none {
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .sdp-topic__learn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--sl-color-accent);
+    border-radius: 0.55rem;
+    background: transparent;
+    color: var(--sl-color-accent);
+    font: inherit;
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sdp-topic__learn:hover,
+  .sdp-topic__learn:focus-visible {
+    background: var(--sl-color-accent-low);
+  }
+  .sdp-topic__box {
+    position: relative;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid currentColor;
+    border-radius: 0.25rem;
+  }
+  .sdp-topic__learn[aria-pressed='true'] {
+    background: var(--sl-color-accent);
+    color: var(--sl-color-black);
+  }
+  .sdp-topic__learn[aria-pressed='true'] .sdp-topic__box::after {
+    content: '';
+    position: absolute;
+    left: 0.28rem;
+    top: 0.08rem;
+    width: 0.25rem;
+    height: 0.5rem;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+</style>
+
+<script>
+  import { loadProgress, markVisited, onProgressChange, setLearned } from '../lib/progress';
+
+  document.querySelectorAll<HTMLElement>('[data-topic]').forEach((nav) => {
+    const path = nav.dataset.topic!;
+    markVisited(path);
+    const btn = nav.querySelector<HTMLButtonElement>('[data-learn]')!;
+    const label = nav.querySelector<HTMLElement>('[data-learn-label]')!;
+    const render = () => {
+      const p = loadProgress();
+      const on = !!p.learned[path];
+      btn.setAttribute('aria-pressed', String(on));
+      label.textContent = on ? nav.dataset.marked! : nav.dataset.mark!;
+      nav.querySelectorAll<HTMLAnchorElement>('a[data-p]').forEach((a) => {
+        const q = a.dataset.p!;
+        // classList, not className: Astro's scoped-style class must stay on the element.
+        a.classList.toggle('is-learned', !!p.learned[q]);
+        a.classList.toggle('is-opened', !p.learned[q] && !!p.visited[q]);
+      });
+    };
+    btn.addEventListener('click', () => setLearned(path, !loadProgress().learned[path]));
+    onProgressChange(render);
+    render();
+  });
+</script>

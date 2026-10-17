@@ -75,6 +75,8 @@ src/content/docs/
     └── ...
 scripts/pages.json                 the site map: every section and slug
 scripts/check-mdx.mjs              self-check for content files
+scripts/check-diagrams.mjs         renders every diagram and checks its width
+src/data/skill-map.ts              the skill map: each topic and its prerequisites
 astro.config.mjs                   site config and sidebar groups
 CONTENT_GUIDE.md                   how pages are written
 ```
@@ -82,9 +84,9 @@ CONTENT_GUIDE.md                   how pages are written
 - **English** pages live in `src/content/docs/<section>/<slug>.mdx`.
 - **Russian** pages live in `src/content/docs/ru/<section>/<slug>.mdx`, with exactly the same section and file name.
 - **The sidebar** is generated from the folders. A page's position inside its section comes from `sidebar.order` in its frontmatter.
-- **New pages** need their slug added to `scripts/pages.json`; internal links are only allowed to pages listed there.
+- **New pages** need their slug added to `scripts/pages.json`; internal links are only allowed to pages listed there. A new topic page also needs a node in `src/data/skill-map.ts` with its prerequisites, or the build fails.
 - **Internal links** are written root-relative, without the locale or base path, and end with a slash: `/fundamentals/cap-theorem/`. The build adds `/system-design` and `/ru` automatically.
-- **Diagrams** are Mermaid code blocks; images are not used.
+- **Diagrams** are Mermaid code blocks; images are not used. Keep them at most 800px wide (stack long chains top to bottom), or labels become too small to read.
 - **Interactive widgets** in `src/components/` are added by the maintainer; if a page would benefit from one, suggest it in an issue.
 
 The [content guide](https://github.com/butyavk/system-design/blob/main/CONTENT_GUIDE.md) is the reference for everything else: page templates, frontmatter, writing style, the English–Russian glossary, MDX pitfalls and link quality rules. Please read it before writing or rewriting a page.
@@ -104,18 +106,24 @@ The self-check script validates content files without a full build. It reports M
 node scripts/check-mdx.mjs src/content/docs/fundamentals/cap-theorem.mdx src/content/docs/ru/fundamentals/cap-theorem.mdx
 ```
 
-Every file should get a ✓. Fix every ✗ before you open a pull request, then run `npm run build` as the final check.
+Every file should get a ✓. If you changed a diagram, render it too (the first run needs `npx playwright install chromium`):
+
+```bash
+node scripts/check-diagrams.mjs src/content/docs/fundamentals/cap-theorem.mdx src/content/docs/ru/fundamentals/cap-theorem.mdx
+```
+
+Fix every ✗ before you open a pull request, then run `npm run build` and `npm run check:links` as the final check.
 
 ## Pull request checklist
 
-- [ ] The change is made in **both** the English and the Russian page (or the description says which half is missing).
-- [ ] Frontmatter is complete: `title`, `description` (120–160 characters), `sidebar.order`.
-- [ ] Internal links are root-relative, end with `/` and point to pages in `scripts/pages.json`.
-- [ ] Every new external link was opened and works.
-- [ ] Numbers in estimates were recomputed, and code examples were run.
-- [ ] `node scripts/check-mdx.mjs` passes for every changed file.
-- [ ] `npm run build` completes without errors.
-- [ ] The description says what changed and why, with sources for factual corrections.
+- The change is made in **both** the English and the Russian page (or the description says which half is missing).
+- Frontmatter is complete: `title`, `description` (120–160 characters), `sidebar.order`.
+- Internal links are root-relative, end with `/` and point to pages in `scripts/pages.json`.
+- Every new external link was opened and works.
+- Numbers in estimates were recomputed, and code examples were run.
+- `node scripts/check-mdx.mjs` passes for every changed file, and `node scripts/check-diagrams.mjs` for every changed diagram.
+- `npm run build` completes without errors and `npm run check:links` finds no broken links.
+- The description says what changed and why, with sources for factual corrections.
 
 If you are new to pull requests, GitHub's guide to [creating a pull request from a fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) walks through it.
 
@@ -126,7 +134,7 @@ By contributing, you agree that your contribution is published under the same li
 ## Further reading
 
 - [Content guide](https://github.com/butyavk/system-design/blob/main/CONTENT_GUIDE.md): templates, style, glossary and MDX rules for this site.
-- [Starlight: using components](https://starlight.astro.build/components/using-components/): the components available in pages (asides, steps, tabs, cards).
+- [Starlight: using components](https://starlight.astro.build/components/using-components/): how to import and use components in MDX; the sidebar there links to a page for each built-in one (asides, steps, tabs, cards).
 - [Mermaid flowchart syntax](https://mermaid.js.org/syntax/flowchart.html): reference for diagrams.
 - [The original primer's contributing guide](https://github.com/donnemartin/system-design-primer/blob/master/CONTRIBUTING.md): how the upstream project handles contributions and translations.
 

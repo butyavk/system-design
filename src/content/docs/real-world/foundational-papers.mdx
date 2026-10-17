@@ -29,24 +29,30 @@ A three-pass approach works well: skim the abstract, headings and figures first 
 
 ## How the ideas connect
 
-Many of these systems build directly on each other. The arrows below mean "builds on or borrows ideas from".
+Many of these systems build directly on each other. In both diagrams below, an arrow means "builds on or borrows ideas from". The first covers coordination and storage:
 
 ```mermaid
 flowchart LR
-  paxos["Paxos (2001)"] --> chubby["Chubby (2006)"]
-  paxos --> raft["Raft (2014)"]
-  chubby --> zk["ZooKeeper (2010)"]
-  gfs["GFS (2003)"] --> mr["MapReduce (2004)"]
-  gfs --> hdfs["HDFS"]
-  gfs --> bt["Bigtable (2006)"]
+  paxos["Paxos<br/>(2001)"] --> chubby["Chubby<br/>(2006)"]
+  paxos --> raft["Raft<br/>(2014)"]
+  chubby --> zk["ZooKeeper<br/>(2010)"]
+  gfs["GFS<br/>(2003)"] --> hdfs["HDFS"]
+  gfs --> bt["Bigtable<br/>(2006)"]
   chubby --> bt
-  bt --> spanner["Spanner (2012)"]
-  bt --> cass["Cassandra (2009)"]
-  dynamo["Dynamo (2007)"] --> cass
-  dynamo --> ddb["DynamoDB (2022 paper)"]
-  mr --> spark["Spark RDDs (2012)"]
-  mr --> dataflow["Dataflow model (2015)"]
-  dataflow --> flink["Flink state (2017)"]
+  bt --> spanner["Spanner<br/>(2012)"]
+  bt --> cass["Cassandra<br/>(2009)"]
+  dynamo["Dynamo<br/>(2007)"] --> cass
+  dynamo --> ddb["DynamoDB<br/>(2022 paper)"]
+```
+
+The second shows how batch and stream processing grew out of GFS and MapReduce:
+
+```mermaid
+flowchart LR
+  gfs["GFS<br/>(2003)"] --> mr["MapReduce<br/>(2004)"]
+  mr --> spark["Spark RDDs<br/>(2012)"]
+  mr --> dataflow["Dataflow model<br/>(2015)"]
+  dataflow --> flink["Flink state<br/>(2017)"]
 ```
 
 ## Data processing

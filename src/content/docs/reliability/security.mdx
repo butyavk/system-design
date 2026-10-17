@@ -29,14 +29,14 @@ questions: is the channel encrypted, is the caller authenticated, is the action 
 input validated, and is it logged?
 
 ```mermaid
-flowchart LR
-  user["Users and attackers"] -- "TLS 1.3" --> edge["CDN, WAF, DDoS protection"]
+flowchart TB
+  user["Users and attackers"] -- "TLS 1.3" --> edge["CDN, WAF,<br/>DDoS protection"]
   edge --> gw["API gateway<br/>authN, rate limits"]
   gw -- "mTLS" --> svc["Services<br/>authZ per object"]
-  svc -- "mTLS, least-privilege role" --> db[("Databases<br/>encrypted at rest")]
-  svc --> kms["KMS and secrets manager"]
   ci["CI/CD pipeline"] -- "signed artifacts" --> svc
-  svc -. "audit events" .-> audit[("Append-only audit log")]
+  svc -- "mTLS,<br/>least-privilege role" --> db[("Databases<br/>encrypted at rest")]
+  svc --> kms["KMS and<br/>secrets manager"]
+  svc -. "audit events" .-> audit[("Append-only<br/>audit log")]
 ```
 
 ## Encryption in transit
@@ -65,11 +65,11 @@ sequenceDiagram
   participant K as KMS
   participant S as Storage
   A->>K: GenerateDataKey (key ID)
-  K-->>A: Plaintext data key + encrypted data key
-  Note over A: Encrypt record locally (AES-GCM),<br/>then discard the plaintext key
-  A->>S: Store ciphertext + encrypted data key
-  A->>S: Later: read ciphertext + encrypted data key
-  A->>K: Decrypt (encrypted data key), IAM-checked and logged
+  K-->>A: Plaintext data key +<br/>encrypted data key
+  Note over A: Encrypt record locally<br/>(AES-GCM), then discard<br/>the plaintext key
+  A->>S: Store ciphertext +<br/>encrypted data key
+  A->>S: Later: read ciphertext +<br/>encrypted data key
+  A->>K: Decrypt (encrypted data key),<br/>IAM-checked and logged
   K-->>A: Plaintext data key
   Note over A: Decrypt record locally
 ```
@@ -119,16 +119,16 @@ in. "Sign in with Google" and enterprise single sign-on are OIDC.
 sequenceDiagram
   participant U as User browser
   participant C as Client app
-  participant AS as Authorization server
+  participant AS as Authorization<br/>server
   participant API as Resource API
-  C->>U: Redirect to login with code_challenge (PKCE)
+  C->>U: Redirect to login<br/>with code_challenge<br/>(PKCE)
   U->>AS: Sign in and consent
-  AS-->>U: Redirect back with one-time code
+  AS-->>U: Redirect back<br/>with one-time code
   U->>C: Deliver code
-  C->>AS: Exchange code + code_verifier
-  AS-->>C: Access token, refresh token, ID token
-  C->>API: Request with Bearer access token
-  Note over API: Verify signature, iss, aud, exp, scopes
+  C->>AS: Exchange code<br/>+ code_verifier
+  AS-->>C: Access token,<br/>refresh token,<br/>ID token
+  C->>API: Request with<br/>Bearer access token
+  Note over API: Verify signature,<br/>iss, aud, exp,<br/>scopes
   API-->>C: Data
 ```
 
@@ -324,7 +324,7 @@ requirements that shape architecture:
 ## Related topics
 
 - [Rate limiting](/reliability/rate-limiting/) — the first line against abuse and application-layer floods.
-- [HTTP](/communication/http/) — TLS 1.3, 0-RTT replay risk, cookies and caching of private data.
+- [HTTP](/communication/http/) — TLS 1.3, 0-RTT replay risk and caching of private data.
 - [Reverse proxy and API gateway](/traffic/reverse-proxy-and-api-gateway/) — where authentication, WAF and rate limits usually sit.
 - [Service discovery and mesh](/architecture/service-discovery-and-mesh/) — mTLS and workload identity between services.
 - [Observability](/reliability/observability/) — logs, traces and alerts that audit logging builds on.

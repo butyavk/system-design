@@ -83,12 +83,12 @@ sequenceDiagram
   participant A as App server
   participant D as Metadata DB
   participant S as Object storage
-  C->>A: POST /uploads (type, size)
-  A->>D: insert media row (status = pending)
-  A-->>C: presigned PUT URL (expires in 15 min)
+  C->>A: POST /uploads<br/>(type, size)
+  A->>D: insert media row<br/>(status = pending)
+  A-->>C: presigned PUT URL<br/>(expires in 15 min)
   C->>S: PUT object bytes
   S-->>A: object-created event
-  A->>D: status = ready, size, checksum
+  A->>D: status = ready,<br/>size, checksum
 ```
 
 ```python title="presign.py"
@@ -135,7 +135,7 @@ Watch the fine print: minimum storage durations and per-request fees can make "c
 The most common storage architecture for user content splits responsibilities:
 
 ```mermaid
-flowchart LR
+flowchart TB
   user["Client"] -->|"GET /photos/42"| api["API service"]
   api --> db[("Metadata DB<br/>owner, key, size, ACL")]
   api -->|"signed CDN URL"| user

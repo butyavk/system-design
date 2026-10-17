@@ -27,7 +27,7 @@ import { Aside } from '@astrojs/starlight/components';
 Большинство историй проходят похожий путь роста:
 
 ```mermaid
-flowchart LR
+flowchart TB
   one["Один сервер приложения<br/>и одна база"] --> cache["Кэш и<br/>реплики для чтения"]
   cache --> cdn["CDN и асинхронные<br/>очереди задач"]
   cdn --> shard["Шардирование<br/>базы"]

@@ -17,8 +17,8 @@ import { Aside } from '@astrojs/starlight/components';
 ## Как работать со списком
 
 1. Выберите вопрос и поставьте таймер на 45 минут.
-2. Запишите требования и [прикидочный расчёт](/start/estimation/), нарисуйте высокоуровневую схему.
-3. Углубитесь в ключевую сложность из таблицы — именно туда будет давить интервьюер.
+2. Запишите требования, [прикидочный расчёт](/start/estimation/), API и модель данных, затем нарисуйте высокоуровневую схему.
+3. Углубитесь в ключевую сложность из таблицы — именно туда будет давить интервьюер. Затем найдите узкие места и режимы отказа и подведите итог относительно требований.
 4. Прочитайте ссылки и отметьте, что там сделали иначе и почему.
 
 Вопросы, уже разобранные на сайте:
@@ -44,8 +44,8 @@ import { Aside } from '@astrojs/starlight/components';
 | Синхронизация файлов (Dropbox, Google Drive) | Разбиение на блоки и дедупликация, конфликты, клиент, корректно синхронизирующийся после работы офлайн | [Объектное хранилище](/data/object-storage/), [Модели согласованности](/fundamentals/consistency-patterns/) | [Dropbox: rewriting the sync engine](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine), [Inside the Magic Pocket](https://dropbox.tech/infrastructure/inside-the-magic-pocket) |
 | Генератор уникальных ID | 64-битные ID, примерно упорядоченные по времени, без центрального узкого места; рассинхронизация часов | [Сокращатель ссылок](/practice/url-shortener-pastebin/), [Шардирование](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
 | Данные в нескольких дата-центрах | Согласованность против задержки между регионами; failover без потери записей | [Репликация](/data/replication/), [Теорема CAP](/fundamentals/cap-theorem/) | [Spanner (OSDI 2012)](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett), [Transactions across datacenters](https://snarfed.org/transactions_across_datacenters_io.html) |
-| Распределённый планировщик задач (cron в масштабе) | Запустить каждую задачу ровно один раз при сбоях; выбор лидера; без пиков ровно в полночь | [Очереди](/async/queues-and-back-pressure/), [Паттерны устойчивости](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
-| Конвейер метрик и логов | Приём миллионов точек в секунду, сжатие, уровни хранения, быстрые запросы | [Наблюдаемость](/reliability/observability/), [Потоки событий](/async/event-streaming/) | [Gorilla (VLDB 2015)](https://www.vldb.org/pvldb/vol8/p1816-teller.pdf), [Monarch (VLDB 2020)](https://research.google/pubs/monarch-googles-planet-scale-in-memory-time-series-database/) |
+| Распределённый планировщик задач (cron в масштабе) | Запустить каждую задачу ровно один раз при сбоях; выбор лидера; без пиков ровно в полночь | [Консенсус и координация](/fundamentals/consensus-and-coordination/), [Очереди](/async/queues-and-back-pressure/), [Паттерны устойчивости](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
+| Конвейер метрик и логов | Приём миллионов точек в секунду, сжатие, уровни хранения, быстрые запросы | [Наблюдаемость](/reliability/observability/), [Потоковая передача событий](/async/event-streaming/) | [Gorilla (VLDB 2015)](https://www.vldb.org/pvldb/vol8/p1816-teller.pdf), [Monarch (VLDB 2020)](https://research.google/pubs/monarch-googles-planet-scale-in-memory-time-series-database/) |
 
 ## Социальные и контентные платформы
 
@@ -57,7 +57,7 @@ import { Aside } from '@astrojs/starlight/components';
 | Система уведомлений (push, email, SMS) | Рассылка на миллионы устройств, приоритеты, дедупликация, лимиты на пользователя и на провайдера | [Очереди](/async/queues-and-back-pressure/), [Ограничение частоты запросов](/reliability/rate-limiting/) | [Netflix: Rapid Event Notification System](https://netflixtechblog.com/rapid-event-notification-system-at-netflix-6deb1d2b57d1) |
 | Видеоплатформа (YouTube, Netflix) | Конвейер транскодирования, адаптивный битрейт, кэширование огромного каталога на периферии | [CDN](/traffic/cdn/), [Объектное хранилище](/data/object-storage/) | [Netflix: per-title encoding](https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2), [Netflix Open Connect](https://openconnect.netflix.com/en/) |
 | Совместный редактор (Google Docs, Figma) | Сходимость одновременных правок (OT или CRDT); присутствие; редактирование офлайн | [Модели согласованности](/fundamentals/consistency-patterns/) | [How Figma's multiplayer works](https://www.figma.com/blog/how-figmas-multiplayer-technology-works/), [Local-first software](https://www.inkandswitch.com/essay/local-first/) |
-| Рекомендательная система (Amazon, YouTube) | Отбор кандидатов, затем ранжирование; свежие признаки; офлайн-обучение и онлайн-отдача | [Потоки событий](/async/event-streaming/), [Уровни кэширования](/caching/caching-layers/) | [Deep Neural Networks for YouTube Recommendations](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/) |
+| Рекомендательная система (Amazon, YouTube) | Отбор кандидатов, затем ранжирование; свежие признаки; офлайн-обучение и онлайн-отдача | [Потоковая передача событий](/async/event-streaming/), [Уровни кэширования](/caching/caching-layers/) | [Deep Neural Networks for YouTube Recommendations](https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/) |
 | Сеть доставки контента (Cloudflare, CloudFront) | Маршрутизация запроса к ближайшему здоровому узлу, заполнение кэша, сброс | [CDN](/traffic/cdn/), [DNS](/traffic/dns/) | [Netflix Open Connect](https://openconnect.netflix.com/en/) |
 
 ## Поиск
@@ -72,9 +72,9 @@ import { Aside } from '@astrojs/starlight/components';
 
 | Вопрос | Ключевая сложность | На сайте | Ссылки |
 |---|---|---|---|
-| Тренды (Twitter/X) | Скользящие окна, ранжирование по росту, а не по объёму, спам | [Рейтинг продаж](/practice/sales-rank/), [Потоки событий](/async/event-streaming/) | [Real-time trending topics in Storm](https://www.michael-noll.com/blog/2013/01/18/implementing-real-time-trending-topics-in-storm/) |
+| Тренды (Twitter/X) | Скользящие окна, ранжирование по росту, а не по объёму, спам | [Рейтинг продаж](/practice/sales-rank/), [Потоковая передача событий](/async/event-streaming/) | [Real-time trending topics in Storm](https://www.michael-noll.com/blog/2013/01/18/implementing-real-time-trending-topics-in-storm/) |
 | Top-K запросов за интервал времени | Тяжёлые игроки в ограниченной памяти; слияние частичных результатов | [Рейтинг продаж](/practice/sales-rank/) | [Space-Saving (Metwally и др.)](https://www.cs.ucsb.edu/sites/default/files/documents/2005-23.pdf), [Count-Min Sketch](https://dsf.berkeley.edu/cs286/papers/countmin-latin2004.pdf) |
-| Агрегация кликов по рекламе | Подсчёт ровно один раз, опоздавшие события, сверка для биллинга | [Потоки событий](/async/event-streaming/) | [Uber: exactly-once ad event processing](https://www.uber.com/blog/real-time-exactly-once-ad-event-processing/) |
+| Агрегация кликов по рекламе | Подсчёт ровно один раз, опоздавшие события, сверка для биллинга | [Потоковая передача событий](/async/event-streaming/) | [Uber: exactly-once ad event processing](https://www.uber.com/blog/real-time-exactly-once-ad-event-processing/) |
 | Ограничитель частоты запросов к API | Точные лимиты на множестве серверов без добавления задержки | [Ограничение частоты запросов](/reliability/rate-limiting/) | [Stripe: scaling your API with rate limiters](https://stripe.com/blog/rate-limiters), [Cloudflare: rate limiting millions of domains](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/) |
 
 ## Геолокация, маркетплейсы и деньги
@@ -113,7 +113,7 @@ import { Aside } from '@astrojs/starlight/components';
 ## Что почитать
 
 - [Designing Data-Intensive Applications](https://dataintensive.net/) — книга Мартина Клеппмана о строительных блоках почти всех вопросов с этой страницы (на русском выходила под названием «Высоконагруженные приложения»).
-- [Основополагающие статьи](/real-world/foundational-papers/) — статьи, от которых происходит большинство этих систем.
+- [Ключевые статьи и системы](/real-world/foundational-papers/) — статьи, от которых происходит большинство этих систем.
 - [Архитектуры компаний](/real-world/company-architectures/) — как устроены известные продукты.
 - [Инженерные блоги](/real-world/engineering-blogs/) — где следить за текущей практикой.
 

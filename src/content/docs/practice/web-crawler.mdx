@@ -67,14 +67,14 @@ The original multiplies 4 B fetches by 500 KB to get 2 PB per month and 72 PB in
 ## Step 2 — High-level design
 
 ```mermaid
-flowchart LR
+flowchart TB
   seeds["Seed URLs"] --> frontier[("URL frontier")]
   frontier --> fetcher["Fetchers"]
   dns["DNS cache"] --> fetcher
   robots["robots.txt cache"] --> fetcher
   fetcher --> store[("Page store<br/>(object storage)")]
-  fetcher --> parser["Parser / link extractor"]
-  parser --> dedup["URL filter + seen set"]
+  fetcher --> parser["Parser /<br/>link extractor"]
+  parser --> dedup["URL filter +<br/>seen set"]
   dedup --> frontier
   parser --> content["Content fingerprint<br/>(dedup)"]
   content --> indexer["Indexer"]
@@ -98,15 +98,15 @@ flowchart LR
 The frontier has two jobs that pull in opposite directions: fetch the most important URLs first, and never send many requests to the same host. The classic answer comes from the Mercator crawler and is described in *Introduction to Information Retrieval*:
 
 ```mermaid
-flowchart LR
+flowchart TB
   pri["Prioritiser"] --> f1["Front queue 1<br/>(high)"]
   pri --> f2["Front queue 2"]
   pri --> f3["Front queue F<br/>(low)"]
   f1 & f2 & f3 --> router["Biased selector +<br/>host router"]
-  router --> b1["Back queue: host A"]
-  router --> b2["Back queue: host B"]
-  router --> b3["Back queue: host C"]
-  b1 & b2 & b3 --> heap["Heap: host → next allowed time"]
+  router --> b1["Back queue:<br/>host A"]
+  router --> b2["Back queue:<br/>host B"]
+  router --> b3["Back queue:<br/>host C"]
+  b1 & b2 & b3 --> heap["Heap: host →<br/>next allowed time"]
   heap --> workers["Fetch workers"]
 ```
 
@@ -339,22 +339,23 @@ In practice: re-crawl important pages often, skip pages whose `ETag` or content 
 7. **Query side.** About 38,600 searches/s needs a replicated, document-sharded index and a result cache for popular queries, because query frequency is highly skewed. See [the search query cache case study](/practice/search-query-cache/).
 
 ```mermaid
-flowchart LR
+flowchart TB
+  links["Discovered-links stream<br/>(partitioned by host)"]
   coord["Coordinator<br/>(host → node map)"] -.-> node1 & node2
-  subgraph node1 ["Crawler node 1 (hosts A–M)"]
-    fr1["Frontier shard"] --> ft1["Async fetchers<br/>+ DNS / robots cache"]
+  subgraph node1 ["Crawler node 1"]
+    fr1["Frontier shard"] --> ft1["Async fetchers<br/>+ DNS / robots<br/>cache"]
   end
-  subgraph node2 ["Crawler node 2 (hosts N–Z)"]
-    fr2["Frontier shard"] --> ft2["Async fetchers<br/>+ DNS / robots cache"]
+  subgraph node2 ["Crawler node 2"]
+    fr2["Frontier shard"] --> ft2["Async fetchers<br/>+ DNS / robots<br/>cache"]
   end
+  ft1 & ft2 --> pages["Fetched-pages<br/>stream"]
   ft1 & ft2 --> warc[("Object storage<br/>WARC files")]
-  ft1 & ft2 --> pages["Fetched-pages stream"]
   pages --> parse["Parsers"]
-  parse --> links["Discovered-links stream<br/>(partitioned by host)"]
+  parse --> idx["Indexers"] --> index[("Inverted<br/>index shards")]
+  parse --> dedup[("Seen set +<br/>SimHash tables")]
+  parse --> links
   links --> fr1 & fr2
-  parse --> dedup[("Seen set + SimHash tables")]
-  parse --> idx["Indexers"] --> index[("Inverted index shards")]
-  query["Query API + cache"] --> index
+  query["Query API<br/>+ cache"] --> index
 ```
 
 | Added component | Buys | Costs |

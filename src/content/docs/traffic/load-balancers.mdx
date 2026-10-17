@@ -19,12 +19,12 @@ A load balancer accepts traffic on one stable address and spreads it across a po
 ## What a load balancer does
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Clients"] --> vip["Load balancer (VIP)"]
   vip --> s1["App server 1"]
   vip --> s2["App server 2"]
-  vip -.->|"health check failing: no traffic"| s3["App server 3"]
-  s1 & s2 --> store[("Shared state: DB, cache, session store")]
+  vip -.->|"health check failing:<br/>no traffic"| s3["App server 3"]
+  s1 & s2 --> store[("Shared state: DB,<br/>cache, session store")]
 ```
 
 - **Health.** It probes each backend and stops sending traffic to those that fail, so a crashed or overloaded instance does not cause user-visible errors for long.
@@ -59,7 +59,7 @@ Large platforms stack them: an anycast or L4 tier spreads packets across a fleet
 | Least connections / least outstanding requests | Server with fewest active requests | Request durations vary a lot (uploads, slow queries, WebSockets) | Needs accurate counts; each balancer sees only its own traffic |
 | Least response time | Lowest recent latency, often combined with active requests | Heterogeneous or noisy backends | Can pile onto a server that answers errors very fast |
 | Random | Uniform random choice | Very many balancers, no shared state | Random clumping on small pools |
-| Power of two choices (P2C) | Pick two at random, send to the less loaded one | Many independent balancers or client-side LB (Envoy's default least-request mode) | Slightly worse than true least-connections on a single balancer |
+| Power of two choices (P2C) | Pick two at random, send to the less loaded one | Many independent balancers or client-side LB (Envoy's least-request policy uses it by default) | Slightly worse than true least-connections on a single balancer |
 | IP or header hash | `hash(key) mod N` | Simple stickiness | Changing N remaps almost every key |
 | Consistent hashing (ring hash, Maglev) | Key → point on a ring or lookup table | Cache locality, sharded backends, connection affinity | Hot keys still overload one server; needs bounded-load variants |
 

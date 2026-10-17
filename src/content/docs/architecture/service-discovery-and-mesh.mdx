@@ -27,11 +27,11 @@ Static configuration ("orders lives at 10.0.3.17:8080") breaks as soon as instan
 ## Client-side discovery
 
 ```mermaid
-flowchart LR
-  inst1["Orders instance 1"] -->|"register + heartbeat"| reg[("Service registry")]
-  inst2["Orders instance 2"] -->|"register + heartbeat"| reg
-  client["Checkout service with discovery library"] -->|"1. who serves orders?"| reg
-  client -->|"2. call chosen instance"| inst2
+flowchart TB
+  inst1["Orders instance 1"] -->|"register +<br/>heartbeat"| reg[("Service registry")]
+  inst2["Orders instance 2"] -->|"register +<br/>heartbeat"| reg
+  client["Checkout service<br/>with discovery library"] -->|"1. who serves<br/>orders?"| reg
+  client -->|"2. call chosen<br/>instance"| inst2
 ```
 
 The caller asks the registry for the instance list, caches it, receives updates, and picks an instance itself (round robin, P2C, zone-aware). Netflix popularised this with the Eureka registry and the Ribbon client library. Today the same idea appears in **gRPC's xDS support**, where clients receive endpoints and load-balancing policy from a control plane, and in client-side libraries generally.
@@ -42,11 +42,11 @@ The caller asks the registry for the instance list, caches it, receives updates,
 ## Server-side discovery
 
 ```mermaid
-flowchart LR
-  inst1["Orders instance 1"] -->|"registered by platform"| reg[("Service registry")]
-  inst2["Orders instance 2"] -->|"registered by platform"| reg
-  client["Checkout service"] -->|"call orders"| router["Load balancer or virtual IP"]
-  router -->|"looks up healthy instances"| reg
+flowchart TB
+  inst1["Orders instance 1"] -->|"registered<br/>by platform"| reg[("Service registry")]
+  inst2["Orders instance 2"] -->|"registered<br/>by platform"| reg
+  client["Checkout service"] -->|"call orders"| router["Load balancer<br/>or virtual IP"]
+  router -->|"looks up<br/>healthy instances"| reg
   router --> inst1
   router --> inst2
 ```

@@ -31,15 +31,17 @@ So the trade-off is **forced only while a partition is happening**. When the net
 ## CP and AP behaviour
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph sideA["Majority side (2 of 3 replicas)"]
+    direction LR
     c1["Client 1"] --> r1["Replica 1"]
     r1 --- r2["Replica 2"]
   end
   subgraph sideB["Minority side (1 of 3 replicas)"]
+    direction LR
     c2["Client 2"] --> r3["Replica 3"]
   end
-  r2 -.-|"network partition"| r3
+  sideA -.-|"network partition"| sideB
 ```
 
 What the minority side does with Client 2's request is the CP/AP choice:

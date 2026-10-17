@@ -17,8 +17,8 @@ The worked case studies in this section cover a handful of classic problems in d
 ## How to use this list
 
 1. Pick a question and set a 45-minute timer.
-2. Write requirements and a [back-of-the-envelope estimate](/start/estimation/), then draw the high-level design.
-3. Go deep on the key challenge listed in the table. That is where interviewers push.
+2. Write requirements, a [back-of-the-envelope estimate](/start/estimation/) and the API and data model, then draw the high-level design.
+3. Go deep on the key challenge listed in the table. That is where interviewers push. Then look for bottlenecks and failure modes, and wrap up against the requirements.
 4. Read the references and note what they did differently, and why.
 
 Questions already worked through on this site:
@@ -44,7 +44,7 @@ Questions already worked through on this site:
 | File sync service (Dropbox, Google Drive) | Chunking and dedup, conflict handling, a client that syncs correctly offline | [Object storage](/data/object-storage/), [Consistency patterns](/fundamentals/consistency-patterns/) | [Dropbox: rewriting the sync engine](https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine), [Inside the Magic Pocket](https://dropbox.tech/infrastructure/inside-the-magic-pocket) |
 | Unique ID generator | Roughly time-ordered 64-bit IDs with no central bottleneck; clock skew | [URL shortener](/practice/url-shortener-pastebin/), [Partitioning](/data/partitioning-and-sharding/) | [Announcing Snowflake](https://blog.x.com/engineering/en_us/a/2010/announcing-snowflake), [Sharding & IDs at Instagram](https://medium.com/@instagram-engineering/sharding-ids-at-instagram-1cf5a71e5a5c) |
 | Serving data from multiple data centers | Consistency vs latency across regions; failover without losing writes | [Replication](/data/replication/), [CAP theorem](/fundamentals/cap-theorem/) | [Spanner (OSDI 2012)](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett), [Transactions across datacenters](https://snarfed.org/transactions_across_datacenters_io.html) |
-| Distributed job scheduler (cron at scale) | Run each job exactly once despite failures; leader election; avoiding midnight spikes | [Queues](/async/queues-and-back-pressure/), [Resilience patterns](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
+| Distributed job scheduler (cron at scale) | Run each job exactly once despite failures; leader election; avoiding midnight spikes | [Consensus and coordination](/fundamentals/consensus-and-coordination/), [Queues](/async/queues-and-back-pressure/), [Resilience patterns](/reliability/resilience-patterns/) | [Reliable Cron across the Planet](https://queue.acm.org/detail.cfm?id=2745840) |
 | Metrics and logging pipeline | Ingesting millions of points per second, compression, retention tiers, fast queries | [Observability](/reliability/observability/), [Event streaming](/async/event-streaming/) | [Gorilla (VLDB 2015)](https://www.vldb.org/pvldb/vol8/p1816-teller.pdf), [Monarch (VLDB 2020)](https://research.google/pubs/monarch-googles-planet-scale-in-memory-time-series-database/) |
 
 ## Social and content platforms

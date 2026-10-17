@@ -27,17 +27,16 @@ Four kinds of servers take part in a lookup:
 
 ```mermaid
 sequenceDiagram
-  participant B as Browser and OS stub
-  participant R as Recursive resolver
-  participant Root as Root server
-  participant T as TLD server for com
-  participant A as Authoritative for example.com
-  B->>R: api.example.com, type A?
+  participant B as Browser and<br/>OS stub
+  participant R as Recursive<br/>resolver
+  participant N as Root and<br/>TLD servers
+  participant A as Authoritative<br/>for example.com
+  B->>R: api.example.com,<br/>type A?
   Note over R: cache miss
-  R->>Root: api.example.com?
-  Root-->>R: referral to com servers
-  R->>T: api.example.com?
-  T-->>R: referral to example.com servers
+  R->>N: api.example.com?<br/>(root server)
+  N-->>R: referral to<br/>com servers
+  R->>N: api.example.com?<br/>(com server)
+  N-->>R: referral to<br/>example.com servers
   R->>A: api.example.com?
   A-->>R: 203.0.113.10, TTL 60
   R-->>B: 203.0.113.10, TTL 60
@@ -157,7 +156,7 @@ DNS usually comes up in the first minute ("the client resolves our domain…") a
 - [What is DNS?](https://www.cloudflare.com/learning/dns/what-is-dns/) — Cloudflare's walk-through of resolvers, root, TLD and authoritative servers.
 - [RFC 9499: DNS Terminology](https://www.rfc-editor.org/rfc/rfc9499.html) — precise definitions of the terms used above.
 - [Route 53 routing policies](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html) — a concrete catalogue of weighted, latency, geo and failover routing.
-- [Load Balancing at the Frontend](https://sre.google/sre-book/load-balancing-frontend/) — Google SRE book on the limits of DNS load balancing and the role of anycast VIPs.
+- [Load Balancing at the Frontend](https://sre.google/sre-book/load-balancing-frontend/) — Google SRE book on the limits of DNS load balancing and on spreading traffic behind a virtual IP.
 - [DDoS attacks on Dyn](https://en.wikipedia.org/wiki/DDoS_attacks_on_Dyn) — timeline and impact of the 2016 outage.
 - [More details about the October 4 outage](https://engineering.fb.com/2021/10/05/networking-traffic/outage-details/) — how Facebook's DNS disappeared from the internet.
 

@@ -1,0 +1,136 @@
+---
+// Makes every rendered mermaid diagram readable at any width (and wide tables and code
+// blocks keyboard-scrollable):
+//  - records the diagram's natural width so CSS can stop it shrinking below ~70%
+//    (a wider diagram scrolls sideways instead of turning into 4px text);
+//  - adds an "Expand" button that opens the diagram full-screen with zoom.
+// Works with astro-mermaid's client renderer, including its re-render on theme change.
+---
+<script>
+  const ru = document.documentElement.lang.toLowerCase().startsWith('ru');
+  const T = ru
+    ? { open: 'откройте на весь экран', title: 'Диаграмма', close: 'Закрыть', fit: 'Вписать', hint: 'Схема шире экрана: прокрутите её вбок или' }
+    : { open: 'expand it', title: 'Diagram', close: 'Close', fit: 'Fit', hint: 'Wider than the screen: scroll it sideways or' };
+  const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>';
+
+  let dialog: HTMLDialogElement | null = null;
+  let current: { svg: SVGSVGElement; home: HTMLElement; style: string } | null = null;
+  let zoom = 0; // 0 = fit
+
+  function natural(svg: SVGSVGElement) {
+    const vb = svg.viewBox?.baseVal;
+    return vb && vb.width ? { w: vb.width, h: vb.height } : { w: svg.getBoundingClientRect().width, h: svg.getBoundingClientRect().height };
+  }
+
+  function applyZoom() {
+    if (!dialog || !current) return;
+    const body = dialog.querySelector<HTMLElement>('.sdp-dlg__body')!;
+    const { w, h } = natural(current.svg);
+    const fit = Math.min((body.clientWidth - 32) / w, (body.clientHeight - 32) / h, 2);
+    const z = zoom || Math.max(fit, 0.1);
+    current.svg.style.width = `${Math.round(w * z)}px`;
+    current.svg.style.minWidth = '0';
+    dialog.querySelector('[data-z]')!.textContent = `${Math.round(z * 100)}%`;
+  }
+
+  function ensureDialog() {
+    if (dialog) return dialog;
+    dialog = document.createElement('dialog');
+    dialog.className = 'sdp-dlg';
+    dialog.setAttribute('aria-label', T.title);
+    dialog.innerHTML = `<div class="sdp-dlg__bar"><span>${T.title}</span>
+      <button type="button" data-act="out" aria-label="−">−</button>
+      <button type="button" data-z aria-live="polite">100%</button>
+      <button type="button" data-act="in" aria-label="+">+</button>
+      <button type="button" data-act="fit">${T.fit}</button>
+      <button type="button" data-act="close">${T.close}</button></div>
+      <div class="sdp-dlg__body"></div>`;
+    document.body.append(dialog);
+    const steps = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+    dialog.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t === dialog) return dialog!.close();
+      const act = t.closest<HTMLElement>('[data-act], [data-z]');
+      if (!act || !current) return;
+      const z = zoom || parseFloat(dialog!.querySelector('[data-z]')!.textContent!) / 100;
+      if (act.dataset.act === 'close') return dialog!.close();
+      if (act.dataset.act === 'fit') zoom = 0;
+      else if (act.hasAttribute('data-z')) zoom = 1;
+      else if (act.dataset.act === 'in') zoom = steps.find((s) => s > z + 0.01) ?? 3;
+      else if (act.dataset.act === 'out') zoom = [...steps].reverse().find((s) => s < z - 0.01) ?? 0.5;
+      applyZoom();
+    });
+    dialog.addEventListener('close', () => {
+      if (!current) return;
+      // If the diagram was re-rendered meanwhile (theme switch), drop the stale copy.
+      if (current.home.querySelector(':scope > svg')) current.svg.remove();
+      else {
+        current.svg.setAttribute('style', current.style);
+        current.home.prepend(current.svg);
+      }
+      current = null;
+    });
+    window.addEventListener('resize', () => dialog?.open && !zoom && applyZoom());
+    return dialog;
+  }
+
+  function openFull(pre: HTMLElement) {
+    const svg = pre.querySelector<SVGSVGElement>(':scope > svg');
+    if (!svg) return;
+    const d = ensureDialog();
+    current = { svg, home: pre, style: svg.getAttribute('style') || '' };
+    d.querySelector('.sdp-dlg__body')!.append(svg);
+    zoom = 0;
+    d.showModal();
+    applyZoom();
+  }
+
+  function enhance(pre: HTMLElement) {
+    const svg = pre.querySelector<SVGSVGElement>(':scope > svg');
+    if (!svg) return;
+    svg.style.setProperty('--sdp-natural', `${Math.round(natural(svg).w)}px`);
+    let wrap = pre.parentElement as HTMLElement;
+    if (!wrap.classList.contains('sdp-diagram')) {
+      wrap = document.createElement('div');
+      wrap.className = 'sdp-diagram';
+      pre.before(wrap);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sdp-diagram__open';
+      btn.innerHTML = `${ICON}<span class="sdp-diagram__label">${T.open}</span>`;
+      btn.setAttribute('aria-label', T.title + ': ' + T.open);
+      btn.addEventListener('click', () => openFull(pre));
+      const hint = document.createElement('p');
+      hint.className = 'sdp-diagram__hint';
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.innerHTML = `${ICON}<span>${T.open}</span>`;
+      more.addEventListener('click', () => openFull(pre));
+      hint.append(`${T.hint} `, more);
+      wrap.append(pre, btn, hint);
+      new ResizeObserver(() => wrap.classList.toggle('is-scrollable', pre.scrollWidth > pre.clientWidth + 4)).observe(pre);
+    }
+    requestAnimationFrame(() => wrap.classList.toggle('is-scrollable', pre.scrollWidth > pre.clientWidth + 4));
+  }
+
+  function scan() {
+    document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(enhance);
+  }
+  // astro-mermaid replaces each <pre>'s content when it renders (and again on theme change).
+  const mo = new MutationObserver((records) => {
+    for (const r of records) {
+      const t = r.target as HTMLElement;
+      if (t instanceof HTMLElement && t.matches('pre.mermaid') && t.querySelector(':scope > svg')) enhance(t);
+    }
+  });
+  document.querySelectorAll('pre.mermaid').forEach((pre) => mo.observe(pre, { childList: true }));
+  scan();
+
+  // Wide tables and code blocks scroll sideways; make them reachable from the keyboard.
+  const focusScrollables = () =>
+    document.querySelectorAll<HTMLElement>('.sl-markdown-content :is(table, pre:not(.mermaid))').forEach((el) => {
+      if (el.scrollWidth > el.clientWidth + 1 && !el.hasAttribute('tabindex')) el.tabIndex = 0;
+    });
+  focusScrollables();
+  addEventListener('resize', focusScrollables);
+</script>

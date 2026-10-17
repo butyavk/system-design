@@ -66,7 +66,7 @@ summaries — including the original primer — get the cacheability column wron
 - **Safe** means the client does not request a state change, so crawlers and prefetchers may call it freely. Logging and metrics on the server don't count.
 - **Idempotent** means sending the request twice has the same *intended* effect as once. This is what lets HTTP clients, proxies and service meshes retry after a dropped connection.
 - **POST and PATCH caching.** A response is reusable only if it carries explicit freshness *and* a `Content-Location` equal to the request URI, and then only for a later GET or HEAD. RFC 9110 itself notes that most caches support only GET and HEAD, so in designs treat POST and PATCH responses as uncacheable.
-- A successful PUT, DELETE or POST through a cache **invalidates** stored responses for that URI.
+- A successful response to an unsafe method (POST, PUT, PATCH, DELETE) passing through a cache **invalidates** stored responses for that URI.
 - PATCH *can* be made idempotent (for example with `If-Match`), and POST can be made retry-safe with an [idempotency key](/communication/rpc-and-rest/).
 - **QUERY** (RFC 10008, June 2026) closes an old gap: a search too large or complex for a GET URL used to become a POST, which caches and retry logic must treat as unsafe. QUERY carries the query in the body and stays safe, idempotent and cacheable. It is new, so check that your frameworks, proxies and CDN pass and cache it before relying on it.
 
@@ -141,14 +141,17 @@ concurrency without locks.
 
 ```mermaid
 flowchart TB
-  subgraph v1["HTTP/1.1"]
-    a1["Text messages"] --> a2["TLS"] --> a3["TCP"] --> a4["IP"]
+  subgraph v3["HTTP/3"]
+    direction TB
+    c1["Frames, QPACK"] --> c2["QUIC: streams,<br/>loss recovery,<br/>TLS 1.3"] --> c3["UDP"] --> c4["IP"]
   end
   subgraph v2["HTTP/2"]
-    b1["Binary frames, streams, HPACK"] --> b2["TLS"] --> b3["TCP"] --> b4["IP"]
+    direction TB
+    b1["Binary frames,<br/>streams, HPACK"] --> b2["TLS"] --> b3["TCP"] --> b4["IP"]
   end
-  subgraph v3["HTTP/3"]
-    c1["Frames, QPACK"] --> c2["QUIC: streams, loss recovery, TLS 1.3"] --> c3["UDP"] --> c4["IP"]
+  subgraph v1["HTTP/1.1"]
+    direction TB
+    a1["Text messages"] --> a2["TLS"] --> a3["TCP"] --> a4["IP"]
   end
 ```
 

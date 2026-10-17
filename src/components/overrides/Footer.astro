@@ -1,8 +1,12 @@
 ---
 import Default from '@astrojs/starlight/components/Footer.astro';
+import DiagramTools from '../site/DiagramTools.astro';
+import TopicNav from '../site/TopicNav.astro';
 const isRu = Astro.locals.starlightRoute?.locale === 'ru';
 ---
+<TopicNav />
 <Default><slot /></Default>
+<DiagramTools />
 <p class="sdp-attribution">
   {isRu ? (
     <>Основано на <a href="https://github.com/donnemartin/system-design-primer">The System Design Primer</a> Донна Мартина (CC BY 4.0). Материал переработан, переписан и обновлён; контент сайта распространяется по <a href="https://creativecommons.org/licenses/by/4.0/deed.ru">CC BY 4.0</a>.</>

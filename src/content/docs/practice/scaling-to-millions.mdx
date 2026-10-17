@@ -68,7 +68,7 @@ The original primer used "2.5 million seconds per month", which rounds 386 write
 ### The scaling loop
 
 ```mermaid
-flowchart LR
+flowchart TB
   test["Load test<br/>(realistic traffic)"] --> profile["Profile<br/>(CPU, memory, I/O, locks)"]
   profile --> fix["Fix the top bottleneck<br/>(weigh alternatives)"]
   fix --> observe["Observe in production<br/>(SLOs, dashboards)"]
@@ -187,9 +187,9 @@ flowchart LR
 **Trigger.** The single web server saturates at peak hours, latency spikes, and every deploy or crash is an outage.
 
 ```mermaid
-flowchart LR
+flowchart TB
   user["User"] --> dns["DNS"]
-  dns --> lb["Load balancer<br/>(TLS termination)"]
+  user --> lb["Load balancer<br/>(TLS termination)"]
   lb --> app1["App server<br/>zone A"]
   lb --> app2["App server<br/>zone B"]
   app1 & app2 --> db[("DB primary<br/>zone A")]
@@ -225,11 +225,12 @@ flowchart LR
 
 ### Stage 5 — Object storage and CDN
 
-**Trigger.** App servers spend bandwidth and CPU on images, scripts and video; users far from the region see slow page loads.
+**Trigger.** App servers still pass images, scripts and video between users and object storage, spending bandwidth and CPU on them; users far from the region see slow page loads.
 
 ```mermaid
-flowchart LR
+flowchart TB
   user["User"] --> cdn["CDN<br/>(CloudFront)"]
+  user -->|"upload via<br/>pre-signed URL"| obj
   cdn -->|"static, media"| obj[("Object storage<br/>(S3)")]
   cdn -->|"API, dynamic"| lb["Load balancer"]
   lb --> app["App servers"]
@@ -248,9 +249,10 @@ flowchart LR
 **Trigger.** Some requests do slow work inline (thumbnails, emails, reports, third-party calls) and tie up app servers. Traffic follows the business day, so fixed capacity is either too small at noon or wasted at night.
 
 ```mermaid
-flowchart LR
+flowchart TB
   app["App servers<br/>(autoscaled)"] -->|"enqueue job"| queue[["Queue<br/>(SQS)"]]
   queue --> workers["Worker pool<br/>(autoscaled on queue depth)"]
+  queue -.->|"poison messages"| dlq[["Dead-letter queue"]]
   workers --> obj[("Object storage")]
   workers --> db[("Database")]
   app --> db

@@ -35,7 +35,7 @@ The costs are just as real:
 ## Where to cache
 
 ```mermaid
-flowchart LR
+flowchart TB
   browser["Browser or app cache"] --> cdn["CDN edge cache"]
   cdn --> proxy["Reverse proxy cache<br/>(Varnish, NGINX)"]
   proxy --> app["App server<br/>in-process cache"]
@@ -44,7 +44,7 @@ flowchart LR
   db --> disk["OS page cache and disk"]
 ```
 
-Each layer is closer to the user (and cheaper per hit) than the one to its right, but holds less specific, less controllable data.
+Each layer is closer to the user (and cheaper per hit) than the one below it, but holds less specific, less controllable data.
 
 | Layer | What it caches | Controlled by | Typical hit latency | Watch out for |
 |---|---|---|---|---|
@@ -113,7 +113,7 @@ effective latency = h · t_cache + (1 − h) · t_origin
 origin load       = (1 − h) · request rate
 ```
 
-(With a look-aside cache a miss actually costs `t_cache + t_origin`, which adds `t_cache` to every request; at sub-millisecond cache latency the difference is negligible.)
+(With a look-aside cache a miss actually costs `t_cache + t_origin`, which adds `t_cache` to every miss; at sub-millisecond cache latency the difference is negligible.)
 
 Example: Redis at 0.5 ms, a database query at 20 ms, 50,000 reads per second:
 

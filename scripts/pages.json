@@ -1,5 +1,5 @@
 {
-  "start": ["introduction", "study-plan", "interview-framework", "estimation"],
+  "start": ["introduction", "study-plan", "skill-map", "interview-framework", "estimation"],
   "fundamentals": ["performance-vs-scalability", "latency-vs-throughput", "cap-theorem", "consistency-patterns", "availability-patterns", "consensus-and-coordination"],
   "traffic": ["dns", "cdn", "load-balancers", "reverse-proxy-and-api-gateway"],
   "architecture": ["monolith-and-microservices", "service-discovery-and-mesh", "llm-applications"],

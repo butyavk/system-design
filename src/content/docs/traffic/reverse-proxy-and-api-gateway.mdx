@@ -56,14 +56,14 @@ The distinction is about role, not product. NGINX, HAProxy, Envoy, Caddy and Tra
 With many backend services, every one of them needs the same edge features: check the token, apply quotas, log the call, route `/v2/orders` to the right place. An **API gateway** does this once, at the edge of the service estate.
 
 ```mermaid
-flowchart LR
-  web["Web app"] --> gw["API gateway"]
+flowchart TB
+  web["Web app"] --> gw["API gateway:<br/>auth, quotas, routing"]
   mobile["Mobile app"] --> gw
   partner["Partner API client"] --> gw
-  gw -->|"auth, quotas, routing"| users["User service"]
+  gw --> users["User service"]
   gw --> orders["Order service"]
   gw --> catalog["Catalog service"]
-  idp["Identity provider"] -.->|"keys for token checks"| gw
+  idp["Identity provider"] -.->|"keys for<br/>token checks"| gw
 ```
 
 Typical responsibilities:
@@ -117,7 +117,7 @@ Draw the edge explicitly: CDN, then load balancer or reverse proxy, then gateway
 - [NGINX: reverse proxy guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) — practical configuration of proxying, headers and buffering.
 - [Pattern: API Gateway / Backends for Frontends](https://microservices.io/patterns/apigateway.html) — Chris Richardson's description of the pattern and its drawbacks.
 - [Backends For Frontends](https://samnewman.io/patterns/architectural/bff/) — Sam Newman's original write-up of the BFF pattern.
-- [Overambitious API gateways](https://www.thoughtworks.com/radar/platforms/overambitious-api-gateways) — the Thoughtworks Radar warning against logic in gateways.
+- [Overambitious API gateways](https://www.thoughtworks.com/radar/platforms/overambitious-api-gateways) — the Thoughtworks Radar's Hold-ring warning against logic in gateways (last featured in 2018).
 - [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/docs/) — the standard routing API for gateways and meshes.
 - [What is Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/what_is_envoy) — the proxy behind many gateways and meshes.
 

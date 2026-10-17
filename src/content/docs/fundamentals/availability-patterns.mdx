@@ -23,7 +23,7 @@ Availability is the fraction of time, or of requests, for which a system does it
 One node serves traffic. A standby receives replicated data and watches the active node through heartbeats or a health check. When the active node fails, the standby takes over its virtual IP, DNS name or leader role and starts serving.
 
 ```mermaid
-flowchart LR
+flowchart TB
   clients["Clients"] --> vip["Virtual IP or DNS name"]
   vip --> active["Active node"]
   vip -.->|"after fail-over"| passive["Passive standby"]
@@ -48,7 +48,7 @@ Managed databases mostly use the hot active-passive pattern. Examples are a prim
 All nodes serve traffic at once. A load balancer or DNS spreads requests between them, and a failed node is simply removed from rotation.
 
 ```mermaid
-flowchart LR
+flowchart TB
   clients["Clients"] --> lb["Load balancer or DNS"]
   lb --> nodeA["Node A (serving)"]
   lb --> nodeB["Node B (serving)"]

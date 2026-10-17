@@ -31,12 +31,12 @@ Rate limits do four jobs, and each job points to a different place in the stack:
 | Stay within someone else's quota | Your own credentials | Client side, before calling a third-party API |
 
 ```mermaid
-flowchart LR
+flowchart TB
   user["Clients"] --> edge["Edge / WAF: per IP"]
-  edge --> gw["API gateway: per API key and plan"]
+  edge --> gw["API gateway:<br/>per API key and plan"]
   gw --> svc["Service: concurrency limit"]
   svc --> db[("Database")]
-  svc --> ext["Third-party API: client-side limit"]
+  svc --> ext["Third-party API:<br/>client-side limit"]
 ```
 
 Choosing the key needs care. Many users share one IPv4 address behind carrier-grade NAT or a corporate proxy, while one IPv6 client controls billions of addresses, so limit IPv6 by prefix. Authenticated keys (user, API key, tenant) are fairer but only exist after authentication, so login endpoints also need limits per IP and per target account.
@@ -213,7 +213,7 @@ Good clients make rate limiting cheap for everyone:
 ## Further reading
 
 - [Scaling your API with rate limiters](https://stripe.com/blog/rate-limiters): Stripe's four limiter types and their token-bucket implementation in Redis.
-- [Cloudflare on counting at scale](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/): the sliding-window counter and how accurate it is in production.
+- [How we built rate limiting capable of scaling to millions of domains](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/): the sliding-window counter and how accurate it is in production.
 - [Redis `INCR`: rate limiter patterns](https://redis.io/docs/latest/commands/incr/): the official patterns and the race conditions they avoid.
 - [RateLimit header fields for HTTP (IETF draft)](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/): track the current revision and status.
 - [Envoy global rate limiting](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting): combining local token buckets with a central service.

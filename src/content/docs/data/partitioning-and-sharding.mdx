@@ -102,12 +102,12 @@ Two design choices make this far easier: **many more logical shards than servers
 
 With `shard = hash(key) % N`, adding one server changes N, and almost every key moves. Going from 4 to 5 servers moves about 80% of keys. **Consistent hashing**, introduced by Karger et al. in 1997 for web caches, avoids this.
 
-Picture the hash space as a ring. Each server is hashed to positions on the ring. A key belongs to the first server position found by walking **clockwise** from the key's hash. When a server joins, it takes over only the keys between its positions and their predecessors: about 1/N of all keys. When a server leaves, only its keys move, to its clockwise neighbours.
+Picture the hash space as a ring. Each server is hashed to positions on the ring. A key belongs to the first server position found by walking **clockwise** from the key's hash. When a server joins, it takes over only the keys between its positions and their predecessors: about 1/(N+1) of all keys, where N is the number of servers before it joined. When a server leaves, only its keys move, to its clockwise neighbours.
 
 With one position per server, the arcs are very uneven. In our test with four servers, the busiest server got about twice its fair share in a typical run. The fix is **virtual nodes**: each physical server is placed at many positions, say 100 to 256, so its total share averages out to about 1/N. Virtual nodes also let a bigger machine take more positions, and spread a failed server's load over all the survivors instead of one neighbour.
 
 ```mermaid
-flowchart LR
+flowchart TB
   a1(["A#1"]) --> b1(["B#1"]) --> c1(["C#1"]) --> a2(["A#2"]) --> c2(["C#2"]) --> b2(["B#2"]) --> a1
   k1["key user:42"] -. "walk clockwise" .-> c1
   k2["key user:7"] -. "walk clockwise" .-> b2

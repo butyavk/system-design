@@ -58,25 +58,26 @@ Raft (Ongaro and Ousterhout, 2014) was designed to be understandable. It splits 
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant L as Leader S1 (term 5)
+  participant L as Leader S1<br/>(term 5)
   participant F2 as Follower S2
   participant F3 as Follower S3
   C->>L: SET x = 7
-  L->>L: append entry 42 (term 5)
-  L->>F2: AppendEntries(term 5, after 41, entry 42)
-  L->>F3: AppendEntries(term 5, after 41, entry 42)
+  L->>L: append entry 42<br/>(term 5)
+  L->>F2: AppendEntries(term 5,<br/>after 41, entry 42)
+  L->>F3: AppendEntries(term 5,<br/>after 41, entry 42)
   F2-->>L: OK, entry 42 on disk
-  Note over L,F2: 2 of 3 nodes have it, a majority: commit index = 42
+  Note over L,F2: 2 of 3 nodes have it,<br/>a majority: commit index = 42
   L->>L: apply entry 42
   L-->>C: OK
   F3-->>L: OK (late, which is fine)
-  L->>F3: next heartbeat carries commit index 42
-  Note over F2,F3: Followers apply entry 42 once they learn the commit index
+  L->>F2: next heartbeat:<br/>commit index 42
+  L->>F3: next heartbeat:<br/>commit index 42
+  Note over F2,F3: Followers apply<br/>entry 42 once they<br/>learn the commit index
 ```
 
 Three practical details:
 
-- **Reads.** A leader cut off by a partition may not know it was replaced. A linearizable read either confirms leadership with a heartbeat round to a majority (*ReadIndex*) or relies on a time-based **leader lease** (see below). etcd lists one network round trip as the minimum cost of a linearizable read.
+- **Reads.** A leader cut off by a partition may not know it was replaced. A linearizable read either confirms leadership with a heartbeat round to a majority (*ReadIndex*) or relies on a time-based **leader lease** (see below). In etcd a linearizable read goes through a quorum, so it costs at least one round trip between members.
 - **Membership changes** go through the log too, with rules that stop the old and new configurations from forming separate majorities. Add a node as a non-voting learner first and promote it once it has caught up.
 - **Pre-vote.** A node returning from a partition has inflated its term and would force a needless election. With pre-vote, a candidate first checks that it could win. etcd enables it by default; Kafka 4.0 added it to KRaft.
 
@@ -130,16 +131,16 @@ sequenceDiagram
   participant B as Client B
   participant S as Storage
   A->>LS: acquire lock "report"
-  LS-->>A: granted, lease 10 s, token 33
-  Note over A: 15 s GC pause, A still believes it holds the lock
-  Note over LS: lease expires after 10 s
+  LS-->>A: granted, lease 10 s,<br/>token 33
+  Note over A: 15 s GC pause:<br/>A still believes<br/>it holds the lock
+  Note over LS: lease expires<br/>after 10 s
   B->>LS: acquire lock "report"
   LS-->>B: granted, token 34
   B->>S: write (token 34)
-  S-->>B: OK, highest token = 34
+  S-->>B: OK, highest<br/>token = 34
   A->>S: write (token 33)
-  S-->>A: rejected, 33 is older than 34
-  Note over A,S: Without the token check, A would overwrite B's data
+  S-->>A: rejected,<br/>33 is older than 34
+  Note over A,S: Without the token check,<br/>A would overwrite B's data
 ```
 
 A **fencing token** increases every time the lock is granted. The client attaches it to each write, and the storage atomically rejects any token lower than the highest it has accepted. Coordination services hand out such numbers: an etcd key's revision, a ZooKeeper zxid or znode version, Chubby's *sequencer*. Kafka fences "zombie" producers the same way, with an epoch number. etcd's documentation says plainly that its lock API cannot provide mutual exclusion on its own, and Jepsen's 2020 analysis of etcd 3.4.3 saw lock holders overlap, even in healthy clusters, and recommended the lock key's revision as a fencing token.

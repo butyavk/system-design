@@ -342,21 +342,21 @@ Scale iteratively: load-test, find the bottleneck, fix it, repeat. The bottlenec
 7. **Multiple regions.** Serve reads from the nearest region with a replicated table. Random keys can be minted in any region safely. Counter schemes need region bits or per-region ranges.
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> cdn["CDN / edge"]
   cdn --> lb["Load balancer"]
   lb --> writeapi["Write API"]
   lb --> readapi["Read API"]
   writeapi --> primary[("Primary DB")]
-  writeapi --> obj[("Object store")]
-  readapi --> cache["Memory cache<br/>(Valkey)"]
-  readapi --> replica[("Read replicas")]
+  writeapi --> obj[("Object<br/>store")]
+  readapi --> cache["Memory<br/>cache<br/>(Valkey)"]
+  readapi --> replica[("Read<br/>replicas")]
   readapi --> obj
   primary --> replica
-  cdn -->|"edge logs"| stream["Event stream"]
+  cdn -->|"edge logs"| stream["Event<br/>stream"]
   readapi -->|"view events"| stream
-  stream --> olap[("Analytics store")]
-  sweeper["Expiry sweeper"] --> primary
+  stream --> olap[("Analytics<br/>store")]
+  sweeper["Expiry<br/>sweeper"] --> primary
 ```
 
 | Added component | Buys | Costs |

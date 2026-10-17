@@ -12,19 +12,20 @@ rewritten and updated for 2026, and the whole thing is available in English and 
 
 | | Original | This site |
 |---|---|---|
-| Format | One long README | 60 pages in 13 sections, sidebar, full-text search, dark mode |
+| Format | One long README | 61 pages in 13 sections, sidebar, full-text search, dark mode |
 | Languages | English (+ community translations) | English and Russian, kept in sync page by page |
-| Currency | Mostly 2016–2019 | Updated: HTTP/3, Kafka-style logs, distributed SQL, Valkey/Redis 8, SLOs, edge compute, OWASP Top 10:2025… |
+| Currency | Mostly 2017–2019 | Updated: HTTP/3, Kafka-style logs, distributed SQL, Valkey/Redis 8, SLOs, edge compute, OWASP Top 10:2025… |
 | New topics | — | Object storage, event streaming, rate limiting, resilience patterns, observability, API styles, service meshes, consistent hashing, consensus and coordination, LLM-powered systems |
+| Navigation | Table of contents | A skill map of every topic with its prerequisites, your progress, skipped topics and what to read next, shared with a 1–12-week study plan |
 | Numbers | Static 2012 latency table | 2026 latency numbers with sources, interactive explorer, availability and estimation calculators |
 | Flashcards | Anki decks to download | 150 on-site flashcards with spaced repetition, plus Anki decks in English and Russian exported from the same cards (`npm run flashcards`) |
-| Diagrams | PNG images | Mermaid diagrams that follow the light/dark theme |
+| Diagrams | PNG images | Mermaid diagrams that follow the light/dark theme, stay readable on phones and open full-screen with zoom |
 | Case studies | 8 system design + 6 OOD | Same problems, recomputed estimates, fixed code (Python 3.12), "what's different in 2026" sections |
 | Links | Many dead | Every external link checked; dead ones replaced or removed |
 
 ## Sections
 
-1. **Start here** — introduction, study plan, interview framework, back-of-the-envelope estimation
+1. **Start here** — introduction, study plan, skill map, interview framework, back-of-the-envelope estimation
 2. **Fundamentals & trade-offs** — performance vs scalability, latency vs throughput, CAP/PACELC, consistency, availability, consensus and coordination
 3. **Networking & traffic** — DNS, CDN, load balancers, reverse proxy and API gateway
 4. **Application architecture** — monolith vs microservices, service discovery and mesh, LLM-powered systems
@@ -52,11 +53,15 @@ Content lives in `src/content/docs/` (English) and `src/content/docs/ru/` (Russi
 Read [CONTENT_GUIDE.md](CONTENT_GUIDE.md) before editing, then run the checks:
 
 ```bash
-node scripts/check-mdx.mjs $(find src/content/docs -name '*.mdx')   # syntax, frontmatter, links, translations
-npm run build && python3 scripts/check_links.py dist                # internal links and anchors
+npm run check:content     # MDX syntax, frontmatter, links, EN/RU twins
+npm run check:diagrams    # every diagram renders and is at most 800px wide (needs: npx playwright install chromium)
+npm run build             # also validates the skill map graph
+npm run check:links       # internal links and anchors in dist/
+npm run flashcards        # re-export the Anki decks after editing src/data/flashcards.ts
 ```
 
-Pushes to `main` are built and deployed to GitHub Pages by `.github/workflows/deploy.yml`.
+Pushes to `main` run the same checks, then build and deploy to GitHub Pages (`.github/workflows/deploy.yml`).
+To publish your own copy, set **Settings → Pages → Source** to **GitHub Actions** and change `site`/`base` in `astro.config.mjs`.
 
 ## Credits and license
 
@@ -72,7 +77,8 @@ The content of this repository is licensed under [CC BY 4.0](LICENSE).
 ### По-русски
 
 Переработанный и обновлённый к 2026 году System Design Primer на русском и английском:
-60 страниц в 13 разделах, поиск, тёмная тема, актуальные цифры задержек с источниками,
+61 страница в 13 разделах, поиск, тёмная тема, карта навыков с зависимостями между темами
+и прогрессом, актуальные цифры задержек с источниками,
 калькуляторы доступности и прикидочных расчётов, разборы задач с пересчитанными оценками,
 новые страницы о консенсусе и координации и о системах на базе LLM, 150 карточек
 с интервальными повторениями и колоды для импорта в Anki.

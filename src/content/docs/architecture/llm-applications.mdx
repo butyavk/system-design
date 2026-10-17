@@ -22,17 +22,14 @@ A large language model (LLM) is a slow, expensive and non-deterministic dependen
 ## The request path
 
 ```mermaid
-flowchart LR
-  client["Client (web, mobile)"] -->|"request, SSE stream back"| gw["API gateway: auth, token quotas"]
-  gw --> orch["Orchestrator: prompt assembly, guardrails"]
-  orch --> conv[("Conversation store")]
-  orch --> rag["Retrieval: vector + keyword index"]
-  orch --> tools["Tools and internal APIs"]
-  orch --> cache[("Response cache")]
-  orch --> mgw["Model gateway: routing, fallback, metering"]
-  mgw --> api["Managed model API"]
-  mgw --> selfhost["Self-hosted inference"]
-  orch -.-> obs["Traces, token and cost metrics"]
+flowchart TB
+  client["Client (web, mobile)"] -->|"request,<br/>SSE stream back"| gw["API gateway:<br/>auth, token quotas"]
+  gw --> orch["Orchestrator:<br/>prompt assembly, guardrails"]
+  orch --> deps["Conversation store,<br/>retrieval (vector + keyword),<br/>tools and internal APIs,<br/>response cache"]
+  orch --> mgw["Model gateway:<br/>routing, fallback,<br/>metering"]
+  mgw --> api["Managed<br/>model API"]
+  mgw --> selfhost["Self-hosted<br/>inference"]
+  orch -.-> obs["Traces, token<br/>and cost metrics"]
 ```
 
 - **API gateway** authenticates, applies request and token quotas and holds the stream open. See [reverse proxy and API gateway](/traffic/reverse-proxy-and-api-gateway/).
@@ -110,17 +107,17 @@ Serving engines such as **vLLM**, **SGLang** and **TensorRT-LLM** are built arou
 Models know nothing about your private or recent data. RAG retrieves relevant passages at request time and puts them in the prompt, so answers are grounded and can cite sources.
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph ingest["Ingestion (async)"]
-    src["Sources: docs, tickets, wiki"] --> parse["Parse and chunk"]
+    src["Sources: docs,<br/>tickets, wiki"] --> parse["Parse and chunk"]
     parse --> emb["Embedding model"]
-    emb --> idx[("Vector + keyword index with ACL metadata")]
+    emb --> idx[("Vector + keyword index<br/>with ACL metadata")]
   end
   subgraph query["Query path"]
     q["User question"] --> rw["Rewrite query"]
-    rw --> hyb["Hybrid search filtered by user ACL"]
-    hyb --> rr["Rerank top candidates"]
-    rr --> prompt["Prompt with cited passages"]
+    rw --> hyb["Hybrid search<br/>filtered by user ACL"]
+    hyb --> rr["Rerank top<br/>candidates"]
+    rr --> prompt["Prompt with<br/>cited passages"]
     prompt --> llm["LLM"]
   end
   idx --> hyb

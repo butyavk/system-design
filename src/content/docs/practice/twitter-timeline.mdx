@@ -61,18 +61,18 @@ The original's rates (100,000 reads/s, 6,000 tweets/s, 60,000 deliveries/s, 4,00
 ## Step 2 — High-level design
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> web["Web server<br/>(reverse proxy)"]
-  web --> writeapi["Write API"]
   web --> readapi["Read API"]
-  web --> searchapi["Search API"]
-  writeapi --> tweets[("Tweet store")]
-  writeapi --> fanout["Fan-out service"]
-  fanout --> follows["User graph service"]
-  fanout --> tlcache[("Timeline cache")]
-  fanout --> search[("Search index")]
-  fanout --> notify["Notification service"]
-  readapi --> timeline["Timeline service"]
+  web --> writeapi["Write API"]
+  web --> searchapi["Search<br/>service"]
+  readapi --> timeline["Timeline<br/>service"]
+  writeapi --> tweets[("Tweet<br/>store")]
+  writeapi --> fanout["Fan-out<br/>service"]
+  fanout --> follows["User graph<br/>service"]
+  fanout --> tlcache[("Timeline<br/>cache")]
+  fanout --> search[("Search<br/>index")]
+  fanout --> notify["Notification<br/>service"]
   timeline --> tlcache
   timeline --> tweets
   searchapi --> search
@@ -216,17 +216,16 @@ print([e.tweet_id for e in home_timeline(42, cache, [9], recent, max_id=first[-1
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant T as Timeline service
-  participant L as Timeline cache
-  participant R as Celebrity recent-tweets (in RAM)
-  participant H as Tweet and user stores
-  C->>T: GET home?max_id=…
-  T->>L: ZRANGE BYSCORE REV (20 IDs below max_id)
-  T->>R: recent tweets of followed celebrities
-  T->>T: merge by tweet ID, drop blocked, muted or deleted
-  T->>H: multiget 20 tweets and their authors
+  participant T as Timeline<br/>service
+  participant L as Timeline<br/>cache
+  participant H as Tweet and<br/>user stores
+  C->>T: GET home?<br/>max_id=…
+  T->>L: ZRANGE BYSCORE<br/>REV (20 IDs<br/>below max_id)
+  T->>T: add followed celebrities'<br/>recent tweets (in RAM)
+  T->>T: merge by tweet ID, drop<br/>blocked, muted or deleted
+  T->>H: multiget 20 tweets<br/>and their authors
   H-->>T: tweet and user objects
-  T-->>C: 20 hydrated tweets + next cursor
+  T-->>C: 20 hydrated tweets<br/>+ next cursor
 ```
 
 Hydration is the expensive part of a read. 96,000 reads/s × 20 tweets ≈ 1.9 M tweet lookups per second, plus author lookups. Tweet and user objects therefore sit behind their own caches (Memcached or Valkey) with very high hit rates, because the same popular tweets appear in millions of timelines. Hydration also handles deletes cheaply. Deleting a tweet does not touch millions of timelines: the tweet object gets a tombstone, and hydration drops it.
@@ -271,24 +270,26 @@ Bottlenecks, one at a time:
 7. **Media.** Store media in object storage and serve it through a CDN. Clients upload directly with pre-signed URLs, so media bytes never pass through the API.
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> cdn["CDN<br/>(media)"]
   client --> lb["Load balancer"]
   lb --> writeapi["Write API"]
-  lb --> readapi["Timeline service"]
-  lb --> searchapi["Search service"]
-  writeapi --> tweets[("Tweet store<br/>sharded by tweet ID")]
+  lb --> readapi["Timeline<br/>service"]
+  lb --> searchapi["Search<br/>service"]
+  writeapi --> tweets[("Tweet store<br/>sharded by<br/>tweet ID")]
   writeapi --> log["Tweet log<br/>(Kafka)"]
-  log --> fanout["Fan-out workers"]
-  fanout --> follows[("Follow graph")]
-  fanout --> tlcache[("Timeline cache<br/>sharded, 3 replicas")]
-  log --> indexer["Search indexers"] --> index[("Search index<br/>time-tiered shards")]
-  log --> notify["Notification service"]
+  log --> fanout["Fan-out<br/>workers"]
+  fanout --> follows[("Follow<br/>graph")]
+  fanout --> tlcache[("Timeline cache<br/>sharded,<br/>3 replicas")]
+  log --> indexer["Search<br/>indexers"] --> index[("Search index<br/>time-tiered<br/>shards")]
+  log --> notify["Notification<br/>service"]
   readapi --> tlcache
-  readapi --> objcache[("Tweet and user caches")]
+  readapi --> objcache[("Tweet and<br/>user caches")]
   objcache --> tweets
   searchapi --> index
-  cdn --> media[("Object store")]
+  cdn --> media[("Object<br/>store")]
+  searchapi ~~~ log
+  fanout ~~~ notify
 ```
 
 | Added component | Buys | Costs |

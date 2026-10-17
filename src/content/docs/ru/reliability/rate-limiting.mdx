@@ -31,12 +31,12 @@ import { Aside } from '@astrojs/starlight/components';
 | Уложиться в чужую квоту | Собственные учётные данные | На клиенте, перед вызовом стороннего API |
 
 ```mermaid
-flowchart LR
+flowchart TB
   user["Клиенты"] --> edge["Граница / WAF: по IP"]
-  edge --> gw["API-шлюз: по ключу и тарифу"]
+  edge --> gw["API-шлюз:<br/>по ключу и тарифу"]
   gw --> svc["Сервис: лимит параллельности"]
   svc --> db[("База данных")]
-  svc --> ext["Сторонний API: лимит на клиенте"]
+  svc --> ext["Сторонний API:<br/>лимит на клиенте"]
 ```
 
 Ключ надо выбирать аккуратно. Множество пользователей сидит за одним IPv4-адресом через операторский NAT (CGNAT) или корпоративный прокси, а один клиент IPv6 распоряжается миллиардами адресов, поэтому IPv6 ограничивают по префиксу. Аутентифицированные ключи (пользователь, API-ключ, клиент) честнее, но появляются только после аутентификации, поэтому эндпоинтам входа нужны ещё и лимиты по IP и по атакуемому аккаунту.
@@ -213,7 +213,7 @@ return {allowed, tostring(tokens)}
 ## Что почитать
 
 - [Scaling your API with rate limiters](https://stripe.com/blog/rate-limiters): четыре типа ограничителей Stripe и их реализация token bucket на Redis.
-- [Cloudflare on counting at scale](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/): счётчик скользящего окна и его точность в продакшене.
+- [How we built rate limiting capable of scaling to millions of domains](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/): счётчик скользящего окна и его точность в продакшене.
 - [Redis `INCR`: rate limiter patterns](https://redis.io/docs/latest/commands/incr/): официальные шаблоны и гонки, которых они избегают.
 - [RateLimit header fields for HTTP (IETF draft)](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/): текущая ревизия и статус черновика.
 - [Envoy global rate limiting](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting): локальные token bucket плюс центральный сервис.

@@ -52,10 +52,10 @@ sequenceDiagram
   C->>L: COMMIT
   L->>L: flush WAL locally
   L->>S: send change
-  S-->>L: acknowledged (flushed)
+  S-->>L: acknowledged<br/>(flushed)
   L-->>C: OK
   L--)A: send change (no wait)
-  Note over L,A: If the leader dies now, A may lack the last commit
+  Note over L,A: If the leader dies now,<br/>A may lack the last commit
 ```
 
 | Mode | Commit returns when | Data loss on leader failure | Latency cost | Availability risk |
@@ -82,7 +82,7 @@ With asynchronous replicas, a follower is always slightly behind. Lag is usually
 | **Monotonic reads** violated | A comment appears, then disappears on the next refresh (second read hit a more-lagged replica) | Pin each user or session to one replica (for example, hash the user ID). Or have the client send the last position it saw. |
 | **Consistent prefix** violated | Sees an answer before the question it replies to | Keep causally related writes on the same leader or partition. Or track dependencies. |
 
-The position-based fix is precise and cheap. After a write, the application stores the leader's log position: in PostgreSQL the LSN from `pg_current_wal_lsn()`, in MySQL the GTID set. On the next read, it picks a replica whose replayed position (`pg_last_wal_replay_lsn()`) is at least that value. MySQL can also block until a replica catches up with `WAIT_FOR_EXECUTED_GTID_SET()`; PostgreSQL 19, in beta as of October 2026, adds a `WAIT FOR LSN` command for the same job. PostgreSQL's `synchronous_commit = remote_apply` gives the same effect at commit time, at the cost of slower commits.
+The position-based fix is precise and cheap. After a write, the application stores the leader's log position: in PostgreSQL the LSN from `pg_current_wal_lsn()`, in MySQL the GTID set. On the next read, it picks a replica whose replayed position (`pg_last_wal_replay_lsn()`) is at least that value. MySQL can also block until a replica catches up with `WAIT_FOR_EXECUTED_GTID_SET()`; PostgreSQL 19, a release candidate in October 2026 (general availability is planned for November), adds a `WAIT FOR LSN` command for the same job. PostgreSQL's `synchronous_commit = remote_apply` gives the same effect at commit time, at the cost of slower commits.
 
 Also expose lag as a metric and alert on it. Take a replica out of the read pool when its lag exceeds what the product tolerates.
 
@@ -92,8 +92,8 @@ When the leader dies, a follower must be promoted:
 
 1. **Detect** the failure. Usually this is missed heartbeats for some seconds. Too short a timeout causes needless failovers. Too long a timeout extends the outage.
 2. **Choose** the new leader. Pick the most up-to-date replica to minimise lost writes. A synchronous replica is ideal.
-3. **Reconfigure.** Point clients at the new leader (DNS, a virtual IP, a proxy or service discovery) and point the other replicas at it.
-4. **Fence** the old leader so it cannot accept writes if it comes back.
+3. **Fence** the old leader so it cannot accept writes if it is still running or comes back.
+4. **Reconfigure.** Point clients at the new leader (DNS, a virtual IP, a proxy or service discovery) and point the other replicas at it.
 
 Tools such as **Patroni** for PostgreSQL use a consistent store (etcd, Consul, ZooKeeper or the Kubernetes API) to hold a leader lease. Only the lease holder may act as primary. Managed services such as RDS, Cloud SQL and Azure Database run this loop for you.
 

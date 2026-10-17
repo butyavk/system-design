@@ -84,15 +84,19 @@ const SHORT_DUR: Record<Locale, { y: string; d: string; h: string; m: string; s:
   ru: { y: 'г', d: 'д', h: 'ч', m: 'мин', s: 'с', ms: 'мс' },
 };
 
-/** Seconds → "8 h 45 min 57 s", "4 min 23 s", "8.6 s", "864 ms". At most three parts. */
+/**
+ * Seconds → "3 d 15 h 40 min", "8 h 45 min 58 s", "4 min 23 s", "8.64 s", "864 ms".
+ * At most three parts; with days, seconds are dropped and the minutes rounded.
+ */
 export function formatDuration(seconds: number, locale: Locale): string {
   const u = SHORT_DUR[locale];
   const sp = ' ';
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
   if (seconds === 0) return `0${sp}${u.s}`;
-  if (seconds < 1) return `${sig(seconds * 1000, locale, 3)}${sp}${u.ms}`;
-  if (seconds < 60) return `${sig(seconds, locale, 3)}${sp}${u.s}`;
-  let rest = Math.round(seconds);
+  // Thresholds sit just below the next unit, so 3-digit rounding never shows "1,000 ms" or "60 s".
+  if (seconds < 0.9995) return `${sig(seconds * 1000, locale, 3)}${sp}${u.ms}`;
+  if (seconds < 59.95) return `${sig(seconds, locale, 3)}${sp}${u.s}`;
+  let rest = seconds >= 86400 ? Math.round(seconds / 60) * 60 : Math.round(seconds);
   const parts: string[] = [];
   const push = (n: number, label: string) => parts.push(`${int(n, locale)}${sp}${label}`);
   const days = Math.floor(rest / 86400);

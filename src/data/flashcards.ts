@@ -184,8 +184,8 @@ export const flashcards: Flashcard[] = [
       ru: "Когда чтение с кворумом видит последнюю запись и достаточно ли этого для линеаризуемости?",
     },
     back: {
-      en: "With `N` replicas, a write waits for `W` acks and a read asks `R` replicas. If `R + W > N` (say N = 3, W = 2, R = 2), every read set overlaps every write set.\nOverlap is not linearizability: sloppy quorums, partially failed writes and last-writer-wins can still produce anomalies.",
-      ru: "При `N` репликах запись ждёт `W` подтверждений, а чтение опрашивает `R` реплик. Если `R + W > N` (например, N = 3, W = 2, R = 2), любое множество чтения пересекается с любым множеством записи.\nПересечение — ещё не линеаризуемость: нестрогие кворумы (sloppy quorums), частично неудачные записи и last-writer-wins всё равно дают аномалии.",
+      en: "With `N` replicas, a write waits for `W` acks and a read asks `R` replicas. If `R + W > N` (say N = 3, W = 2, R = 2), every read set overlaps every write set.\nOverlap is not linearizability: concurrent writes, partially failed writes and sloppy quorums can still produce anomalies.",
+      ru: "При `N` репликах запись ждёт `W` подтверждений, а чтение опрашивает `R` реплик. Если `R + W > N` (например, N = 3, W = 2, R = 2), любое множество чтения пересекается с любым множеством записи.\nПересечение — ещё не линеаризуемость: конкурентные записи, частично неудачные записи и нестрогие кворумы (sloppy quorums) всё равно дают аномалии.",
     },
   },
   {
@@ -277,7 +277,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "Time is split into numbered **terms** with at most one leader each; a node that sees a higher term steps down, which makes a deposed leader harmless. A follower that hears no heartbeat for a randomised **election timeout** asks for votes; a majority makes it leader, and only candidates with an up-to-date log can win.\nThe leader appends commands and replicates them; an entry is **committed** once a majority has stored it.",
-      ru: "Время делится на пронумерованные **термы** (terms), в каждом не больше одного лидера; узел, увидевший терм старше своего, уступает — поэтому смещённый лидер безвреден. Фолловер, не получивший heartbeat за случайный **тайм-аут выборов**, просит голоса; большинство делает его лидером, причём победить может только кандидат с актуальным журналом.\nЛидер дописывает команды и реплицирует их; запись **зафиксирована**, когда её сохранило большинство.",
+      ru: "Время делится на пронумерованные **сроки** (terms), в каждом не больше одного лидера; узел, увидевший срок старше своего, уступает — поэтому смещённый лидер безвреден. Фолловер, не получивший heartbeat за случайный **тайм-аут выборов**, просит голоса; большинство делает его лидером, причём победить может только кандидат с актуальным журналом.\nЛидер дописывает команды и реплицирует их; запись **зафиксирована**, когда её сохранило большинство.",
     },
   },
   {
@@ -816,7 +816,7 @@ export const flashcards: Flashcard[] = [
       ru: "Зачем ставить пулер соединений перед PostgreSQL и что ломает режим transaction?",
     },
     back: {
-      en: "PostgreSQL runs one OS process per connection, so thousands of mostly idle connections from autoscaled app servers waste memory and throughput. PgBouncer multiplexes them onto a few dozen server connections, sized near the core count.\nTransaction mode, the usual choice, breaks session state: `SET`, `LISTEN`, session advisory locks and `WITH HOLD` cursors.",
+      en: "PostgreSQL runs one OS process per connection, so thousands of mostly idle connections from autoscaled app servers waste memory and throughput. PgBouncer multiplexes them onto a few dozen server connections, sized near the core count times a small factor.\nTransaction mode, the usual choice, breaks session state: `SET`, `LISTEN`, session advisory locks and `WITH HOLD` cursors.",
       ru: "PostgreSQL запускает отдельный процесс ОС на каждое соединение, поэтому тысячи почти простаивающих соединений от автомасштабируемых серверов тратят память и пропускную способность. PgBouncer мультиплексирует их на несколько десятков серверных соединений — по числу ядер с небольшим множителем.\nРежим transaction, обычный выбор, ломает состояние сессии: `SET`, `LISTEN`, сессионные advisory-блокировки и курсоры `WITH HOLD`.",
     },
   },
@@ -1160,8 +1160,8 @@ export const flashcards: Flashcard[] = [
       ru: "Какие методы HTTP безопасны, какие идемпотентны и как безопасно повторить POST?",
     },
     back: {
-      en: "**Safe** (no state change requested): GET, HEAD, OPTIONS, TRACE. **Idempotent**: the safe ones plus PUT and DELETE, so clients and proxies can retry them.\nPOST and PATCH are neither; make them retry-safe with an **idempotency key**. In practice only GET and HEAD responses are cached.",
-      ru: "**Безопасные** (не запрашивают изменения состояния): GET, HEAD, OPTIONS, TRACE. **Идемпотентные**: безопасные плюс PUT и DELETE, поэтому клиенты и прокси могут их повторять.\nPOST и PATCH — ни то ни другое; для безопасного повтора им нужен **ключ идемпотентности**. На практике кэшируются только ответы на GET и HEAD.",
+      en: "**Safe** (no state change requested): GET, HEAD, OPTIONS, TRACE and the new QUERY (RFC 10008). **Idempotent**: the safe ones plus PUT and DELETE, so clients and proxies can retry them.\nPOST and PATCH are neither; make them retry-safe with an **idempotency key**. In practice caches store GET and HEAD responses; QUERY is cacheable, but support is still new.",
+      ru: "**Безопасные** (не запрашивают изменения состояния): GET, HEAD, OPTIONS, TRACE и новый QUERY (RFC 10008). **Идемпотентные**: безопасные плюс PUT и DELETE, поэтому клиенты и прокси могут их повторять.\nPOST и PATCH — ни то ни другое; для безопасного повтора им нужен **ключ идемпотентности**. На практике кэши хранят ответы на GET и HEAD; QUERY тоже кэшируемый, но его поддержка пока только появляется.",
     },
   },
   {
@@ -1580,8 +1580,8 @@ export const flashcards: Flashcard[] = [
       ru: "Насколько быстры жёсткие диски, NVMe и облачные блочные тома?",
     },
     back: {
-      en: "- HDD random read (seek + rotation): ~**10 ms**, still 100–200 random IOPS per drive; 1 MB sequential ~5 ms.\n- NVMe: 1 MB sequential ~100 µs (7 GB/s on PCIe 4, 14 GB/s on PCIe 5), ten times the 2012 SSD.\n- Network-attached cloud block volume I/O: ~**1 ms**, ten times a local NVMe drive, because every I/O crosses the network.",
-      ru: "- Случайное чтение с HDD (позиционирование + оборот): ~**10 мс**, по-прежнему 100–200 случайных IOPS на диск; 1 МБ последовательно — ~5 мс.\n- NVMe: 1 МБ последовательно — ~100 мкс (7 ГБ/с на PCIe 4, 14 ГБ/с на PCIe 5), в десять раз быстрее SSD 2012 года.\n- Ввод-вывод облачного блочного тома по сети: ~**1 мс**, в десять раз медленнее локального NVMe: каждый запрос идёт по сети.",
+      en: "- HDD random read (seek + rotation): ~**10 ms**, so only about 100 random IOPS per drive; 1 MB sequential ~5 ms.\n- NVMe: 1 MB sequential ~100 µs (7 GB/s on PCIe 4, 14 GB/s on PCIe 5), ten times the 2012 SSD.\n- Network-attached cloud block volume I/O: ~**1 ms**, ten times a local NVMe drive, because every I/O crosses the network.",
+      ru: "- Случайное чтение с HDD (позиционирование + оборот): ~**10 мс**, поэтому всего около 100 случайных IOPS на диск; 1 МБ последовательно — ~5 мс.\n- NVMe: 1 МБ последовательно — ~100 мкс (7 ГБ/с на PCIe 4, 14 ГБ/с на PCIe 5), в десять раз быстрее SSD 2012 года.\n- Ввод-вывод облачного блочного тома по сети: ~**1 мс**, в десять раз медленнее локального NVMe: каждый запрос идёт по сети.",
     },
   },
   {

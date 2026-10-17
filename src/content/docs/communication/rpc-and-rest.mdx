@@ -27,7 +27,7 @@ the message, and waits; a **server stub** unmarshals the request, calls the real
 sends the result back the same way.
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph client["Client process"]
     c1["Caller code"] --> c2["Client stub<br/>(generated)"]
     c2 --> c3["Marshal arguments"]

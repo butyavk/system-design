@@ -27,7 +27,7 @@ Observability is how well you can understand what a running system is doing, and
 | Logs | Timestamped records of discrete events | What exactly happened to this request? | Volume (GB ingested and kept) |
 | Traces | The tree of spans for one request across services | Where did the time go? Which hop failed? | Spans per request × sampling rate |
 
-A typical investigation moves through them in order. An alert fires on the checkout error-rate metric. You open an exemplar trace from the bad minute and see that the `payments` span takes 4 s and times out. Its logs, found by trace ID, show `connection pool exhausted` right after a deploy. Profiles, the emerging fourth signal, then show which function burns the CPU.
+A typical investigation moves through them in order. An alert fires on the checkout error-rate metric. You open an exemplar trace from the bad minute and see that the `payments` span takes 3 s and times out. Its logs, found by trace ID, show `connection pool exhausted` right after a deploy. Profiles, the emerging fourth signal, then show which function burns the CPU.
 
 ## What to measure: RED, USE and the golden signals
 
@@ -72,14 +72,14 @@ A **trace** follows one request across services. It is a tree of **spans**, one 
 sequenceDiagram
   participant GW as API gateway
   participant O as Orders
-  participant P as Payments
   participant DB as Orders DB
-  GW->>O: POST /orders (traceparent: trace 4bf9, span a1)
-  O->>DB: INSERT order (span b2, parent a1)
+  participant P as Payments
+  GW->>O: POST /orders<br/>traceparent:<br/>trace 4bf9, span a1
+  O->>DB: INSERT order<br/>(span b2,<br/>parent a1)
   DB-->>O: ok, 4 ms
-  O->>P: charge (traceparent: trace 4bf9, span c3)
+  O->>P: charge<br/>traceparent:<br/>trace 4bf9, span c3
   P-->>O: timeout after 3,000 ms
-  O-->>GW: 504 (whole trace 3,020 ms)
+  O-->>GW: 504<br/>(whole trace<br/>3,020 ms)
 ```
 
 - **Origins.** Google's **Dapper** paper (2010) set the template: propagate trace and span IDs through every RPC, sample to keep overhead low, and make instrumentation transparent by building it into shared libraries. Zipkin and Jaeger followed. OpenTracing and OpenCensus merged in 2019 to form OpenTelemetry.
@@ -155,5 +155,5 @@ Rules of thumb:
 - [Availability patterns](/fundamentals/availability-patterns/): SLOs, error budgets and the cost of each nine.
 - [Latency vs throughput](/fundamentals/latency-vs-throughput/): percentiles, tail latency and why averages mislead.
 - [Resilience patterns](/reliability/resilience-patterns/): what to do once observability shows a dependency failing.
-- [Event streaming](/async/event-streaming/): consumer lag and tracing across asynchronous hops.
+- [Event streaming](/async/event-streaming/): consumer lag, the key health metric of a streaming pipeline.
 - [Service discovery and mesh](/architecture/service-discovery-and-mesh/): meshes that emit RED metrics and spans for free.

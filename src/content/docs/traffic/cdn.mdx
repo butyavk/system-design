@@ -19,10 +19,10 @@ A content delivery network is a fleet of caching reverse proxies spread over hun
 ## How a request flows
 
 ```mermaid
-flowchart LR
+flowchart TB
   user["User"] -->|"DNS or anycast"| edge["Edge PoP cache"]
   edge -->|"miss"| shield["Shield / upper tier"]
-  shield -->|"miss"| origin["Origin: app or object storage"]
+  shield -->|"miss"| origin["Origin: app or<br/>object storage"]
   origin --> shield
   shield --> edge
   edge -->|"hit or filled"| user

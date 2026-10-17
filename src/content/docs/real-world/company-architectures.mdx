@@ -27,7 +27,7 @@ Treat each article as an answer to a design question that you did not see. While
 Most of the stories follow a similar growth path:
 
 ```mermaid
-flowchart LR
+flowchart TB
   one["Single app server<br/>and database"] --> cache["Add cache<br/>and read replicas"]
   cache --> cdn["CDN and async<br/>job queues"]
   cdn --> shard["Shard the<br/>database"]

@@ -27,7 +27,7 @@ import { Aside } from '@astrojs/starlight/components';
 демаршалирует запрос, вызывает настоящую реализацию и тем же путём возвращает результат.
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph client["Процесс клиента"]
     c1["Вызывающий код"] --> c2["Клиентский стаб<br/>(сгенерирован)"]
     c2 --> c3["Маршалинг аргументов"]

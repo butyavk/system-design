@@ -1,0 +1,1134 @@
+---
+// Skill map: every topic as a node in a prerequisite graph, grouped by stage and section.
+// Shows what is learned, opened, ready, skipped ("gaps"), where the reader is and what to
+// read next. Selecting a node draws its prerequisites and what it unlocks.
+// Server-rendered as plain links (works without JS); the script adds state and wiring.
+import { stages, tracks } from '~/data/skill-map';
+import { mapNodes, pageHref } from './lib/skill-map-data';
+import type { Locale } from './lib/format';
+
+const locale: Locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
+const nodes = await mapNodes(locale);
+const href = (p: string) => pageHref(p, locale);
+
+const T = {
+  en: {
+    learned: 'topics learned',
+    here: 'You are here',
+    notStarted: 'Not started yet.',
+    start: 'Start with the introduction',
+    next: 'Next up',
+    gaps: 'Skipped',
+    gapsHelp: 'Prerequisites of topics you have learned',
+    plan: 'Show',
+    all: 'All topics',
+    short: 'Short plan',
+    medium: 'Medium plan',
+    long: 'Long plan',
+    reset: 'Reset progress',
+    confirm: 'Clear all progress on the map and in the study plan?',
+    legend: 'Legend',
+    lLearned: 'learned',
+    lOpened: 'opened',
+    lReady: 'ready to start',
+    lLocked: 'read prerequisites first',
+    lGap: 'skipped',
+    saved: 'Progress is saved in this browser only and shared with the study plan. Pages you open are marked “opened”; mark a topic as learned at the end of its page or here.',
+    nojs: 'Turn on JavaScript to see your progress and the connections between topics.',
+  },
+  ru: {
+    learned: 'тем изучено',
+    here: 'Вы здесь',
+    notStarted: 'Вы ещё не начали.',
+    start: 'Начните с введения',
+    next: 'Дальше',
+    gaps: 'Пропущено',
+    gapsHelp: 'Темы, на которые опираются уже изученные',
+    plan: 'Показать',
+    all: 'Все темы',
+    short: 'Короткий план',
+    medium: 'Средний план',
+    long: 'Длинный план',
+    reset: 'Сбросить прогресс',
+    confirm: 'Удалить весь прогресс на карте и в плане подготовки?',
+    legend: 'Обозначения',
+    lLearned: 'изучено',
+    lOpened: 'открыто',
+    lReady: 'можно начинать',
+    lLocked: 'сначала нужные темы',
+    lGap: 'пропущено',
+    saved: 'Прогресс хранится только в этом браузере и общий с планом подготовки. Открытые страницы отмечаются как «открыто»; отметить тему изученной можно в конце её страницы или здесь.',
+    nojs: 'Включите JavaScript, чтобы видеть прогресс и связи между темами.',
+  },
+}[locale];
+
+// Strings the script needs.
+const C = {
+  en: {
+    of: 'of', min: 'min read', core: 'In every plan', medium: 'Medium and long plans', long: 'Long plan only', noPlan: 'Not a plan step',
+    mark: 'Mark as learned', unmark: 'Learned — undo', open: 'Open the page', before: 'Read first', leads: 'Leads to',
+    noNeeds: 'Nothing — a good place to start.', endLine: 'Nothing directly: this is an end point.', allBefore: 'Prerequisites learned, counting indirect ones',
+    st: { learned: 'Learned', opened: 'Opened, not marked as learned', ready: 'Ready: every prerequisite is learned', locked: 'Prerequisites not learned yet', gap: 'Skipped: a topic you learned builds on it' },
+    done: 'Everything in this plan is learned. Keep practising out loud.', more: 'more', here: 'You are here', none: 'none',
+    cont: 'Continue reading', show: 'Show on the map',
+  },
+  ru: {
+    of: 'из', min: 'мин чтения', core: 'Во всех планах', medium: 'Средний и длинный планы', long: 'Только длинный план', noPlan: 'Не шаг плана',
+    mark: 'Отметить изученным', unmark: 'Изучено — отменить', open: 'Открыть страницу', before: 'Сначала прочитать', leads: 'Ведёт к',
+    noNeeds: 'Ничего — хорошее место для старта.', endLine: 'Прямых продолжений нет: это конечная точка.', allBefore: 'Изучено нужных тем, включая косвенные',
+    st: { learned: 'Изучено', opened: 'Открыто, но не отмечено изученным', ready: 'Можно начинать: все нужные темы изучены', locked: 'Нужные темы ещё не изучены', gap: 'Пропущено: на эту тему опирается уже изученная' },
+    done: 'Всё в этом плане изучено. Продолжайте тренироваться вслух.', more: 'ещё', here: 'Вы здесь', none: 'нет',
+    cont: 'Продолжить чтение', show: 'Показать на карте',
+  },
+}[locale];
+
+const trackTitle = Object.fromEntries(tracks.map((t) => [t.id, t.title[locale]]));
+const stageOfTrack = Object.fromEntries(stages.flatMap((s, i) => s.tracks.map((t) => [t, i])));
+const clientData = {
+  nodes: nodes.map((n) => ({ p: n.p, t: n.t, title: n.title, d: n.d, tr: n.tr, needs: n.needs, deps: n.deps, plans: n.plans, ord: n.ord, min: n.min, h: href(n.p) })),
+  tracks: trackTitle,
+  stages: stages.map((s) => s.title[locale]),
+  stageOfTrack,
+  t: C,
+};
+const plans = [
+  ['all', T.all],
+  ['short', T.short],
+  ['medium', T.medium],
+  ['long', T.long],
+] as const;
+---
+
+<div class="sm not-content" data-sm>
+  <script type="application/json" data-sm-json set:html={JSON.stringify(clientData)} />
+
+  <section class="sm-top" aria-label={locale === 'ru' ? 'Ваш прогресс' : 'Your progress'}>
+    <div class="sm-stat">
+      <p class="sm-stat__num"><b data-sm-learned>0</b> <span>/ <span data-sm-total>{nodes.length}</span></span></p>
+      <p class="sm-stat__label">{T.learned}</p>
+      <div class="sm-meter" aria-hidden="true"><span class="sm-meter__l" data-sm-ml></span><span class="sm-meter__o" data-sm-mo></span></div>
+    </div>
+    <div class="sm-cell">
+      <p class="sm-k">{T.here}</p>
+      <div data-sm-here>
+        <p class="sm-here__empty">{T.notStarted} <a href={href('start/introduction/')}>{T.start}</a>.</p>
+      </div>
+    </div>
+    <div class="sm-cell">
+      <p class="sm-k">{T.next}</p>
+      <div class="sm-chips" data-sm-next>
+        <a class="sm-chip" href={href('start/introduction/')}>{nodes[0].t}</a>
+      </div>
+    </div>
+    <div class="sm-cell sm-cell--gaps" data-sm-gaps-wrap hidden>
+      <p class="sm-k">{T.gaps} <span class="sm-k__help">· {T.gapsHelp}</span></p>
+      <div class="sm-chips" data-sm-gaps></div>
+    </div>
+  </section>
+
+  <div class="sm-bar">
+    <fieldset class="sm-plan">
+      <legend class="sm-sr">{T.plan}</legend>
+      {plans.map(([id, label]) => (
+        <label>
+          <input type="radio" name="sm-plan" value={id} checked={id === 'all'} />
+          <span>{label}</span>
+        </label>
+      ))}
+    </fieldset>
+    <ul class="sm-legend" aria-label={T.legend}>
+      <li><span class="sm-glyph is-learned"></span>{T.lLearned}</li>
+      <li><span class="sm-glyph is-opened"></span>{T.lOpened}</li>
+      <li><span class="sm-glyph is-ready"></span>{T.lReady}</li>
+      <li><span class="sm-glyph is-locked"></span>{T.lLocked}</li>
+      <li><span class="sm-glyph is-gap"></span>{T.lGap}</li>
+    </ul>
+  </div>
+  <noscript><p class="sm-nojs">{T.nojs}</p></noscript>
+
+  <div class="sm-board" data-sm-board>
+    <svg class="sm-wires" data-sm-wires aria-hidden="true" focusable="false">
+      <defs>
+        <marker id="sm-arrow-need" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 8 4 0 8z" /></marker>
+        <marker id="sm-arrow-dep" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 8 4 0 8z" /></marker>
+      </defs>
+      <g data-sm-g></g>
+    </svg>
+    <ol class="sm-stages">
+      {stages.map((st, si) => (
+        <li class="sm-stage" data-stage={si}>
+          <header class="sm-stage__head">
+            <span class="sm-stage__n" aria-hidden="true">{si + 1}</span>
+            <h2 class="sm-stage__title">{st.title[locale]}</h2>
+            <span class="sm-stage__count" data-sm-stage-count></span>
+          </header>
+          <p class="sm-stage__out">{st.outcome[locale]}</p>
+          <div class="sm-tracks">
+            {st.tracks.map((tr) => (
+              <section class="sm-track" data-track={tr}>
+                <h3 class="sm-track__title">
+                  <span>{trackTitle[tr]}</span>
+                  <span class="sm-track__count" data-sm-track-count></span>
+                </h3>
+                <ol class="sm-track__list">
+                  {nodes
+                    .filter((n) => n.tr === tr)
+                    .map((n) => (
+                      <li>
+                        <a class="sm-node" href={href(n.p)} data-p={n.p} title={n.title !== n.t ? n.title : undefined}>
+                          <span class="sm-glyph" aria-hidden="true"></span>
+                          <span class="sm-node__t">{n.t}</span>
+                          <span class="sm-node__here" hidden>{C.here}</span>
+                        </a>
+                      </li>
+                    ))}
+                </ol>
+              </section>
+            ))}
+          </div>
+        </li>
+      ))}
+    </ol>
+    <aside class="sm-detail" data-sm-detail hidden aria-live="polite"></aside>
+  </div>
+
+  <div class="sm-foot">
+    <p class="sm-saved">{T.saved}</p>
+    <button type="button" class="sm-reset" data-sm-reset data-confirm={T.confirm}>{T.reset}</button>
+  </div>
+</div>
+
+<style is:global>
+  :root:has(.sm) {
+    --sl-content-width: 74rem;
+  }
+  .sm {
+    --sm-gap: 1rem;
+    --sm-node-bg: var(--sl-color-bg);
+    container-type: inline-size;
+    margin-block: 1.5rem 2rem;
+  }
+  .sm :where(p, ol, ul, h2, h3, h4) {
+    margin: 0;
+  }
+  .sm ol,
+  .sm ul {
+    list-style: none;
+    padding: 0;
+  }
+  .sm-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ---------- Summary ---------- */
+  .sm-top {
+    display: grid;
+    grid-template-columns: minmax(9rem, auto) 1fr 1.4fr;
+    gap: 0.75rem;
+  }
+  .sm-stat,
+  .sm-cell {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    background: var(--sl-color-bg);
+  }
+  .sm-cell--gaps {
+    grid-column: 1 / -1;
+    border-color: color-mix(in srgb, var(--sdp-signal) 55%, var(--sl-color-gray-5));
+    background: color-mix(in srgb, var(--sdp-signal-low) 60%, var(--sl-color-bg));
+  }
+  .sm-stat__num {
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--sl-color-white);
+  }
+  .sm-stat__num span {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--sl-color-gray-3);
+  }
+  .sm-stat__label {
+    margin-top: 0.3rem !important;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .sm-meter {
+    display: flex;
+    height: 0.4rem;
+    margin-top: 0.7rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--sl-color-gray-6);
+  }
+  .sm-meter__l {
+    background: var(--sl-color-accent);
+  }
+  .sm-meter__o {
+    background: color-mix(in srgb, var(--sl-color-accent) 35%, transparent);
+  }
+  .sm-k {
+    margin-bottom: 0.45rem !important;
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  .sm-k__help {
+    font-weight: 450;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .sm-here__empty,
+  .sm-here__title {
+    font-size: var(--sl-text-sm);
+    line-height: 1.45;
+  }
+  .sm-here__title {
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  .sm-here__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+    margin-top: 0.4rem;
+    font-size: var(--sl-text-sm);
+  }
+  .sm-here__actions :is(a, button),
+  .sm-here__empty a {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--sl-color-accent);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+  .sm-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .sm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 100%;
+    padding: 0.28rem 0.7rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+    font: inherit;
+    font-size: var(--sl-text-sm);
+    line-height: 1.35;
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .sm-chip:hover,
+  .sm-chip:focus-visible {
+    border-color: var(--sl-color-accent);
+  }
+  .sm-chip--more {
+    color: var(--sl-color-gray-3);
+  }
+  .sm-done {
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-2);
+  }
+
+  /* ---------- Controls ---------- */
+  .sm-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.25rem;
+    margin: 1.25rem 0 0.25rem;
+  }
+  .sm-plan {
+    display: inline-flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0.2rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+  }
+  .sm-plan label {
+    position: relative;
+  }
+  .sm-plan input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+  .sm-plan span {
+    display: block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-2);
+  }
+  .sm-plan input:checked + span {
+    background: var(--sl-color-accent);
+    color: var(--sl-color-black);
+    font-weight: 600;
+  }
+  .sm-plan input:focus-visible + span {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+  .sm-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.9rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .sm-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .sm-nojs {
+    margin-top: 0.75rem !important;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+
+  /* ---------- Board ---------- */
+  .sm-board {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    margin-top: 1rem;
+  }
+  .sm.is-side.has-sel .sm-board {
+    grid-template-columns: minmax(0, 1fr) 19rem;
+    align-items: start;
+  }
+  .sm-wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .sm-wires path {
+    fill: none;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+  }
+  .sm-wires .w-need {
+    stroke: var(--sl-color-accent);
+    marker-end: url(#sm-arrow-need);
+  }
+  .sm-wires .w-dep {
+    stroke: var(--sdp-signal);
+    stroke-dasharray: 5 4;
+    marker-end: url(#sm-arrow-dep);
+  }
+  #sm-arrow-need path {
+    fill: var(--sl-color-accent);
+  }
+  #sm-arrow-dep path {
+    fill: var(--sdp-signal);
+  }
+  .sm-stages {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .sm-stage {
+    position: relative;
+    padding-bottom: 1.1rem;
+  }
+  .sm-stage:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 0.95rem;
+    bottom: 0;
+    width: 2px;
+    height: 0.9rem;
+    background: var(--sl-color-gray-5);
+  }
+  .sm-stage__head,
+  .sm-stage__out {
+    position: relative;
+    background: var(--sl-color-bg);
+  }
+  .sm-stage__head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .sm-stage__n {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--sl-color-accent);
+    border-radius: 50%;
+    background: var(--sl-color-bg);
+    color: var(--sl-color-accent);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sm-stage.is-complete .sm-stage__n {
+    background: var(--sl-color-accent);
+    color: var(--sl-color-bg);
+  }
+  .sm .sm-stage__title {
+    margin: 0;
+    padding: 0;
+    font-size: var(--sl-text-lg);
+    font-weight: 650;
+    color: var(--sl-color-white);
+  }
+  .sm-stage__count {
+    margin-inline-start: auto;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .sm-stage__out {
+    margin: 0.2rem 0 0.7rem 2.6rem !important;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .sm-tracks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+    gap: var(--sm-gap);
+    margin-inline-start: 2.6rem;
+  }
+  .sm-track {
+    min-width: 0;
+    padding: 0.7rem 0.75rem 0.8rem;
+    border: 1px dashed var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+  }
+  .sm-track {
+    background: color-mix(in srgb, var(--sl-color-bg) 82%, transparent);
+  }
+  .sm .sm-track__title {
+    margin-top: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem !important;
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  .sm-track__count {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  .sm-track__list {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .sm-node {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.55rem;
+    background: var(--sm-node-bg);
+    color: var(--sl-color-white);
+    font-size: var(--sl-text-sm);
+    line-height: 1.3;
+    text-decoration: none;
+    transition: border-color 120ms, opacity 120ms, background-color 120ms;
+  }
+  .sm-node:hover {
+    border-color: var(--sl-color-gray-3);
+  }
+  .sm-node:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+  .sm-node__t {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .sm-node__here {
+    flex: none;
+    margin-inline-start: auto;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: var(--sdp-signal);
+    color: var(--sl-color-black);
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .sm-node.is-locked {
+    color: var(--sl-color-gray-2);
+  }
+  .sm-node.is-gap {
+    border-color: color-mix(in srgb, var(--sdp-signal) 70%, transparent);
+  }
+  /* Dimming changes colours, never opacity: nodes stay opaque so wires pass behind them. */
+  .sm-node.is-out {
+    border-color: var(--sl-color-gray-6);
+    color: var(--sl-color-gray-4);
+  }
+  .sm-node.is-out .sm-glyph {
+    opacity: 0.45;
+  }
+  .sm-node.is-need {
+    border-color: var(--sl-color-accent);
+  }
+  .sm-node.is-anc:not(.is-need) {
+    border-color: color-mix(in srgb, var(--sl-color-accent) 45%, var(--sl-color-gray-5));
+    border-style: dashed;
+  }
+  .sm-node.is-dep {
+    border-color: var(--sdp-signal);
+  }
+  .sm-node.is-sel {
+    border-color: var(--sl-color-accent);
+    background: color-mix(in srgb, var(--sl-color-accent-low) 75%, var(--sl-color-bg));
+    box-shadow: 0 0 0 1px var(--sl-color-accent);
+  }
+  .sm.has-sel .sm-node:not(.is-sel, .is-need, .is-anc, .is-dep) {
+    border-color: var(--sl-color-gray-6);
+    color: var(--sl-color-gray-3);
+  }
+  .sm.has-sel .sm-node.is-out:not(.is-sel, .is-need, .is-anc, .is-dep) {
+    color: var(--sl-color-gray-4);
+  }
+  .sm.has-sel .sm-node:not(.is-sel, .is-need, .is-anc, .is-dep) .sm-glyph {
+    opacity: 0.6;
+  }
+
+  /* ---------- Detail panel ---------- */
+  .sm-detail {
+    position: relative;
+    z-index: 2;
+    padding: 1rem 1.1rem 1.1rem;
+    border: 1px solid var(--sl-color-accent);
+    border-radius: 0.85rem;
+    background: var(--sl-color-bg);
+    box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.5);
+  }
+  .sm.is-side .sm-detail {
+    position: sticky;
+    top: calc(var(--sl-nav-height, 4rem) + 1rem);
+    max-height: calc(100vh - var(--sl-nav-height, 4rem) - 2rem);
+    overflow: auto;
+  }
+  .sm-tracks > .sm-detail {
+    grid-column: 1 / -1;
+  }
+  .sm-detail .sm-d__crumb {
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .sm-detail .sm-d__title {
+    margin: 0.25rem 0 0.4rem;
+    font-size: var(--sl-text-xl);
+    line-height: 1.2;
+    font-weight: 650;
+    color: var(--sl-color-white);
+  }
+  .sm-detail .sm-d__desc {
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+    color: var(--sl-color-gray-2);
+  }
+  .sm-detail .sm-d__meta {
+    margin-top: 0.5rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .sm-detail .sm-d__status {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 0.55rem;
+    background: var(--sl-color-gray-6);
+    font-size: var(--sl-text-sm);
+    line-height: 1.4;
+  }
+  .sm-detail .sm-d__status .sm-glyph {
+    margin-top: 0.15rem;
+  }
+  .sm-detail .sm-d__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+  }
+  .sm-detail .sm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--sl-color-accent);
+    border-radius: 0.5rem;
+    background: var(--sl-color-accent);
+    color: var(--sl-color-black);
+    font: inherit;
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .sm-detail .sm-btn--ghost {
+    background: transparent;
+    color: var(--sl-color-accent);
+  }
+  .sm-detail .sm-d__h {
+    margin: 1rem 0 0.4rem;
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  .sm-detail .sm-d__h--need {
+    color: var(--sl-color-accent);
+  }
+  .sm-detail .sm-d__h--dep {
+    color: var(--sdp-signal);
+  }
+  .sm-detail .sm-d__list {
+    display: grid;
+    gap: 0.3rem;
+  }
+  .sm-detail .sm-d__list .sm-chip {
+    width: 100%;
+    border-radius: 0.5rem;
+  }
+  .sm-detail .sm-d__none,
+  .sm-detail .sm-d__path {
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .sm-detail .sm-d__path {
+    margin-top: 0.4rem;
+  }
+
+  /* ---------- Footer ---------- */
+  .sm-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-gray-6);
+  }
+  .sm-saved {
+    flex: 1 1 22rem;
+    font-size: var(--sl-text-xs);
+    line-height: 1.5;
+    color: var(--sl-color-gray-3);
+  }
+  .sm-reset {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    font: inherit;
+    font-size: var(--sl-text-sm);
+    cursor: pointer;
+  }
+  .sm-reset:hover,
+  .sm-reset:focus-visible {
+    border-color: var(--sl-color-gray-3);
+    color: var(--sl-color-white);
+  }
+
+  @container (max-width: 44rem) {
+    .sm-top {
+      grid-template-columns: 1fr;
+    }
+    .sm-stat {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: end;
+      column-gap: 0.75rem;
+    }
+    .sm-meter {
+      grid-column: 1 / -1;
+    }
+    .sm-tracks {
+      margin-inline-start: 0;
+    }
+    .sm-stage__out {
+      margin-inline-start: 0 !important;
+    }
+    .sm-stage:not(:last-child)::after {
+      display: none;
+    }
+    .sm-plan {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      border-radius: 1rem;
+    }
+    .sm-plan span {
+      text-align: center;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sm-node {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import { loadProgress, onProgressChange, saveProgress, setLearned, type Progress } from './lib/progress';
+
+  type N = { p: string; t: string; title: string; d: string; tr: string; needs: string[]; deps: string[]; plans: string[]; ord: number; min: number; h: string };
+  type Data = { nodes: N[]; tracks: Record<string, string>; stages: string[]; stageOfTrack: Record<string, number>; t: any };
+  type Status = 'learned' | 'opened' | 'ready' | 'locked' | 'gap';
+  const PLAN_KEY = 'sdp-map-plan';
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+  function readPlan(): string {
+    try {
+      const own = localStorage.getItem(PLAN_KEY);
+      if (own) return own;
+      const sp = JSON.parse(localStorage.getItem('sdp-study-plan') || '{}');
+      if (sp && typeof sp.timeline === 'string') return sp.timeline;
+    } catch {
+      /* storage unavailable */
+    }
+    return 'all';
+  }
+  function writePlan(v: string) {
+    try {
+      localStorage.setItem(PLAN_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const data = JSON.parse(root.querySelector('[data-sm-json]')!.textContent || '{}') as Data;
+    const t = data.t;
+    const byPath = new Map(data.nodes.map((n) => [n.p, n]));
+    const els = new Map<string, HTMLAnchorElement>();
+    root.querySelectorAll<HTMLAnchorElement>('.sm-node').forEach((a) => els.set(a.dataset.p!, a));
+    const board = root.querySelector<HTMLElement>('[data-sm-board]')!;
+    const g = root.querySelector<SVGGElement>('[data-sm-g]')!;
+    const detail = root.querySelector<HTMLElement>('[data-sm-detail]')!;
+    const radios = [...root.querySelectorAll<HTMLInputElement>('input[name="sm-plan"]')];
+
+    let plan = readPlan();
+    if (!radios.some((r) => r.value === plan)) plan = 'all';
+    let progress: Progress = loadProgress();
+    let selected: string | null = null;
+
+    // Transitive prerequisites.
+    const ancCache = new Map<string, Set<string>>();
+    const ancestors = (p: string): Set<string> => {
+      if (ancCache.has(p)) return ancCache.get(p)!;
+      const out = new Set<string>();
+      const walk = (q: string) => byPath.get(q)?.needs.forEach((d) => { if (!out.has(d)) { out.add(d); walk(d); } });
+      walk(p);
+      ancCache.set(p, out);
+      return out;
+    };
+    const inPlan = (n: N) => plan === 'all' || n.plans.length === 0 || n.plans.includes(plan);
+    const learned = (p: string) => !!progress.learned[p];
+
+    function statuses(): Map<string, Status> {
+      const gapSet = new Set<string>();
+      for (const n of data.nodes) if (learned(n.p)) ancestors(n.p).forEach((a) => !learned(a) && gapSet.add(a));
+      const m = new Map<string, Status>();
+      for (const n of data.nodes) {
+        if (learned(n.p)) m.set(n.p, 'learned');
+        else if (gapSet.has(n.p)) m.set(n.p, 'gap');
+        else if (progress.visited[n.p]) m.set(n.p, 'opened');
+        else m.set(n.p, n.needs.every(learned) ? 'ready' : 'locked');
+      }
+      return m;
+    }
+
+    const chip = (n: N, st?: Status) =>
+      `<button type="button" class="sm-chip" data-go="${esc(n.p)}">${st ? `<span class="sm-glyph is-${st}" aria-hidden="true"></span>` : ''}${esc(n.t)}</button>`;
+
+    function planText(n: N) {
+      if (!n.plans.length) return t.noPlan;
+      if (n.plans.includes('short')) return t.core;
+      if (n.plans.includes('medium')) return t.medium;
+      return t.long;
+    }
+
+    function renderDetail(st: Map<string, Status>) {
+      if (!selected) {
+        detail.hidden = true;
+        return;
+      }
+      const n = byPath.get(selected)!;
+      const s = st.get(n.p)!;
+      const anc = [...ancestors(n.p)];
+      const ancLearned = anc.filter(learned).length;
+      const needs = n.needs.map((p) => byPath.get(p)!);
+      const deps = n.deps.map((p) => byPath.get(p)!);
+      detail.innerHTML = `
+        <p class="sm-d__crumb">${data.stageOfTrack[n.tr] + 1} · ${esc(data.stages[data.stageOfTrack[n.tr]])} / ${esc(data.tracks[n.tr])}</p>
+        <h3 class="sm-d__title">${esc(n.title)}</h3>
+        <p class="sm-d__desc">${esc(n.d)}</p>
+        <p class="sm-d__meta">≈ ${n.min} ${t.min} · ${esc(planText(n))}</p>
+        <p class="sm-d__status"><span class="sm-glyph is-${s}" aria-hidden="true"></span><span>${esc(t.st[s])}</span></p>
+        <div class="sm-d__actions">
+          <a class="sm-btn" href="${esc(n.h)}">${t.open} →</a>
+          <button type="button" class="sm-btn sm-btn--ghost" data-toggle aria-pressed="${learned(n.p)}">${learned(n.p) ? t.unmark : t.mark}</button>
+        </div>
+        <h4 class="sm-d__h sm-d__h--need">${t.before}</h4>
+        ${needs.length ? `<ul class="sm-d__list">${needs.map((x) => `<li>${chip(x, st.get(x.p))}</li>`).join('')}</ul>` : `<p class="sm-d__none">${t.noNeeds}</p>`}
+        ${anc.length > needs.length ? `<p class="sm-d__path">${t.allBefore}: ${ancLearned} ${t.of} ${anc.length}</p>` : ''}
+        <h4 class="sm-d__h sm-d__h--dep">${t.leads}</h4>
+        ${deps.length ? `<ul class="sm-d__list">${deps.map((x) => `<li>${chip(x, st.get(x.p))}</li>`).join('')}</ul>` : `<p class="sm-d__none">${t.endLine}</p>`}`;
+      detail.hidden = false;
+      // Narrow layout: show the panel right under the section that holds the node.
+      if (!root.classList.contains('is-side')) {
+        const track = els.get(n.p)!.closest('.sm-track')!;
+        if (track.nextElementSibling !== detail) track.after(detail);
+      } else if (detail.parentElement !== board) board.append(detail);
+    }
+
+    function render() {
+      progress = loadProgress();
+      const st = statuses();
+      const sel = selected ? byPath.get(selected) : null;
+      const anc = sel ? ancestors(sel.p) : new Set<string>();
+      root.classList.toggle('has-sel', !!sel);
+      let total = 0;
+      let nLearned = 0;
+      let nOpened = 0;
+      for (const n of data.nodes) {
+        const a = els.get(n.p)!;
+        const s = st.get(n.p)!;
+        for (const k of ['learned', 'opened', 'ready', 'locked', 'gap']) a.classList.toggle(`is-${k}`, k === s);
+        const out = !inPlan(n);
+        a.classList.toggle('is-out', out);
+        a.classList.toggle('is-sel', n.p === selected);
+        a.classList.toggle('is-need', !!sel && sel.needs.includes(n.p));
+        a.classList.toggle('is-anc', anc.has(n.p));
+        a.classList.toggle('is-dep', !!sel && sel.deps.includes(n.p));
+        if (n.p === selected) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+        a.querySelector<HTMLElement>('.sm-node__here')!.hidden = progress.last !== n.p;
+        if (!out) {
+          total++;
+          if (s === 'learned') nLearned++;
+          else if (progress.visited[n.p]) nOpened++;
+        }
+      }
+      // Counts per track and stage (within the chosen plan).
+      root.querySelectorAll<HTMLElement>('.sm-track').forEach((tr) => {
+        const list = data.nodes.filter((n) => n.tr === tr.dataset.track && inPlan(n));
+        tr.querySelector('[data-sm-track-count]')!.textContent = `${list.filter((n) => learned(n.p)).length}/${list.length}`;
+      });
+      root.querySelectorAll<HTMLElement>('.sm-stage').forEach((sg) => {
+        const i = Number(sg.dataset.stage);
+        const list = data.nodes.filter((n) => data.stageOfTrack[n.tr] === i && inPlan(n));
+        const d = list.filter((n) => learned(n.p)).length;
+        sg.querySelector('[data-sm-stage-count]')!.textContent = `${d} ${t.of} ${list.length}`;
+        sg.classList.toggle('is-complete', list.length > 0 && d === list.length);
+      });
+      root.querySelector('[data-sm-learned]')!.textContent = String(nLearned);
+      root.querySelector('[data-sm-total]')!.textContent = String(total);
+      root.querySelector<HTMLElement>('[data-sm-ml]')!.style.width = `${total ? (nLearned / total) * 100 : 0}%`;
+      root.querySelector<HTMLElement>('[data-sm-mo]')!.style.width = `${total ? (nOpened / total) * 100 : 0}%`;
+
+      // You are here.
+      const here = root.querySelector<HTMLElement>('[data-sm-here]')!;
+      const last = progress.last && byPath.get(progress.last);
+      if (last) {
+        here.innerHTML = `<p class="sm-here__title">${esc(last.title)}</p>
+          <p class="sm-here__actions"><a href="${esc(last.h)}">${t.cont} →</a><button type="button" data-go="${esc(last.p)}">${t.show}</button></p>`;
+      }
+
+      // Next up: ready topics in plan order, from the earliest stage that has one and the
+      // stage after it (so a topic with no prerequisites far down the map does not jump ahead).
+      const ready = data.nodes
+        .filter((n) => inPlan(n) && !learned(n.p) && st.get(n.p) !== 'gap' && n.needs.every(learned))
+        .sort((a, b) => a.ord - b.ord);
+      const firstStage = Math.min(...ready.map((n) => data.stageOfTrack[n.tr]));
+      const next = ready.filter((n) => data.stageOfTrack[n.tr] <= firstStage + 1).slice(0, 3);
+      const nextEl = root.querySelector<HTMLElement>('[data-sm-next]')!;
+      nextEl.innerHTML = next.length ? next.map((n) => chip(n, st.get(n.p))).join('') : `<p class="sm-done">${t.done}</p>`;
+
+      // Gaps.
+      const gaps = data.nodes.filter((n) => st.get(n.p) === 'gap').sort((a, b) => a.ord - b.ord);
+      const gw = root.querySelector<HTMLElement>('[data-sm-gaps-wrap]')!;
+      gw.hidden = gaps.length === 0;
+      const shown = gaps.slice(0, 8);
+      root.querySelector<HTMLElement>('[data-sm-gaps]')!.innerHTML =
+        shown.map((n) => chip(n, 'gap')).join('') + (gaps.length > shown.length ? `<span class="sm-chip sm-chip--more">+${gaps.length - shown.length} ${t.more}</span>` : '');
+
+      renderDetail(st);
+      requestAnimationFrame(drawWires);
+    }
+
+    // ---------- Wires ----------
+    function drawWires() {
+      g.textContent = '';
+      if (!selected) return;
+      const n = byPath.get(selected)!;
+      const box = board.getBoundingClientRect();
+      const rect = (p: string) => {
+        const r = els.get(p)!.getBoundingClientRect();
+        return { l: r.left - box.left, r: r.right - box.left, t: r.top - box.top, b: r.bottom - box.top, cx: r.left - box.left + r.width / 2, cy: r.top - box.top + r.height / 2 };
+      };
+      const path = (from: string, to: string, cls: string, k: number) => {
+        const a = rect(from);
+        const b = rect(to);
+        let d: string;
+        if (Math.abs(a.cx - b.cx) < 8) {
+          // Same column: bulge out to the left so the line does not run behind the nodes in between.
+          const x = Math.min(a.l, b.l);
+          const bend = 16 + k * 7;
+          const y1 = a.cy;
+          const y2 = b.cy;
+          d = `M${x} ${y1} C${x - bend} ${y1} ${x - bend} ${y2} ${x - 2} ${y2}`;
+        } else if (Math.abs(a.cy - b.cy) < Math.max(a.b - a.t, 24) && Math.abs(a.cx - b.cx) > 0) {
+          // Same row: side to side.
+          const [x1, x2] = a.cx < b.cx ? [a.r, b.l - 2] : [a.l, b.r + 2];
+          const mx = (x1 + x2) / 2;
+          d = `M${x1} ${a.cy} C${mx} ${a.cy} ${mx} ${b.cy} ${x2} ${b.cy}`;
+        } else {
+          const down = b.cy > a.cy;
+          const y1 = down ? a.b : a.t;
+          const y2 = down ? b.t - 2 : b.b + 2;
+          const my = (y1 + y2) / 2;
+          d = `M${a.cx} ${y1} C${a.cx} ${my} ${b.cx} ${my} ${b.cx} ${y2}`;
+        }
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        el.setAttribute('d', d);
+        el.setAttribute('class', cls);
+        g.append(el);
+      };
+      n.needs.forEach((p, i) => path(p, n.p, 'w-need', i));
+      n.deps.forEach((p, i) => path(n.p, p, 'w-dep', i));
+    }
+
+    // ---------- Selection ----------
+    function select(p: string | null, opts: { scroll?: boolean; hash?: boolean } = {}) {
+      selected = p && byPath.has(p) ? p : null;
+      render();
+      if (opts.hash !== false) {
+        try {
+          const url = new URL(location.href);
+          url.hash = '';
+          if (selected) url.searchParams.set('focus', selected);
+          else url.searchParams.delete('focus');
+          history.replaceState(null, '', url);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (selected && opts.scroll) {
+        const a = els.get(selected)!;
+        const r = a.getBoundingClientRect();
+        if (r.top < 80 || r.bottom > innerHeight - 40) a.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        if (!root.classList.contains('is-side')) {
+          const dr = detail.getBoundingClientRect();
+          if (dr.bottom > innerHeight) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+
+    root.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const node = target.closest<HTMLAnchorElement>('.sm-node');
+      if (node && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+        e.preventDefault();
+        select(node.dataset.p === selected ? null : node.dataset.p!, { scroll: false });
+        if (!root.classList.contains('is-side') && selected) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+      const go = target.closest<HTMLElement>('[data-go]');
+      if (go) {
+        select(go.dataset.go!, { scroll: true });
+        return;
+      }
+      if (target.closest('[data-toggle]') && selected) {
+        setLearned(selected, !learned(selected));
+        return;
+      }
+      if (target.closest('[data-sm-reset]')) {
+        const msg = (target.closest('[data-sm-reset]') as HTMLElement).dataset.confirm!;
+        if (!window.confirm(msg)) return;
+        saveProgress({ v: 1, learned: {}, visited: {}, activities: {}, migrated: true });
+      }
+    });
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && selected) select(null);
+    });
+    for (const r of radios) {
+      r.checked = r.value === plan;
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        plan = r.value;
+        writePlan(plan);
+        render();
+      });
+    }
+
+    // Layout mode: side panel when the map is wide enough.
+    const setMode = () => {
+      const side = root.clientWidth >= 880;
+      if (side !== root.classList.contains('is-side')) {
+        root.classList.toggle('is-side', side);
+        render();
+      } else requestAnimationFrame(drawWires);
+    };
+    new ResizeObserver(setMode).observe(root);
+    document.fonts?.ready.then(() => requestAnimationFrame(drawWires));
+    onProgressChange(render);
+
+    // Initial selection: ?focus=path (or the older #focus=path), else where the reader is.
+    const asked = new URLSearchParams(location.search).get('focus') ?? /#focus=([\w\-/]+\/)/.exec(location.hash)?.[1] ?? null;
+    const m = asked && byPath.has(asked) ? asked : null;
+    // With nothing to go on, open the first suggested topic so the panel explains what to do.
+    const firstNext = data.nodes
+      .filter((n) => inPlan(n) && !learned(n.p) && n.needs.every(learned))
+      .sort((a, b) => a.ord - b.ord)[0]?.p;
+    const initial = m || progress.last || firstNext || null;
+    root.classList.toggle('is-side', root.clientWidth >= 880);
+    select(initial, { hash: false, scroll: !!m });
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-sm]').forEach(init);
+</script>

@@ -29,24 +29,30 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Как связаны идеи
 
-Многие системы напрямую опираются друг на друга. Стрелка означает «развивает или заимствует идеи».
+Многие системы напрямую опираются друг на друга. На обеих схемах ниже стрелка означает «развивает или заимствует идеи». Первая показывает координацию и хранение данных:
 
 ```mermaid
 flowchart LR
-  paxos["Paxos (2001)"] --> chubby["Chubby (2006)"]
-  paxos --> raft["Raft (2014)"]
-  chubby --> zk["ZooKeeper (2010)"]
-  gfs["GFS (2003)"] --> mr["MapReduce (2004)"]
-  gfs --> hdfs["HDFS"]
-  gfs --> bt["Bigtable (2006)"]
+  paxos["Paxos<br/>(2001)"] --> chubby["Chubby<br/>(2006)"]
+  paxos --> raft["Raft<br/>(2014)"]
+  chubby --> zk["ZooKeeper<br/>(2010)"]
+  gfs["GFS<br/>(2003)"] --> hdfs["HDFS"]
+  gfs --> bt["Bigtable<br/>(2006)"]
   chubby --> bt
-  bt --> spanner["Spanner (2012)"]
-  bt --> cass["Cassandra (2009)"]
-  dynamo["Dynamo (2007)"] --> cass
-  dynamo --> ddb["DynamoDB (статья 2022)"]
-  mr --> spark["Spark RDD (2012)"]
-  mr --> dataflow["Модель Dataflow (2015)"]
-  dataflow --> flink["Состояние Flink (2017)"]
+  bt --> spanner["Spanner<br/>(2012)"]
+  bt --> cass["Cassandra<br/>(2009)"]
+  dynamo["Dynamo<br/>(2007)"] --> cass
+  dynamo --> ddb["DynamoDB<br/>(статья 2022)"]
+```
+
+Вторая — как из GFS и MapReduce выросли пакетная и потоковая обработка:
+
+```mermaid
+flowchart LR
+  gfs["GFS<br/>(2003)"] --> mr["MapReduce<br/>(2004)"]
+  mr --> spark["Spark RDD<br/>(2012)"]
+  mr --> dataflow["Модель Dataflow<br/>(2015)"]
+  dataflow --> flink["Состояние Flink<br/>(2017)"]
 ```
 
 ## Обработка данных

@@ -69,7 +69,7 @@ import { Aside } from '@astrojs/starlight/components';
 ## Шаг 2 — Высокоуровневый дизайн
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Клиент"] --> web["Веб-сервер<br/>(обратный прокси)"]
   web --> readapi["Read API"]
   readapi --> rankdb[("SQL БД<br/>sales_rank")]
@@ -85,6 +85,81 @@ flowchart LR
 
 ## Шаг 3 — Ключевые компоненты
 
+### Read API
+
+```http
+GET /v1/categories/1234/best-sellers?limit=3
+```
+
+```json
+{
+  "category_id": 1234,
+  "snapshot_id": 88231,
+  "window": {"start": "2026-10-01T12:00:00Z", "end": "2026-10-08T12:00:00Z"},
+  "items": [
+    {"rank": 1, "product_id": 50,  "units_sold": 100000, "rank_change": 0},
+    {"rank": 2, "product_id": 200, "units_sold": 90000,  "rank_change": 3},
+    {"rank": 3, "product_id": 3,   "units_sold": 80000,  "rank_change": -1}
+  ],
+  "next_cursor": "eyJyYW5rIjozfQ"
+}
+```
+
+```http
+GET /v1/products/50/sales-rank
+→ {"snapshot_id": 88231, "ranks": [{"category_id": 1234, "rank": 1}, {"category_id": 77, "rank": 412}]}
+```
+
+Ответы содержат `snapshot_id`, поэтому их можно кэшировать с `Cache-Control: max-age=60, stale-while-revalidate=300`. Внутренние сервисы вызывают те же операции по gRPC.
+
+### Модель данных
+
+Источником истины служат часовые агрегаты, а рейтинги публикуются **неизменяемыми снимками**, чтобы читатель никогда не увидел наполовину записанный список:
+
+```sql
+CREATE TABLE sales_hourly (            -- одна строка на товар, категорию и час
+  hour_start   TIMESTAMP NOT NULL,
+  category_id  INTEGER   NOT NULL,
+  product_id   BIGINT    NOT NULL,
+  units        INTEGER   NOT NULL,     -- за вычетом отмен и возвратов
+  PRIMARY KEY (hour_start, category_id, product_id)
+);
+
+CREATE TABLE rank_snapshot (
+  snapshot_id  BIGINT PRIMARY KEY,
+  window_start TIMESTAMP NOT NULL,
+  window_end   TIMESTAMP NOT NULL,
+  published_at TIMESTAMP              -- NULL, пока снимок не готов
+);
+
+CREATE TABLE sales_rank (
+  snapshot_id  BIGINT  NOT NULL REFERENCES rank_snapshot (snapshot_id),
+  category_id  INTEGER NOT NULL,
+  rank         INTEGER NOT NULL,
+  product_id   BIGINT  NOT NULL,
+  units_sold   INTEGER NOT NULL,
+  PRIMARY KEY (snapshot_id, category_id, rank)
+);
+CREATE INDEX sales_rank_by_product ON sales_rank (snapshot_id, product_id);
+```
+
+Недельный рейтинг — один запрос с оконной функцией поверх часовой таблицы:
+
+```sql
+SELECT category_id, product_id, units, rnk
+FROM (
+  SELECT category_id, product_id, SUM(units) AS units,
+         ROW_NUMBER() OVER (PARTITION BY category_id
+                            ORDER BY SUM(units) DESC, product_id) AS rnk
+  FROM sales_hourly
+  WHERE hour_start >= :window_start
+  GROUP BY category_id, product_id
+) AS ranked
+WHERE rnk <= :top_n;
+```
+
+Публикация — это переключение указателя: записать все строки нового `snapshot_id`, затем проставить `published_at`. Читатели всегда берут последний опубликованный снимок, а неудачный запуск откатывается снятием публикации.
+
 ### Пакетная задача
 
 Оригинальное решение использовало двухшаговый MapReduce: map превращает строку журнала в `((категория, товар), количество)`, reduce суммирует, затем ключ меняется на `(категория, количество)`, чтобы распределённая сортировка фреймворка упорядочила результат. Две детали стоит улучшить:
@@ -92,7 +167,7 @@ flowchart LR
 - Глобальная сортировка — лишняя работа: нужен только top-N каждой категории, а его даёт **ограниченная куча на категорию** за `O(n log N)`.
 - Журналы доставляются **хотя бы один раз** (at least once), поэтому задача сначала отбрасывает дубли строк заказа, а товар из нескольких категорий учитывается в каждой из них.
 
-Версия ниже работает на крошечной выборке на чистом Python; три функции — ровно то, что Spark или Beam распределили бы по воркерам.
+Версия ниже работает на крошечной выборке на чистом Python; функции дедупликации, map и reduce — ровно то, что Spark или Beam распределили бы по воркерам.
 
 ```python title="sales_rank_batch.py"
 from collections import defaultdict
@@ -181,81 +256,6 @@ if __name__ == "__main__":
 
 Пересчёт всей недели каждый час читает около 15 ГБ за запуск. Дешевле агрегировать **по одному часу** в таблицу `sales_hourly` и считать неделю как сумму последних 168 часовых строк — та же идея, которую потоковые движки называют *панелями* (panes).
 
-### Модель данных
-
-Источником истины служат часовые агрегаты, а рейтинги публикуются **неизменяемыми снимками**, чтобы читатель никогда не увидел наполовину записанный список:
-
-```sql
-CREATE TABLE sales_hourly (            -- одна строка на товар, категорию и час
-  hour_start   TIMESTAMP NOT NULL,
-  category_id  INTEGER   NOT NULL,
-  product_id   BIGINT    NOT NULL,
-  units        INTEGER   NOT NULL,     -- за вычетом отмен и возвратов
-  PRIMARY KEY (hour_start, category_id, product_id)
-);
-
-CREATE TABLE rank_snapshot (
-  snapshot_id  BIGINT PRIMARY KEY,
-  window_start TIMESTAMP NOT NULL,
-  window_end   TIMESTAMP NOT NULL,
-  published_at TIMESTAMP              -- NULL, пока снимок не готов
-);
-
-CREATE TABLE sales_rank (
-  snapshot_id  BIGINT  NOT NULL REFERENCES rank_snapshot (snapshot_id),
-  category_id  INTEGER NOT NULL,
-  rank         INTEGER NOT NULL,
-  product_id   BIGINT  NOT NULL,
-  units_sold   INTEGER NOT NULL,
-  PRIMARY KEY (snapshot_id, category_id, rank)
-);
-CREATE INDEX sales_rank_by_product ON sales_rank (snapshot_id, product_id);
-```
-
-Недельный рейтинг — один запрос с оконной функцией поверх часовой таблицы:
-
-```sql
-SELECT category_id, product_id, units, rnk
-FROM (
-  SELECT category_id, product_id, SUM(units) AS units,
-         ROW_NUMBER() OVER (PARTITION BY category_id
-                            ORDER BY SUM(units) DESC, product_id) AS rnk
-  FROM sales_hourly
-  WHERE hour_start >= :window_start
-  GROUP BY category_id, product_id
-) AS ranked
-WHERE rnk <= :top_n;
-```
-
-Публикация — это переключение указателя: записать все строки нового `snapshot_id`, затем проставить `published_at`. Читатели всегда берут последний опубликованный снимок, а неудачный запуск откатывается снятием публикации.
-
-### Read API
-
-```http
-GET /v1/categories/1234/best-sellers?limit=3
-```
-
-```json
-{
-  "category_id": 1234,
-  "snapshot_id": 88231,
-  "window": {"start": "2026-10-01T12:00:00Z", "end": "2026-10-08T12:00:00Z"},
-  "items": [
-    {"rank": 1, "product_id": 50,  "units_sold": 100000, "rank_change": 0},
-    {"rank": 2, "product_id": 200, "units_sold": 90000,  "rank_change": 3},
-    {"rank": 3, "product_id": 3,   "units_sold": 80000,  "rank_change": -1}
-  ],
-  "next_cursor": "eyJyYW5rIjozfQ"
-}
-```
-
-```http
-GET /v1/products/50/sales-rank
-→ {"snapshot_id": 88231, "ranks": [{"category_id": 1234, "rank": 1}, {"category_id": 77, "rank": 412}]}
-```
-
-Ответы содержат `snapshot_id`, поэтому их можно кэшировать с `Cache-Control: max-age=60, stale-while-revalidate=300`. Внутренние сервисы вызывают те же операции по gRPC.
-
 ## Шаг 4 — Масштабирование
 
 Нагрузочный тест, поиск узкого места, исправление, повтор. В порядке появления:
@@ -267,7 +267,7 @@ GET /v1/products/50/sales-rank
 5. **Путь записи.** 1900 событий/с в пик — мало для журнала; риск в связанности. Оформление заказа пишет событие (таблица outbox или захват изменений, CDC) и никогда не вызывает сервис рейтинга синхронно.
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Клиент"] --> cdn["CDN"]
   cdn --> lb["Балансировщик нагрузки"]
   lb --> readapi["Read API"]
@@ -292,11 +292,11 @@ flowchart LR
 Пакетная схема по-прежнему работает, и о ней легко рассуждать. Изменилось другое: **потоковая обработка стала стандартом для задачи «top-N в скользящем окне»**. Каждое крупное облако продаёт управляемый Kafka-совместимый журнал, а управляемый Flink есть у AWS и у нескольких Flink-вендоров, поэтому требование «обновлять раз в час» превращается в «обновлять раз в минуту» без расширения команды.
 
 ```mermaid
-flowchart LR
+flowchart TB
   shop["Сервис заказов"] --> outbox["Outbox / CDC"]
   outbox --> log[["Журнал событий<br/>(Kafka-совместимый)"]]
   catalog["CDC каталога<br/>товар → категории"] --> flink
-  log --> flink["Потоковая задача<br/>дедупликация · окна · top-K"]
+  log --> flink["Потоковая задача<br/>дедупликация ·<br/>окна · top-K"]
   flink --> kv[("Хранилище рейтингов<br/>Valkey / KV")]
   flink --> lake[("Объектное хранилище<br/>таблицы Iceberg")]
   kv --> api["Read API"]

@@ -40,29 +40,41 @@ classDiagram
     +dispatch(call) Employee
     +escalate(employee) Employee
     +complete(employee) Call
+    +queued() int
+    -assign(call, employee)
+    -release(employee) Call
     -serve_queue(employee)
   }
   class Employee {
     +name: str
     +rank: Rank
     +call: Call
-    +is_free() bool
+    +is_free: bool
   }
   class Call {
     +caller: str
     +min_rank: Rank
+    +call_id: int
     +state: CallState
     +handler: Employee
   }
   class Rank {
-    OPERATOR
-    SUPERVISOR
-    DIRECTOR
+    <<IntEnum>>
+    OPERATOR = 0
+    SUPERVISOR = 1
+    DIRECTOR = 2
   }
-  CallCenter o-- Employee : staff
-  CallCenter o-- Call : queues
-  Employee --> Call : handles
+  class CallState {
+    <<enumeration>>
+    QUEUED
+    IN_PROGRESS
+    COMPLETE
+  }
+  CallCenter "1" o-- "1..*" Employee : staff
+  CallCenter "1" o-- "0..*" Call : queues
+  Employee "0..1" <--> "0..1" Call : handles
   Call --> Rank : min_rank
+  Call --> CallState : state
 ```
 
 Putting routing in `CallCenter` is a deliberate choice. In some designs the employee calls back into the center (`employee.escalate()` → `center.notify_escalated()`). That creates a cycle between the classes and spreads the queue logic. Here employees are plain data, and every state change goes through one object that sees all staff and all queues.

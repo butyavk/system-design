@@ -21,11 +21,11 @@ Every system must decide how to divide its code into deployable units: one appli
 The first split in most systems is between the **web tier**, which handles HTTP, sessions, rendering and the public API surface, and the **application or platform tier**, which holds business logic and talks to data stores.
 
 ```mermaid
-flowchart LR
+flowchart TB
   clients["Clients"] --> lb["Load balancer"]
   lb --> web1["Web server"]
   lb --> web2["Web server"]
-  web1 & web2 --> app["Application tier: users, orders, search"]
+  web1 & web2 --> app["Application tier:<br/>users, orders, search"]
   app --> db[("Databases")]
   app --> q["Queue"]
   q --> workers["Background workers"]
@@ -98,8 +98,8 @@ Teams do move back. Twilio Segment merged more than 140 per-destination services
 Big-bang rewrites usually fail: they take years, the old system keeps changing, and nobody fully knows what it does. The **strangler fig** pattern, named by Martin Fowler after a vine that slowly grows around its host tree, replaces a system piece by piece.
 
 ```mermaid
-flowchart LR
-  client["Clients"] --> facade["Routing facade: proxy or gateway"]
+flowchart TB
+  client["Clients"] --> facade["Routing facade:<br/>proxy or gateway"]
   facade -->|"/orders/*"| newsvc["New order service"]
   facade -->|"everything else"| legacy["Legacy monolith"]
   newsvc -.->|"sync data during transition"| legacy
@@ -119,7 +119,7 @@ The same pattern works for extracting a module from a modular monolith, or for m
 Serverless fits event-driven glue (react to an upload, a queue message, a webhook), spiky or low-traffic workloads, and scheduled jobs. Watch for:
 
 - **Cold starts** on infrequently used functions (mitigated by provisioned concurrency or isolate-based runtimes);
-- **Execution limits**: a standard Lambda invocation still stops at 15 minutes. Since late 2025, durable functions checkpoint a workflow across many invocations for up to a year, and Lambda Managed Instances allow 90 minutes for asynchronous runs;
+- **Execution limits**: a standard Lambda invocation still stops at 15 minutes. Since late 2025, durable functions checkpoint a workflow across many invocations for up to a year, and since September 2026 Lambda Managed Instances allow 90 minutes for asynchronous runs;
 - **Cost at high steady load**, where always-on containers are often cheaper;
 - **Downstream pressure**: thousands of concurrent functions can exhaust database connections;
 - **Fragmentation**: hundreds of tiny functions are a distributed system that is hard to reason about.

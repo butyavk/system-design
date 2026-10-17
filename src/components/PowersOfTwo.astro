@@ -58,9 +58,10 @@ function approx(v: bigint): string {
   const n = Number(v);
   if (n < 1000) return intF.format(n);
   if (n >= 1e15) {
-    // Intl compact stops at trillions; spell quadrillions ourselves.
+    // Intl compact stops at trillions; spell quadrillions ourselves, in full like Intl's
+    // "1,1 триллиона". Only 2⁵⁰ ≈ 1,13 reaches here, and a fraction takes «квадриллиона».
     const q = n / 1e15;
-    return ru ? `${sigF(3).format(q)} квадрлн` : `${sigF(3).format(q)} quadrillion`;
+    return ru ? `${sigF(3).format(q)} квадриллиона` : `${sigF(3).format(q)} quadrillion`;
   }
   return compact.format(n);
 }
@@ -299,7 +300,8 @@ const clientData = { locale, si: siNames, iec: iecNames, t: { invalid: T.invalid
     const scaled = (bytes: number, base: number, names: string[]) => {
       let i = 0;
       let v = bytes;
-      while (v >= base && i < names.length - 1) {
+      // Step up just below the base, so 4-digit rounding never shows "1,000 KB".
+      while (v >= base * 0.99995 && i < names.length - 1) {
         v /= base;
         i++;
       }
@@ -324,7 +326,7 @@ const clientData = { locale, si: siNames, iec: iecNames, t: { invalid: T.invalid
       const bytes = v * Number(unit.value);
       const b = locale === 'ru' ? 'байт' : 'bytes';
       exactEl.innerHTML = `${exactStr(bytes)} <small>${b}</small>`;
-      // Show the best-fitting unit, plus the next smaller unit as a sub-line.
+      // Show the best-fitting unit, plus up to two neighbouring units as a sub-line.
       const pick = (base: number, names: string[]) => {
         const main = scaled(bytes, base, names);
         const all = unitsOf(names, base).filter((u) => bytes >= u.v / 1000 && bytes < u.v * 1e6);

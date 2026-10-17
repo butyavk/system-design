@@ -75,6 +75,8 @@ src/content/docs/
     └── ...
 scripts/pages.json                 карта сайта: все разделы и слаги
 scripts/check-mdx.mjs              самопроверка файлов контента
+scripts/check-diagrams.mjs         отрисовка всех схем и проверка их ширины
+src/data/skill-map.ts              карта навыков: темы и их зависимости
 astro.config.mjs                   конфигурация сайта и группы бокового меню
 CONTENT_GUIDE.md                   правила написания страниц
 ```
@@ -82,9 +84,9 @@ CONTENT_GUIDE.md                   правила написания стран�
 - **Английские** страницы лежат в `src/content/docs/<раздел>/<slug>.mdx`.
 - **Русские** — в `src/content/docs/ru/<раздел>/<slug>.mdx`, с точно таким же разделом и именем файла.
 - **Боковое меню** строится по папкам. Место страницы внутри раздела задаёт `sidebar.order` во frontmatter.
-- **Новые страницы** нужно добавить в `scripts/pages.json`: внутренние ссылки разрешены только на перечисленные там страницы.
+- **Новые страницы** нужно добавить в `scripts/pages.json`: внутренние ссылки разрешены только на перечисленные там страницы. Новой тематической странице нужен ещё и узел в `src/data/skill-map.ts` с её зависимостями, иначе сборка упадёт.
 - **Внутренние ссылки** пишутся от корня, без локали и базового пути, и заканчиваются слешем: `/fundamentals/cap-theorem/`. Сборка сама добавит `/system-design` и `/ru`.
-- **Схемы** — это блоки кода Mermaid; картинки не используются.
+- **Схемы** — это блоки кода Mermaid; картинки не используются. Ширина схемы — не больше 800 px (длинные цепочки стройте сверху вниз), иначе подписи станут слишком мелкими.
 - **Интерактивные виджеты** из `src/components/` добавляет сопровождающий; если странице пригодился бы виджет, предложите его в issue.
 
 Всё остальное описано в [руководстве по контенту](https://github.com/butyavk/system-design/blob/main/CONTENT_GUIDE.md): шаблоны страниц, frontmatter, стиль, англо-русский глоссарий, подводные камни MDX и требования к ссылкам. Прочитайте его, прежде чем писать или переписывать страницу.
@@ -104,18 +106,24 @@ CONTENT_GUIDE.md                   правила написания стран�
 node scripts/check-mdx.mjs src/content/docs/fundamentals/cap-theorem.mdx src/content/docs/ru/fundamentals/cap-theorem.mdx
 ```
 
-Каждый файл должен получить ✓. Исправьте все ✗, прежде чем открывать pull request, а в качестве финальной проверки запустите `npm run build`.
+Каждый файл должен получить ✓. Если вы меняли схему, отрисуйте и её (перед первым запуском нужна команда `npx playwright install chromium`):
+
+```bash
+node scripts/check-diagrams.mjs src/content/docs/fundamentals/cap-theorem.mdx src/content/docs/ru/fundamentals/cap-theorem.mdx
+```
+
+Исправьте все ✗, прежде чем открывать pull request, а в качестве финальной проверки запустите `npm run build` и `npm run check:links`.
 
 ## Чек-лист для pull request
 
-- [ ] Изменение внесено **и** в английскую, **и** в русскую страницу (или в описании сказано, какой половины не хватает).
-- [ ] Frontmatter заполнен: `title`, `description` (120–160 символов), `sidebar.order`.
-- [ ] Внутренние ссылки — от корня, заканчиваются на `/` и ведут на страницы из `scripts/pages.json`.
-- [ ] Каждая новая внешняя ссылка открыта и работает.
-- [ ] Цифры в прикидках пересчитаны, примеры кода запущены.
-- [ ] `node scripts/check-mdx.mjs` проходит для всех изменённых файлов.
-- [ ] `npm run build` завершается без ошибок.
-- [ ] В описании сказано, что изменено и почему; для фактических исправлений указаны источники.
+- Изменение внесено **и** в английскую, **и** в русскую страницу (или в описании сказано, какой половины не хватает).
+- Frontmatter заполнен: `title`, `description` (120–160 символов), `sidebar.order`.
+- Внутренние ссылки — от корня, заканчиваются на `/` и ведут на страницы из `scripts/pages.json`.
+- Каждая новая внешняя ссылка открыта и работает.
+- Цифры в прикидках пересчитаны, примеры кода запущены.
+- `node scripts/check-mdx.mjs` проходит для всех изменённых файлов, а `node scripts/check-diagrams.mjs` — для всех изменённых схем.
+- `npm run build` завершается без ошибок, а `npm run check:links` не находит битых ссылок.
+- В описании сказано, что изменено и почему; для фактических исправлений указаны источники.
 
 Если вы раньше не работали с pull request, руководство GitHub [о pull request из форка](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) пошагово объясняет процесс.
 
@@ -126,7 +134,7 @@ node scripts/check-mdx.mjs src/content/docs/fundamentals/cap-theorem.mdx src/con
 ## Что почитать
 
 - [Руководство по контенту](https://github.com/butyavk/system-design/blob/main/CONTENT_GUIDE.md) — шаблоны, стиль, глоссарий и правила MDX для этого сайта.
-- [Starlight: использование компонентов](https://starlight.astro.build/components/using-components/) — компоненты, доступные на страницах (врезки, шаги, вкладки, карточки).
+- [Starlight: использование компонентов](https://starlight.astro.build/components/using-components/) — как импортировать и использовать компоненты в MDX; в боковом меню там есть страница для каждого встроенного компонента (врезки, шаги, вкладки, карточки).
 - [Синтаксис блок-схем Mermaid](https://mermaid.js.org/syntax/flowchart.html) — справочник по диаграммам.
 - [Руководство для контрибьюторов оригинального Primer](https://github.com/donnemartin/system-design-primer/blob/master/CONTRIBUTING.md) — как исходный проект принимает изменения и переводы.
 

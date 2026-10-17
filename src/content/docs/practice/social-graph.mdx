@@ -63,11 +63,11 @@ and 200 friends each needs about 1.6 TB just for adjacency.
 ## Step 2 — High-level design
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> web["Web server / API gateway"]
   web --> search["Search API"]
   search --> ugs["User graph service"]
-  ugs --> lookup["Lookup service"]
+  ugs --> lookup["Lookup<br/>service"]
   ugs --> p1["Person server 1"]
   ugs --> p2["Person server 2"]
   ugs --> pn["Person server N"]
@@ -79,6 +79,28 @@ flowchart LR
 4. The search returns a list of user ids, and the API turns them into names and profile links.
 
 ## Step 3 — Core components
+
+### API
+
+```http title="Request"
+GET /v1/connections/path?source=1234&target=98765&max_hops=6
+```
+
+```json title="Response: 200 OK"
+{
+  "hops": 3,
+  "path": [
+    {"user_id": 1234, "name": "You"},
+    {"user_id": 53, "name": "Ana", "url": "https://social.example/ana"},
+    {"user_id": 7710, "name": "Ben", "url": "https://social.example/ben"},
+    {"user_id": 98765, "name": "Chris", "url": "https://social.example/chris"}
+  ]
+}
+```
+
+When nothing is found within the limit, return `200` with `"path": null` and
+`"reason": "not_within_max_hops"`. This is a normal result, not a server error. Internally,
+services talk over gRPC.
 
 ### Representing the graph
 
@@ -237,28 +259,6 @@ The **lookup service** should not be a network hop on every call. It is a small 
 `user_id % N` above is only for illustration. A real system uses many virtual buckets per
 server, so a shard can move without rehashing everyone.
 
-### API
-
-```http title="Request"
-GET /v1/connections/path?source=1234&target=98765&max_hops=6
-```
-
-```json title="Response: 200 OK"
-{
-  "hops": 3,
-  "path": [
-    {"user_id": 1234, "name": "You"},
-    {"user_id": 53, "name": "Ana", "url": "https://social.example/ana"},
-    {"user_id": 7710, "name": "Ben", "url": "https://social.example/ben"},
-    {"user_id": 98765, "name": "Chris", "url": "https://social.example/chris"}
-  ]
-}
-```
-
-When nothing is found within the limit, return `200` with `"path": null` and
-`"reason": "not_within_max_hops"`. This is a normal result, not a server error. Internally,
-services talk over gRPC.
-
 ## Step 4 — Scaling the design
 
 1. **Repeated and popular searches.** Cache person records and adjacency lists in Valkey, Redis or Memcached. Cache finished paths keyed by `(source, target)` with a short TTL. Hub users' friend lists are read constantly, so keep them in a small local cache on each graph-service instance as well.
@@ -273,13 +273,14 @@ flowchart TD
   lb --> search["Search API"]
   search --> pathcache["Path cache"]
   search --> ugs["User graph service"]
-  ugs --> dircache["Shard map (cached)"]
-  ugs --> cache["Adjacency cache (Valkey / Memcached)"]
-  ugs --> p1["Person servers, shard 1..N (replicated)"]
-  p1 --> store[("Durable edge store (sharded SQL / KV)")]
+  ugs --> dircache["Shard map<br/>(cached)"]
+  ugs --> cache["Adjacency cache<br/>(Valkey / Memcached)"]
+  ugs --> p1["Person servers,<br/>shards 1..N<br/>(replicated)"]
+  p1 --> store[("Durable edge store<br/>(sharded SQL / KV)")]
   store --> cdc["Change stream"]
   cdc --> cache
-  batch["Offline jobs: 2-hop sets"] --> kv[("KV store")]
+  cdc --> p1
+  batch["Offline jobs:<br/>2-hop sets"] --> kv[("KV store")]
   ugs --> kv
 ```
 
@@ -322,5 +323,5 @@ flowchart TD
 - [Partitioning and sharding](/data/partitioning-and-sharding/): sharding users across person servers and the shard directory.
 - [NoSQL](/data/nosql/): key-value and graph stores, and when each fits.
 - [Caching layers](/caching/caching-layers/): where to cache adjacency lists and paths.
-- [RPC and REST](/communication/rpc-and-rest/): internal gRPC calls and batching.
+- [RPC and REST](/communication/rpc-and-rest/): gRPC for the internal calls between services.
 - [Hash map](/ood/hash-map/): the data structure behind adjacency lists and visited sets.

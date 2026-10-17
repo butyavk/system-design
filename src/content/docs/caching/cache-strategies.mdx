@@ -161,6 +161,7 @@ sequenceDiagram
   participant Q as Write queue
   participant D as Database
   A->>C: put(42, new value)
+  C->>C: store value
   C->>Q: enqueue change
   C-->>A: ok (fast)
   Q->>D: batched write, later
@@ -246,7 +247,7 @@ sequenceDiagram
   R2->>C: GET hot key (miss)
   R1->>D: expensive query
   R2->>D: same query, N times
-  Note over D: Load spikes N-fold, latency climbs, more timeouts and retries
+  Note over D: Load spikes N-fold,<br/>latency climbs, more<br/>timeouts and retries
 ```
 
 Fixes, from simplest to most robust:
@@ -310,7 +311,7 @@ sequenceDiagram
   W2->>D: UPDATE price = 12
   W2->>C: SET price 12
   W1->>C: SET price 10 (delayed)
-  Note over D,C: Database says 12, cache says 10 until the TTL expires
+  Note over D,C: Database says 12,<br/>cache says 10<br/>until the TTL expires
 ```
 
 If both writers **delete** the key instead, the order does not matter: a delete is idempotent, and the next reader loads the latest committed value. That is why "update the database, then delete the key" is the safer default, and why Facebook's memcache used deletes rather than sets on writes.

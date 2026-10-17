@@ -20,21 +20,27 @@ Picking a database is one of the few early decisions that is expensive to revers
 
 ```mermaid
 flowchart TD
-  start["New dataset or workload"] --> q1{"Need multi-row<br/>transactions or joins?"}
-  q1 -->|"Yes"| q2{"Fits on one primary<br/>(writes and size)?"}
+  start["New dataset or workload"] --> q1{"Need multi-row<br/>transactions<br/>or joins?"}
+  q1 -->|"Yes"| q2{"Fits on<br/>one primary<br/>(writes, size)?"}
   q2 -->|"Yes"| rdb["Relational DB<br/>(PostgreSQL, MySQL)"]
-  q2 -->|"No"| q3{"Can you shard by tenant<br/>or another key?"}
+  q2 -->|"No"| q3{"Can you shard<br/>by tenant or<br/>another key?"}
   q3 -->|"Yes"| shard["Sharded SQL<br/>(Vitess, Citus)"]
   q3 -->|"No"| dsql["Distributed SQL<br/>(Spanner, CockroachDB, TiDB)"]
-  q1 -->|"No"| q4{"Dominant access pattern?"}
-  q4 -->|"Key lookups, huge QPS"| kv["Key-value<br/>(DynamoDB, Redis)"]
-  q4 -->|"Time-ordered writes at scale"| wc["Wide-column or TSDB<br/>(Cassandra, Prometheus)"]
-  q4 -->|"Whole documents"| doc["Document store<br/>or Postgres jsonb"]
-  q4 -->|"Multi-hop relationships"| gdb["Graph database"]
-  q4 -->|"Text or similarity search"| search["Search or vector index<br/>(derived from primary)"]
+  q1 -->|"No"| q4["Choose by access pattern<br/>(next chart)"]
 ```
 
-The flowchart is a starting point, not an algorithm. Two refinements matter in practice:
+If the data needs no multi-row transactions or joins, the dominant access pattern decides:
+
+```mermaid
+flowchart LR
+  q4{"Dominant<br/>access pattern?"} -->|"Key lookups,<br/>huge QPS"| kv["Key-value<br/>(DynamoDB, Redis)"]
+  q4 -->|"Time-ordered<br/>writes at scale"| wc["Wide-column or TSDB<br/>(Cassandra, Prometheus)"]
+  q4 -->|"Whole documents"| doc["Document store<br/>or Postgres jsonb"]
+  q4 -->|"Multi-hop<br/>relationships"| gdb["Graph database"]
+  q4 -->|"Text or<br/>similarity search"| search["Search or vector index<br/>(derived from primary)"]
+```
+
+The two charts are a starting point, not an algorithm. Two refinements matter in practice:
 
 - **Decide per dataset, not per company.** Orders may live in PostgreSQL, sessions in Redis, and click events in a column store, all within one product.
 - **Size it.** "Fits on one primary" is a number. A single modern PostgreSQL server comfortably handles thousands of write transactions per second and many terabytes of data; read replicas and caching take reads off it. Do the [back-of-the-envelope estimate](/start/estimation/) before reaching for a distributed store.

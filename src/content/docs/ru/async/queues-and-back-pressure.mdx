@@ -29,14 +29,14 @@ import { Aside } from '@astrojs/starlight/components';
 ## Как работает очередь сообщений
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Клиент"] -->|"POST /exports"| api["API-сервер"]
   api -->|"публикация задачи"| queue[["Очередь"]]
   api -->|"202 + id задачи"| client
-  queue -->|"получение (аренда)"| w1["Воркер 1"]
-  queue -->|"получение (аренда)"| w2["Воркер 2"]
+  queue -->|"получение<br/>(аренда)"| w1["Воркер 1"]
+  queue -->|"получение<br/>(аренда)"| w2["Воркер 2"]
   w1 & w2 -->|"запись результата"| db[("База данных")]
-  w1 & w2 -.->|"ack / удаление"| queue
+  w1 & w2 -.->|"ack /<br/>удаление"| queue
   client -.->|"GET /exports/id"| api
 ```
 

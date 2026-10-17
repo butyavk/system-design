@@ -44,14 +44,22 @@ classDiagram
   class ChatService {
     +users: dict
     +chats: dict
-    -inbox: dict
+    -ids: count
+    -inbox: defaultdict
     -private: dict
-    +send_friend_request(from_id, to_id)
-    +respond(from_id, to_id, accept)
+    +add_user(name) User
+    +send_friend_request(from_id, to_id) FriendRequest
+    +pending_requests(user_id) list
+    +respond(from_id, to_id, accept) FriendRequest
+    +remove_friend(user_id, friend_id)
     +private_chat(user_id, friend_id) PrivateChat
     +create_group(owner_id, title, invitee_ids) GroupChat
+    +invite(inviter_id, chat_id, invitee_id)
+    +leave_group(user_id, chat_id)
     +post(author_id, chat_id, text) Message
-    +history(user_id, chat_id) list
+    +history(user_id, chat_id, limit) list
+    -register(chat)
+    -chat_of_member(chat_id, user_id) Chat
   }
   class User {
     +user_id: int
@@ -63,23 +71,37 @@ classDiagram
     +from_id: int
     +to_id: int
     +status: RequestStatus
+    +created_at: datetime
+  }
+  class RequestStatus {
+    <<enumeration>>
+    PENDING
+    ACCEPTED
+    REJECTED
   }
   class Chat {
     +chat_id: int
     +member_ids: set
     +messages: list
   }
+  class GroupChat {
+    +title: str
+    +owner_id: int
+  }
   class Message {
+    +message_id: int
+    +chat_id: int
     +author_id: int
     +text: str
     +sent_at: datetime
   }
-  ChatService o-- User
-  ChatService o-- Chat
-  ChatService o-- FriendRequest : pending
+  ChatService "1" *-- "0..*" User
+  ChatService "1" *-- "0..*" Chat
+  ChatService "1" *-- "0..*" FriendRequest : pending
+  RequestStatus <-- FriendRequest
+  Chat "1" *-- "0..*" Message
   Chat <|-- PrivateChat
   Chat <|-- GroupChat
-  Chat *-- Message
 ```
 
 The original design put methods like `message_user` and `approve_friend_request` on `User` and also on a `UserService`, with each user holding other `User` objects. That duplicates the logic, and accepting a request then means updating two objects from inside one of them. With ids and a single service, each rule lives in one method, and permission checks (`_chat_of_member`) are shared by every operation.

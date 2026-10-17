@@ -37,13 +37,15 @@ classDiagram
   class Card {
     +rank: Rank
     +suit: Suit
+    +\_\_str\_\_() str
   }
   class Deck {
+    -rng: Random
     -cards: list
     -next: int
     +shuffle()
     +deal() Card
-    +len() int
+    +\_\_len\_\_() int
   }
   class Hand {
     +cards: list
@@ -51,15 +53,33 @@ classDiagram
     +score() int
   }
   class BlackjackHand {
-    +card_points(card) int
+    +TARGET: int$
+    +card_points(card)$ int
     +score() int
     +is_soft() bool
     +is_blackjack() bool
     +is_bust() bool
   }
+  class Suit {
+    <<enumeration>>
+    CLUBS
+    DIAMONDS
+    HEARTS
+    SPADES
+  }
+  class Rank {
+    <<IntEnum>>
+    ACE = 1
+    TWO … TEN = 2 … 10
+    JACK = 11
+    QUEEN = 12
+    KING = 13
+  }
   Deck "1" o-- "52 x n" Card
-  Hand o-- Card
+  Hand "1" o-- "0..*" Card
   Hand <|-- BlackjackHand
+  Card --> Rank
+  Card --> Suit
 ```
 
 Специфика игры живёт в подклассах `Hand`, а не в подклассах `Card`. «Карта для блэкджека» вносила бы игровую логику в то, что по сути является значением, и одной и той же физической карте понадобился бы свой класс для каждой игры.

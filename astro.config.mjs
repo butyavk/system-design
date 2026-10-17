@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import mermaid from 'astro-mermaid';
 import remarkBaseLinks from './src/plugins/remark-base-links.mjs';
+import mermaidConfig from './src/mermaid.config.json' with { type: 'json' };
 
 const site = 'https://butyavk.github.io';
 const base = '/system-design';
@@ -24,7 +25,8 @@ export default defineConfig({
   },
   integrations: [
     // Must come before Starlight so ```mermaid blocks are handled first.
-    mermaid({ theme: 'default', autoTheme: true }),
+    // Spacing is shared with the diagram checker (src/mermaid.config.json).
+    mermaid({ theme: 'default', autoTheme: true, enableLog: false, mermaidConfig }),
     starlight({
       title: {
         en: 'System Design Primer',

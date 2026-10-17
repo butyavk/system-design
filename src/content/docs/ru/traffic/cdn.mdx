@@ -19,13 +19,13 @@ import { Aside } from '@astrojs/starlight/components';
 ## Путь запроса
 
 ```mermaid
-flowchart LR
+flowchart TB
   user["Пользователь"] -->|"DNS или anycast"| edge["Кэш периферийной PoP"]
   edge -->|"промах"| shield["Shield / верхний уровень"]
-  shield -->|"промах"| origin["Origin: приложение или объектное хранилище"]
+  shield -->|"промах"| origin["Origin: приложение<br/>или объектное хранилище"]
   origin --> shield
   shield --> edge
-  edge -->|"попадание или заполнение"| user
+  edge -->|"попадание<br/>или заполнение"| user
 ```
 
 1. DNS (часто CNAME на имя CDN) или anycast-адрес приводит пользователя к ближайшей PoP. См. [DNS](/traffic/dns/).

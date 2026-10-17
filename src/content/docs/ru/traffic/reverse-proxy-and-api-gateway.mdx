@@ -56,14 +56,14 @@ flowchart LR
 Когда бэкенд-сервисов много, каждому нужны одни и те же функции на входе: проверить токен, применить квоты, записать вызов в лог, направить `/v2/orders` куда нужно. **API-шлюз** делает это один раз, на границе всего набора сервисов.
 
 ```mermaid
-flowchart LR
-  web["Веб-приложение"] --> gw["API-шлюз"]
-  mobile["Мобильное приложение"] --> gw
-  partner["Клиент партнёрского API"] --> gw
-  gw -->|"аутентификация, квоты, маршрутизация"| users["Сервис пользователей"]
+flowchart TB
+  web["Веб-приложение"] --> gw["API-шлюз:<br/>аутентификация,<br/>квоты, маршрутизация"]
+  mobile["Мобильное<br/>приложение"] --> gw
+  partner["Клиент<br/>партнёрского<br/>API"] --> gw
+  gw --> users["Сервис<br/>пользователей"]
   gw --> orders["Сервис заказов"]
   gw --> catalog["Сервис каталога"]
-  idp["Провайдер идентификации"] -.->|"ключи для проверки токенов"| gw
+  idp["Провайдер<br/>идентификации"] -.->|"ключи для<br/>проверки токенов"| gw
 ```
 
 Типичные обязанности:
@@ -117,7 +117,7 @@ flowchart LR
 - [NGINX: reverse proxy guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) — практическая настройка проксирования, заголовков и буферизации.
 - [Pattern: API Gateway / Backends for Frontends](https://microservices.io/patterns/apigateway.html) — описание паттерна и его недостатков от Криса Ричардсона.
 - [Backends For Frontends](https://samnewman.io/patterns/architectural/bff/) — исходное описание BFF от Сэма Ньюмана.
-- [Overambitious API gateways](https://www.thoughtworks.com/radar/platforms/overambitious-api-gateways) — предостережение Thoughtworks Radar против логики в шлюзах.
+- [Overambitious API gateways](https://www.thoughtworks.com/radar/platforms/overambitious-api-gateways) — предостережение Thoughtworks Radar (кольцо Hold, последний раз в выпуске 2018 года) против логики в шлюзах.
 - [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/docs/) — стандартный API маршрутизации для шлюзов и service mesh.
 - [What is Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/what_is_envoy) — прокси, на котором построены многие шлюзы и service mesh.
 

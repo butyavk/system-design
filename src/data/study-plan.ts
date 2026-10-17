@@ -56,7 +56,7 @@ export const studyPhases: StudyPhase[] = [
     title: { en: 'Get oriented', ru: 'Сориентироваться' },
     aim: {
       short: { en: 'Learn the interview format and the numbers you will use in every answer.', ru: 'Понять формат собеседования и выучить цифры, которые пригодятся в каждом ответе.' },
-      medium: { en: 'Learn the format, then practise estimates until they take under five minutes.', ru: 'Понять формат, затем тренировать оценки, пока они не будут занимать меньше пяти минут.' },
+      medium: { en: 'Learn the format, then practise estimates until they take two or three minutes.', ru: 'Понять формат, затем тренировать оценки, пока они не будут занимать две-три минуты.' },
       long: { en: 'Learn the format and make estimation a habit you use while reading every other page.', ru: 'Понять формат и превратить оценки в привычку при чтении всех остальных страниц.' },
     },
     steps: [

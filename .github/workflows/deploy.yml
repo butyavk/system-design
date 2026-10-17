@@ -13,15 +13,16 @@ permissions:
 
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded pull-request runs, but never interrupt a deployment in progress.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -29,15 +30,25 @@ jobs:
       - run: npm ci
 
       - name: Check content (MDX syntax, frontmatter, links, EN/RU twins)
-        run: node scripts/check-mdx.mjs $(find src/content/docs -name '*.mdx')
+        run: npm run check:content
 
-      - name: Build site
+      - name: Check flashcard decks are up to date
+        run: |
+          npm run flashcards
+          git diff --exit-code -- public/flashcards
+
+      - name: Check diagrams (render, readable width, EN/RU parity)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run check:diagrams
+
+      - name: Build site (also validates the skill map)
         run: npm run build
 
       - name: Check internal links and anchors
-        run: python3 scripts/check_links.py dist
+        run: npm run check:links
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: github.event_name != 'pull_request'
         with:
           path: dist
@@ -51,4 +62,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

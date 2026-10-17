@@ -31,7 +31,7 @@ A cascading failure is a feedback loop: a failure causes more load or more waiti
 The last stage has a name: a **metastable failure**. The trigger is gone, but the system stays broken because the feedback loop (retries, queues, cold caches) keeps load above capacity. Recovery often needs load to drop *well below* the level that started the incident. The patterns below break those loops.
 
 ```mermaid
-flowchart LR
+flowchart TB
   slow["Dependency slows down"] --> wait["Callers wait longer"]
   wait --> full["Pools and queues fill"]
   full --> timeouts["Callers time out"]
@@ -149,6 +149,7 @@ stateDiagram-v2
   Open --> HalfOpen: wait period elapsed
   HalfOpen --> Closed: trial calls succeed
   HalfOpen --> Open: a trial call fails
+  state "Half-open" as HalfOpen
 ```
 
 - **Closed.** Calls pass through. Failures and slow calls are counted over a sliding window, by count or by time.

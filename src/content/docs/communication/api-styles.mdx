@@ -245,14 +245,14 @@ gateways**, and a **pub/sub layer** (Redis or Valkey pub/sub, NATS, or a Kafka-s
 event to whichever gateway holds the recipient's connection.
 
 ```mermaid
-flowchart LR
-  clientA["Client A"] -- "WebSocket" --> gw1["Gateway 1"]
-  clientB["Client B"] -- "WebSocket" --> gw2["Gateway 2"]
+flowchart TB
+  clientA["Client A"] <-- "WebSocket" --> gw1["Gateway 1"]
   gw1 -- "send message" --> chat["Chat service"]
   chat --> store[("Message store")]
-  chat -- "publish to conversation" --> bus["Pub/sub"]
-  bus -- "deliver" --> gw2
-  chat -- "recipient offline" --> push["Mobile push (APNs, FCM)"]
+  chat -- "publish to<br/>conversation" --> bus["Pub/sub"]
+  chat -- "recipient<br/>offline" --> push["Mobile push<br/>(APNs, FCM)"]
+  bus -- "deliver" --> gw2["Gateway 2"]
+  gw2 <-- "WebSocket" --> clientB["Client B"]
 ```
 
 Gateways stay thin and stateless apart from their sockets; persistence and business logic live
@@ -288,6 +288,6 @@ gateways before redundancy.
 - [HTTP](/communication/http/) — HTTP/2 and HTTP/3 make SSE and many concurrent streams practical.
 - [TCP and UDP](/communication/tcp-and-udp/) — the long-lived connections underneath, and why games prefer UDP.
 - [Event streaming](/async/event-streaming/) — the pub/sub and log layer behind real-time fan-out.
-- [Rate limiting](/reliability/rate-limiting/) — cost-based limits for GraphQL and connection limits for sockets.
+- [Rate limiting](/reliability/rate-limiting/) — cost-weighted and concurrency limits, the building blocks of GraphQL demand control.
 - [Online chat](/ood/online-chat/) — object model for a chat system.
 - [LLM-powered systems](/architecture/llm-applications/) — why SSE became the usual transport for streaming model tokens.

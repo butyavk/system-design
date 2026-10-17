@@ -79,7 +79,7 @@ because one-off queries keep pushing out useful entries.
 ## Step 2 — High-level design
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Client"] --> web["Web server / API gateway"]
   web --> qapi["Query API"]
   qapi --> cache["Memory cache"]
@@ -322,15 +322,13 @@ if __name__ == "__main__":
 ```mermaid
 flowchart TD
   client["Client"] --> lb["Load balancer"]
-  lb --> q1["Query API + local hot cache"]
-  lb --> q2["Query API + local hot cache"]
-  q1 & q2 --> ring["Consistent hashing / hash slots"]
-  ring --> c1["Cache shard 1 (primary + replica)"]
-  ring --> c2["Cache shard 2 (primary + replica)"]
-  ring --> cn["Cache shard N (primary + replica)"]
-  q1 & q2 --> coal["Miss path: coalescing + rate limit"]
-  coal --> index["Reverse index service"]
-  coal --> docs["Document service"]
+  lb --> q1["Query API +<br/>local hot cache"]
+  lb --> q2["Query API +<br/>local hot cache"]
+  q1 & q2 --> ring["Consistent hashing /<br/>hash slots"]
+  ring --> shards["Cache shards 1..N<br/>(primary + replica each)"]
+  q1 & q2 --> coal["Miss path: coalescing<br/>+ rate limit"]
+  coal --> index["Reverse index<br/>service"]
+  coal --> docs["Document<br/>service"]
 ```
 
 Sizing: about 140 GB of hot entries (100 M entries, compressed, plus about 30 % headroom for

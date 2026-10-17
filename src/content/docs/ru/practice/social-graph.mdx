@@ -63,14 +63,14 @@ import { Aside } from '@astrojs/starlight/components';
 ## Шаг 2 — Высокоуровневый дизайн
 
 ```mermaid
-flowchart LR
+flowchart TB
   client["Клиент"] --> web["Веб-сервер / API-шлюз"]
   web --> search["Search API"]
   search --> ugs["Сервис графа пользователей"]
-  ugs --> lookup["Сервис поиска шарда"]
-  ugs --> p1["Person-сервер 1"]
-  ugs --> p2["Person-сервер 2"]
-  ugs --> pn["Person-сервер N"]
+  ugs --> lookup["Сервис<br/>поиска шарда"]
+  ugs --> p1["Person-<br/>сервер 1"]
+  ugs --> p2["Person-<br/>сервер 2"]
+  ugs --> pn["Person-<br/>сервер N"]
 ```
 
 1. **Search API** принимает id `source` и `target` и проверяет права доступа.
@@ -79,6 +79,28 @@ flowchart LR
 4. Поиск возвращает список id, и API превращает их в имена и ссылки на профили.
 
 ## Шаг 3 — Ключевые компоненты
+
+### API
+
+```http title="Запрос"
+GET /v1/connections/path?source=1234&target=98765&max_hops=6
+```
+
+```json title="Ответ: 200 OK"
+{
+  "hops": 3,
+  "path": [
+    {"user_id": 1234, "name": "Вы"},
+    {"user_id": 53, "name": "Аня", "url": "https://social.example/anya"},
+    {"user_id": 7710, "name": "Борис", "url": "https://social.example/boris"},
+    {"user_id": 98765, "name": "Кирилл", "url": "https://social.example/kirill"}
+  ]
+}
+```
+
+Если в пределах лимита ничего не нашлось, возвращаем `200` с `"path": null` и
+`"reason": "not_within_max_hops"`. Это нормальный результат, а не ошибка сервера. Внутри
+сервисы общаются по gRPC.
 
 ### Как представить граф
 
@@ -240,28 +262,6 @@ def expand_level(frontier: list[int], lookup: LookupService,
 сервер приходится много виртуальных бакетов, чтобы шард можно было перенести, не
 перехешируя всех.
 
-### API
-
-```http title="Запрос"
-GET /v1/connections/path?source=1234&target=98765&max_hops=6
-```
-
-```json title="Ответ: 200 OK"
-{
-  "hops": 3,
-  "path": [
-    {"user_id": 1234, "name": "Вы"},
-    {"user_id": 53, "name": "Аня", "url": "https://social.example/anya"},
-    {"user_id": 7710, "name": "Борис", "url": "https://social.example/boris"},
-    {"user_id": 98765, "name": "Кирилл", "url": "https://social.example/kirill"}
-  ]
-}
-```
-
-Если в пределах лимита ничего не нашлось, возвращаем `200` с `"path": null` и
-`"reason": "not_within_max_hops"`. Это нормальный результат, а не ошибка сервера. Внутри
-сервисы общаются по gRPC.
-
 ## Шаг 4 — Масштабирование
 
 1. **Повторные и популярные поиски.** Записи пользователей и списки смежности кэшируем в Valkey, Redis или Memcached. Готовые пути кэшируем по ключу `(source, target)` с коротким TTL. Списки друзей «хабов» читаются постоянно, поэтому держим их ещё и в небольшом локальном кэше каждого экземпляра сервиса графа.
@@ -276,13 +276,14 @@ flowchart TD
   lb --> search["Search API"]
   search --> pathcache["Кэш путей"]
   search --> ugs["Сервис графа пользователей"]
-  ugs --> dircache["Карта шардов (в кэше)"]
-  ugs --> cache["Кэш смежности (Valkey / Memcached)"]
-  ugs --> p1["Person-серверы, шарды 1..N (с репликами)"]
-  p1 --> store[("Надёжное хранилище рёбер (шардированный SQL / KV)")]
+  ugs --> dircache["Карта шардов<br/>(в кэше)"]
+  ugs --> cache["Кэш смежности<br/>(Valkey / Memcached)"]
+  ugs --> p1["Person-серверы,<br/>шарды 1..N<br/>(с репликами)"]
+  p1 --> store[("Надёжное хранилище рёбер<br/>(шардированный SQL / KV)")]
   store --> cdc["Поток изменений"]
   cdc --> cache
-  batch["Офлайн-задачи: множества на 2 шага"] --> kv[("KV-хранилище")]
+  cdc --> p1
+  batch["Офлайн-задачи:<br/>множества на 2 шага"] --> kv[("KV-хранилище")]
   ugs --> kv
 ```
 
@@ -325,5 +326,5 @@ flowchart TD
 - [Партиционирование и шардирование](/data/partitioning-and-sharding/) — распределение пользователей по person-серверам и справочник шардов.
 - [NoSQL](/data/nosql/) — key-value- и графовые хранилища и когда какое подходит.
 - [Уровни кэширования](/caching/caching-layers/) — где кэшировать списки смежности и пути.
-- [RPC и REST](/communication/rpc-and-rest/) — внутренние вызовы gRPC и пакетирование.
+- [RPC и REST](/communication/rpc-and-rest/) — gRPC для внутренних вызовов между сервисами.
 - [Хеш-таблица](/ood/hash-map/) — структура данных под списками смежности и множеством посещённых вершин.

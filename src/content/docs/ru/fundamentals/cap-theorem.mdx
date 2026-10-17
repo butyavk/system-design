@@ -31,15 +31,17 @@ import { Aside } from '@astrojs/starlight/components';
 ## Поведение CP и AP
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph sideA["Большинство (2 из 3 реплик)"]
+    direction LR
     c1["Клиент 1"] --> r1["Реплика 1"]
     r1 --- r2["Реплика 2"]
   end
   subgraph sideB["Меньшинство (1 из 3 реплик)"]
+    direction LR
     c2["Клиент 2"] --> r3["Реплика 3"]
   end
-  r2 -.-|"разделение сети"| r3
+  sideA -.-|"разделение сети"| sideB
 ```
 
 То, что сторона меньшинства делает с запросом Клиента 2, и есть выбор между CP и AP:

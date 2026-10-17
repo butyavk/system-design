@@ -23,9 +23,10 @@ const T = {
     of: 'of',
     steps: 'steps done',
     reset: 'Reset progress',
-    confirm: 'Clear all ticks for this timeline?',
+    confirm: 'Clear all ticks for this timeline? They are cleared on the skill map too.',
     aim: 'Aim',
-    saved: 'Progress is saved in this browser only.',
+    saved: 'Progress is saved in this browser only and shared with the',
+    map: 'skill map.',
     done: 'All done — now keep practising out loud.',
   },
   ru: {
@@ -34,12 +35,24 @@ const T = {
     of: 'из',
     steps: 'шагов выполнено',
     reset: 'Сбросить прогресс',
-    confirm: 'Снять все отметки для этого плана?',
+    confirm: 'Снять все отметки для этого плана? На карте навыков они тоже снимутся.',
     aim: 'Цель',
-    saved: 'Прогресс сохраняется только в этом браузере.',
+    saved: 'Прогресс сохраняется только в этом браузере и общий с',
+    map: 'картой навыков.',
     done: 'Всё пройдено — теперь продолжайте тренироваться вслух.',
   },
 }[locale];
+
+// A step is stored as the page it links to (shared with the skill map); a later step that
+// links to an already-used page is an activity of its own (e.g. the mock interview).
+const seen = new Set<string>();
+const keyOf = new Map<string, string>();
+for (const ph of studyPhases)
+  for (const st of ph.steps) {
+    keyOf.set(st.id, seen.has(st.path) ? `act:${st.id}` : `page:${st.path}`);
+    seen.add(st.path);
+  }
+const mapHref = href('start/skill-map/');
 
 const countFor = (tl: Timeline) => studyPhases.reduce((n, p) => n + p.steps.filter((s) => s.timelines.includes(tl)).length, 0);
 const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.done } };
@@ -77,7 +90,7 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
       <span class="sp-bar-fill" data-sp-fill></span>
     </div>
     <div class="sp-progress-foot">
-      <span class="sp-saved">{T.saved}</span>
+      <span class="sp-saved">{T.saved} <a href={mapHref}>{T.map}</a></span>
       <button type="button" class="sp-reset" data-sp-reset>{T.reset}</button>
     </div>
   </div>
@@ -99,7 +112,7 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
         ))}
         <ul class="sp-steps">
           {phase.steps.map((step) => (
-            <li class="sp-step" data-step={step.id} data-tl={step.timelines.join(' ')} hidden={!step.timelines.includes(initial)}>
+            <li class="sp-step" data-step={step.id} data-key={keyOf.get(step.id)} data-tl={step.timelines.join(' ')} hidden={!step.timelines.includes(initial)}>
               <input type="checkbox" id={`${uid}-${step.id}`} aria-labelledby={`${uid}-${step.id}-l`} />
               <a id={`${uid}-${step.id}-l`} href={href(step.path)}>{step.task[locale]}</a>
             </li>
@@ -278,6 +291,8 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
 </style>
 
 <script>
+  import { loadProgress, onProgressChange, saveProgress, update } from './lib/progress';
+
   const KEY = 'sdp-study-plan';
 
   type Store = { timeline?: string; done?: Record<string, string[]> };
@@ -294,7 +309,7 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
     try {
       localStorage.setItem(KEY, JSON.stringify(s));
     } catch {
-      /* storage unavailable: progress lives for this page view only */
+      /* storage unavailable: the choice lives for this page view only */
     }
   }
 
@@ -310,13 +325,35 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
     const fill = root.querySelector<HTMLElement>('[data-sp-fill]')!;
 
     const store = load();
-    store.done ??= {};
     let tl = store.timeline && radios.some((r) => r.value === store.timeline) ? store.timeline : root.dataset.timeline!;
 
-    const doneSet = () => new Set(store.done![tl] ?? []);
+    // One-time merge of the old per-timeline ticks into the shared progress.
+    const first = loadProgress();
+    if (!first.migrated) {
+      for (const ids of Object.values(store.done ?? {}))
+        for (const id of ids) {
+          const key = steps.find((li) => li.dataset.step === id)?.dataset.key;
+          if (key?.startsWith('page:')) first.learned[key.slice(5)] ??= Date.now();
+          else if (key?.startsWith('act:')) first.activities[key.slice(4)] ??= Date.now();
+        }
+      first.migrated = true;
+      saveProgress(first);
+      delete store.done;
+      save(store);
+    }
+
+    const isDone = (key: string) => {
+      const p = loadProgress();
+      return key.startsWith('page:') ? !!p.learned[key.slice(5)] : !!p.activities[key.slice(4)];
+    };
+    const setDone = (key: string, on: boolean) =>
+      update((p) => {
+        const [bucket, id] = key.startsWith('page:') ? [p.learned, key.slice(5)] : [p.activities, key.slice(4)];
+        if (on) bucket[id] = Date.now();
+        else delete bucket[id];
+      });
 
     function render() {
-      const done = doneSet();
       root.dataset.timeline = tl;
       for (const r of radios) r.checked = r.value === tl;
       let total = 0;
@@ -325,12 +362,12 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
         const inPlan = (li.dataset.tl || '').split(' ').includes(tl);
         li.hidden = !inPlan;
         const cb = li.querySelector('input')!;
-        const isDone = done.has(li.dataset.step!);
-        cb.checked = isDone;
-        li.classList.toggle('is-done', isDone);
+        const done = isDone(li.dataset.key!);
+        cb.checked = done;
+        li.classList.toggle('is-done', done);
         if (inPlan) {
           total++;
-          if (isDone) ticked++;
+          if (done) ticked++;
         }
       }
       for (const ph of phases) {
@@ -359,22 +396,21 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
     }
     for (const li of steps) {
       const cb = li.querySelector('input')!;
-      cb.addEventListener('change', () => {
-        const done = doneSet();
-        if (cb.checked) done.add(li.dataset.step!);
-        else done.delete(li.dataset.step!);
-        store.done![tl] = [...done];
-        save(store);
-        render();
-      });
+      // Ticking one step ticks every step that points at the same page.
+      cb.addEventListener('change', () => setDone(li.dataset.key!, cb.checked));
     }
     root.querySelector('[data-sp-reset]')!.addEventListener('click', () => {
       if (!window.confirm(t.confirm)) return;
-      store.done![tl] = [];
-      save(store);
-      render();
+      const keys = steps.filter((li) => (li.dataset.tl || '').split(' ').includes(tl)).map((li) => li.dataset.key!);
+      update((p) => {
+        for (const k of keys) {
+          if (k.startsWith('page:')) delete p.learned[k.slice(5)];
+          else delete p.activities[k.slice(4)];
+        }
+      });
     });
 
+    onProgressChange(render);
     render();
   }
 

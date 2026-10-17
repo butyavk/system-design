@@ -104,7 +104,7 @@ A search engine is built around an **inverted index**: for each term, a sorted l
 Elasticsearch and OpenSearch (both built on Apache Lucene) add sharding, replication, aggregations and vector search. Search indexes are **near real-time**: a new document becomes searchable after a refresh (by default every second in Elasticsearch). They are rarely the source of truth; the usual pattern streams changes from the primary database into the index.
 
 ```mermaid
-flowchart LR
+flowchart TB
   app["Application"] --> db[("Primary database")]
   db --> cdc["Change data capture"]
   cdc --> stream["Event stream"]

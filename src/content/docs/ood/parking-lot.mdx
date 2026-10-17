@@ -44,6 +44,7 @@ classDiagram
     +free_spots() int
   }
   class Level {
+    +CODES: dict$
     +floor: int
     +rows: list
     +free_spots: int
@@ -61,8 +62,14 @@ classDiagram
   }
   class Vehicle {
     +plate: str
-    +size: Size
-    +spots_needed: int
+    +size: Size$
+    +spots_needed: int$
+  }
+  class Size {
+    <<IntEnum>>
+    MOTORCYCLE = 1
+    COMPACT = 2
+    LARGE = 3
   }
   class Ticket {
     +plate: str
@@ -70,11 +77,12 @@ classDiagram
     +spots: tuple
     +issued_at: datetime
   }
-  ParkingLot *-- Level
-  Level *-- ParkingSpot
-  ParkingLot --> Ticket : active
-  Ticket --> ParkingSpot
-  ParkingSpot --> Vehicle : parked
+  ParkingLot "1" *-- "1..*" Level
+  Level "1" *-- "1..*" ParkingSpot
+  ParkingLot "1" --> "0..*" Ticket : active
+  Level <-- Ticket
+  ParkingSpot "1..*" <-- "1" Ticket : spots
+  ParkingSpot "0..*" --> "0..1" Vehicle : parked
   Vehicle <|-- Motorcycle
   Vehicle <|-- Car
   Vehicle <|-- Bus
@@ -233,7 +241,7 @@ With `L` levels and `S` spots per level:
 | `free_spots` | `O(L)` | Counters per level |
 
 - **Linear scan vs free lists.** Scanning a few hundred spots per level is instant. A 10,000-spot garage would keep a free set per size per level, so single-spot parking becomes `O(1)`. Buses still need a contiguous run, which is easiest to find by scanning large-spot rows (or keeping an interval structure of free runs).
-- **Best fit vs first fit.** Best fit protects large spots, but it scans the whole level. First fit is faster and can strand buses. Since a bus needs a whole row of large spots, best fit is worth the cost here.
+- **Best fit vs first fit.** Best fit protects large spots, but it scans the whole level. First fit is faster and can strand buses. Since a bus needs five adjacent large spots, best fit is worth the cost here.
 - **Lowest level first** is simple. A real garage might prefer the level nearest the entrance, or spread cars evenly to cut queues at the ramps. Make it a strategy if the interviewer goes there.
 
 ## Extensions

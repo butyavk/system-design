@@ -2,7 +2,8 @@
 """Check internal links and anchors in the built site.
 
 Usage: python3 scripts/check_links.py dist [--base /system-design]
-Reports links under the base path that point to missing pages or missing #anchors.
+Reports links under the base path that point to missing pages or missing #anchors,
+and stylesheets, scripts, icons and images that point to missing files.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ class Collector(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.links: list[str] = []
+        self.assets: list[str] = []
         self.ids: set[str] = set()
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -24,6 +26,10 @@ class Collector(HTMLParser):
             self.ids.add(a["id"])  # type: ignore[arg-type]
         if tag == "a" and a.get("href"):
             self.links.append(a["href"])  # type: ignore[arg-type]
+        elif tag == "link" and a.get("href") and a.get("rel") not in ("canonical", "alternate", "sitemap"):
+            self.assets.append(a["href"])  # type: ignore[arg-type]
+        elif tag in ("script", "img", "source") and a.get("src"):
+            self.assets.append(a["src"])  # type: ignore[arg-type]
 
 
 def parse(path: Path) -> Collector:
@@ -76,6 +82,13 @@ def main() -> int:
                 tcol = cache.setdefault(target, parse(target))
                 if frag not in tcol.ids and frag != "_top":
                     problems.append(f"{page.relative_to(dist)}: missing anchor -> {href}")
+        for src in col.assets:
+            parts = urlsplit(src)
+            if parts.scheme or parts.netloc or not parts.path.startswith(base):
+                continue
+            checked += 1
+            if resolve(dist, base, unquote(parts.path)) is None:
+                problems.append(f"{page.relative_to(dist)}: missing file -> {src}")
     for p in problems:
         print(p)
     print(f"checked {checked} internal links in {len(pages)} pages; {len(problems)} problems")

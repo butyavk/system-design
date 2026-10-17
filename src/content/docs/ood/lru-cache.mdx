@@ -40,6 +40,7 @@ classDiagram
     -order: DoublyLinkedList
     +get(key) value
     +put(key, value)
+    +\_\_len\_\_() int
   }
   class DoublyLinkedList {
     -head: Node
@@ -55,9 +56,9 @@ classDiagram
     +prev: Node
     +next: Node
   }
-  LRUCache *-- DoublyLinkedList
-  LRUCache --> Node : dict values
-  DoublyLinkedList o-- Node : links
+  LRUCache "1" *-- "1" DoublyLinkedList
+  LRUCache "1" --> "0..*" Node : dict values
+  DoublyLinkedList "1" o-- "0..*" Node : links
 ```
 
 Why both structures? A dict alone finds a key in `O(1)` but cannot tell which key is oldest without a scan. A list alone keeps the order but needs `O(n)` to find a key. The dict points straight at list nodes, so we can unlink a node from the middle of the list without walking it. A doubly linked list is needed because unlinking requires the previous node too.

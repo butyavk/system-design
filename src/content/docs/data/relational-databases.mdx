@@ -121,17 +121,19 @@ The operational catch is the same in both. A transaction left open for hours pin
 ## Storage engines: B-tree vs LSM-tree
 
 ```mermaid
-flowchart LR
-  subgraph btree["B-tree engine"]
-    w1["Write"] --> wal1["Append to WAL"]
-    wal1 --> page["Modify page in place"]
-    page --> tree[("Sorted tree of fixed-size pages")]
-  end
+flowchart TB
   subgraph lsm["LSM-tree engine"]
+    direction TB
     w2["Write"] --> wal2["Append to WAL"]
     wal2 --> mem["In-memory sorted table"]
     mem -- "flush when full" --> sst[("Immutable sorted files")]
     sst -- "background compaction" --> sst
+  end
+  subgraph btree["B-tree engine"]
+    direction TB
+    w1["Write"] --> wal1["Append to WAL"]
+    wal1 --> page["Modify page in place"]
+    page --> tree[("Sorted tree of<br/>fixed-size pages")]
   end
 ```
 

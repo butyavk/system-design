@@ -10,7 +10,7 @@ A restructured, updated and interactive version of
 (CC BY 4.0). Readers are engineers learning to design large-scale systems and preparing
 for system design interviews. Every page should be:
 
-- **Accurate and current.** The original text dates from 2016–2019. Fix outdated claims,
+- **Accurate and current.** The original text dates from 2017–2019. Fix outdated claims,
   add what changed by 2026 (managed cloud services, HTTP/3, Kafka-style logs, distributed
   SQL, Valkey/Redis, edge compute, SLOs, etc.) where it matters for design decisions.
 - **Written in our own words.** Use the original as a map of *topics*, not as text to
@@ -26,6 +26,10 @@ for system design interviews. Every page should be:
 - Russian: `src/content/docs/ru/<section>/<slug>.mdx` — same slug, same filename.
 - The list of sections and slugs lives in `scripts/pages.json`. Do not invent new slugs
   without adding them there.
+- Every topic page is also a node on the skill map: add it to `src/data/skill-map.ts` with
+  its direct prerequisites (`needs`). The build fails if a page is missing from the map, a
+  prerequisite does not exist, the graph has a cycle, or a page in a study-plan timeline
+  needs a page outside that timeline (`src/data/study-plan.ts`).
 
 ```yaml
 ---
@@ -78,6 +82,12 @@ Length: topic pages ≈ 900–1,600 words (EN). Case studies ≈ 1,800–3,000.
 OOD pages ≈ 500–900 words plus code.
 
 ## 4. Case study template (`practice/`)
+
+Case studies keep the four classic headings; the seven steps of the
+[interview framework](src/content/docs/start/interview-framework.mdx) sit inside them
+(requirements and estimates → Step 1, high-level design → Step 2, API, data model and deep
+dives → Step 3, scaling and failures → Step 4). Put the API and data model at the start of
+Step 3.
 
 1. Intro + TL;DR aside (the final architecture in 4 bullets).
 2. `## Step 1 — Requirements and constraints`: use cases in scope / out of scope,
@@ -191,6 +201,11 @@ flowchart LR
 ````
 
 - `flowchart LR` or `TD`, `sequenceDiagram` and `classDiagram` are all fine.
+- **Keep the natural width at 800px or less, in both languages.** The content column is about
+  600px wide, so a wider diagram is scaled down and its labels become unreadable (on phones
+  the site scrolls it sideways instead). Long chains go top to bottom (`flowchart TB`), long
+  labels get `<br/>` every ~20 characters, sequence diagrams keep to four or five short
+  participants. `npm run check:diagrams` renders every diagram and reports its width.
 - Always quote labels: `id["Label (with) symbols"]`. ASCII ids only (`app1`, `cache`).
   Never use `end` as an id. No HTML in labels; use `<br/>` only inside quoted labels.
 - Keep it under ~15 nodes; one idea per diagram. Translate labels in the Russian version.
@@ -207,7 +222,14 @@ flowchart LR
 
 ```bash
 node scripts/check-mdx.mjs src/content/docs/<section>/*.mdx src/content/docs/ru/<section>/*.mdx
+node scripts/check-diagrams.mjs src/content/docs/<section>/*.mdx src/content/docs/ru/<section>/*.mdx
+npm run build && npm run check:links
 ```
 
-It checks MDX syntax, frontmatter, internal links against `scripts/pages.json`,
-and that each page has its translation twin. Fix every ✗.
+`check-mdx` checks MDX syntax, frontmatter, internal links against `scripts/pages.json`,
+and that each page has its translation twin. `check-diagrams` renders every mermaid block
+in a real browser (it needs `npx playwright install chromium` once) and fails on syntax
+errors, diagrams wider than 800px and EN/RU diagram-count mismatches. The build validates
+the skill map; `check:links` checks every internal link and `#anchor` in the built site.
+If you changed `src/data/flashcards.ts`, run `npm run flashcards` and commit the decks.
+Fix every ✗.
