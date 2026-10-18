@@ -1800,12 +1800,19 @@ const plans = timelines.map(({ id, name, duration }) => {
       }
       if (target.closest('[data-sm-export]')) {
         const dump: Record<string, unknown> = {};
+        // Most keys hold JSON; the map's plan and look are stored as plain strings.
         for (const k of PORTABLE) {
+          let v: string | null = null;
           try {
-            const v = localStorage.getItem(k);
-            if (v !== null) dump[k] = JSON.parse(v);
+            v = localStorage.getItem(k);
           } catch {
-            /* skip unreadable keys */
+            /* storage unavailable */
+          }
+          if (v === null) continue;
+          try {
+            dump[k] = JSON.parse(v);
+          } catch {
+            dump[k] = v;
           }
         }
         dump[PROGRESS_KEY] = loadProgress();
@@ -1845,7 +1852,8 @@ const plans = timelines.map(({ id, name, duration }) => {
         for (const k of PORTABLE) {
           if (k === PROGRESS_KEY || !(k in data)) continue;
           try {
-            localStorage.setItem(k, JSON.stringify(data[k]));
+            const v = data[k];
+            localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
           } catch {
             /* storage unavailable */
           }
