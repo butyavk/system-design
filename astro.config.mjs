@@ -38,6 +38,7 @@ export default defineConfig({
         'Learn how to design large-scale systems: a restructured, updated and interactive System Design Primer.',
       logo: { src: './src/assets/logo.svg', replacesTitle: false },
       favicon: '/favicon.svg',
+      routeMiddleware: './src/route-data.ts',
       defaultLocale: 'root',
       locales: {
         root: { label: 'English', lang: 'en' },
