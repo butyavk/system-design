@@ -8,6 +8,7 @@
     "preview": "astro preview",
     "flashcards": "node scripts/export-flashcards.mjs",
     "check:links": "python3 scripts/check_links.py dist",
+    "check:external": "node scripts/check-external-links.mjs",
     "check:diagrams": "node scripts/check-diagrams.mjs",
     "check:content": "node scripts/check-mdx.mjs $(find src/content/docs -name '*.mdx')"
   },

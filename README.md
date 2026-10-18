@@ -89,6 +89,7 @@ npm run check:content     # MDX syntax, frontmatter, links, EN/RU twins
 npm run check:diagrams    # every diagram renders and is at most 800px wide (needs: npx playwright install chromium)
 npm run build             # also validates the skill map graph
 npm run check:links       # internal links and anchors in dist/
+npm run check:external    # every external link; slow and not in CI, since some sites block scripts
 npm run flashcards        # re-export the Anki decks after editing src/data/flashcards.ts
 ```
 

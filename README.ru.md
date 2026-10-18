@@ -91,6 +91,7 @@ npm run check:content     # синтаксис MDX, frontmatter, ссылки, �
 npm run check:diagrams    # каждая диаграмма рендерится и не шире 800px (нужно: npx playwright install chromium)
 npm run build             # заодно проверяет граф карты навыков
 npm run check:links       # внутренние ссылки и якоря в dist/
+npm run check:external    # все внешние ссылки; долго и не в CI: некоторые сайты блокируют скрипты
 npm run flashcards        # пересобрать колоды Anki после правок src/data/flashcards.ts
 ```
 

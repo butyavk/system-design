@@ -194,7 +194,8 @@ the legacy "master–slave" name once, where readers may meet it in older materi
 - Many links in the original (highscalability.com, slideshare.net, old company blogs)
   are dead or moved. Open every external link you add (some sites block scripts, so a
   403 from `curl` is not proof it is broken); if a classic article is gone, use its
-  `web.archive.org` copy or drop it.
+  `web.archive.org` copy or drop it. `npm run check:external` checks every external link
+  and sorts failures into broken, blocked for scripts and no answer.
 - Russian pages use the same links (they are mostly English sources); add a Russian
   source only if it is genuinely good.
 
