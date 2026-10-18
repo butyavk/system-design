@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import mermaid from 'astro-mermaid';
 import remarkBaseLinks from './src/plugins/remark-base-links.mjs';
+import rehypeTableCorner from './src/plugins/rehype-table-corner.mjs';
 import mermaidConfig from './src/mermaid.config.json' with { type: 'json' };
 
 const site = 'https://butyavk.github.io';
@@ -22,6 +23,7 @@ export default defineConfig({
   trailingSlash: 'always',
   markdown: {
     remarkPlugins: [[remarkBaseLinks, { base }]],
+    rehypePlugins: [rehypeTableCorner],
   },
   integrations: [
     // Must come before Starlight so ```mermaid blocks are handled first.

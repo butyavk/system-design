@@ -29,7 +29,9 @@ for system design interviews. Every page should be:
 - Every topic page is also a node on the skill map: add it to `src/data/skill-map.ts` with
   its direct prerequisites (`needs`). The build fails if a page is missing from the map, a
   prerequisite does not exist, the graph has a cycle, or a page in a study-plan timeline
-  needs a page outside that timeline (`src/data/study-plan.ts`).
+  needs a page outside that timeline (`src/data/study-plan.ts`). On the overview tree a topic
+  is labelled with its title (or its `label`), wrapped to at most three lines of about 17
+  characters; the build fails if a label does not fit, so give long titles a short `label`.
 
 ```yaml
 ---

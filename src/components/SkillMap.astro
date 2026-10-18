@@ -5,6 +5,7 @@
 // Server-rendered as plain links (works without JS); the script adds state and wiring.
 import { stages, tracks } from '~/data/skill-map';
 import { mapNodes, pageHref } from './lib/skill-map-data';
+import { overviewLayout } from './lib/skill-map-layout';
 import type { Locale } from './lib/format';
 import '@fontsource-variable/cormorant';
 import './skill-map-grim.css';
@@ -35,8 +36,15 @@ const T = {
     lReady: 'ready to start',
     lLocked: 'read prerequisites first',
     lGap: 'skipped',
+    lOut: 'not in this plan',
     saved: 'Progress is saved in this browser only and shared with the study plan. Pages you open are marked “opened”; mark a topic as learned at the end of its page or here.',
     nojs: 'Turn on JavaScript to see your progress and the connections between topics.',
+    ovAria: 'Overview of all topics and their prerequisites',
+    ovHint: 'Left to right: from the basics to the topics that build on them. Lines are prerequisites; select a topic to see what it needs and what it unlocks.',
+    full: 'Full screen',
+    exitFull: 'Exit full screen',
+    listHead: 'By stage',
+    keyAria: 'Sections',
     download: 'Download progress',
     load: 'Load progress',
     skin: 'Map look',
@@ -66,8 +74,15 @@ const T = {
     lReady: 'можно начинать',
     lLocked: 'сначала нужные темы',
     lGap: 'пропущено',
+    lOut: 'нет в этом плане',
     saved: 'Прогресс хранится только в этом браузере и общий с планом подготовки. Открытые страницы отмечаются как «открыто»; отметить тему изученной можно в конце её страницы или здесь.',
     nojs: 'Включите JavaScript, чтобы видеть прогресс и связи между темами.',
+    ovAria: 'Обзор всех тем и связей между ними',
+    ovHint: 'Слева направо — от основ к темам, которые на них опираются. Линии — зависимости; выберите тему, чтобы увидеть, что ей нужно и что она открывает.',
+    full: 'На весь экран',
+    exitFull: 'Свернуть',
+    listHead: 'По этапам',
+    keyAria: 'Разделы',
     download: 'Скачать прогресс',
     load: 'Загрузить прогресс',
     skin: 'Вид карты',
@@ -86,7 +101,7 @@ const C = {
     noNeeds: 'Nothing — a good place to start.', endLine: 'Nothing directly: this is an end point.', allBefore: 'Prerequisites learned, counting indirect ones',
     st: { learned: 'Learned', opened: 'Opened, not marked as learned', ready: 'Ready: every prerequisite is learned', locked: 'Prerequisites not learned yet', gap: 'Skipped: a topic you learned builds on it' },
     done: 'Everything in this plan is learned. Keep practising out loud.', more: 'more', here: 'You are here', none: 'none',
-    cont: 'Continue reading', show: 'Show on the map',
+    cont: 'Continue reading', show: 'Show on the map', close: 'Close',
     io: { bad: 'This is not a progress file from this site.', replace: 'Replace the progress in this browser with the one from the file?', loaded: 'Progress loaded.', saved: 'Progress file saved.' },
     grim: { before: 'Requires', leads: 'Unlocks', mark: 'Learn this skill', unmark: 'Learned — undo', open: 'Open the page' },
   },
@@ -96,7 +111,7 @@ const C = {
     noNeeds: 'Ничего — хорошее место для старта.', endLine: 'Прямых продолжений нет: это конечная точка.', allBefore: 'Изучено нужных тем, включая косвенные',
     st: { learned: 'Изучено', opened: 'Открыто, но не отмечено изученным', ready: 'Можно начинать: все нужные темы изучены', locked: 'Нужные темы ещё не изучены', gap: 'Пропущено: на эту тему опирается уже изученная' },
     done: 'Всё в этом плане изучено. Продолжайте тренироваться вслух.', more: 'ещё', here: 'Вы здесь', none: 'нет',
-    cont: 'Продолжить чтение', show: 'Показать на карте',
+    cont: 'Продолжить чтение', show: 'Показать на карте', close: 'Закрыть',
     io: { bad: 'Это не файл прогресса с этого сайта.', replace: 'Заменить прогресс в этом браузере данными из файла?', loaded: 'Прогресс загружен.', saved: 'Файл с прогрессом сохранён.' },
     grim: { before: 'Требует', leads: 'Открывает', mark: 'Изучить навык', unmark: 'Изучено — отменить', open: 'Открыть страницу' },
   },
@@ -111,6 +126,8 @@ const clientData = {
   stageOfTrack,
   t: C,
 };
+const nodeByPath = Object.fromEntries(nodes.map((n) => [n.p, n]));
+const ov = overviewLayout((p) => nodeByPath[p].t);
 const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 // One sigil per section for the dark-fantasy look (24×24, stroked).
 const sigils: Record<string, string> = {
@@ -209,9 +226,40 @@ const plans = [
       <li><span class="sm-glyph is-ready"></span>{T.lReady}</li>
       <li><span class="sm-glyph is-locked"></span>{T.lLocked}</li>
       <li><span class="sm-glyph is-gap"></span>{T.lGap}</li>
+      <li data-sm-lout hidden><span class="sm-glyph is-out"></span>{T.lOut}</li>
     </ul>
   </div>
   <noscript><p class="sm-nojs">{T.nojs}</p></noscript>
+
+  <section class="sm-ov" data-sm-ov aria-label={T.ovAria}>
+    <div class="sm-ov__bar">
+      <p class="sm-ov__hint">{T.ovHint}</p>
+      <button type="button" class="sm-ov__full" data-sm-full data-on={T.full} data-off={T.exitFull} aria-pressed="false">
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" /></svg>
+        <span data-sm-full-label>{T.full}</span>
+      </button>
+    </div>
+    <div class="sm-ov__scroll" data-sm-ov-scroll>
+      <div class="sm-ov__canvas" data-sm-ov-canvas style={`width:${ov.width}px;height:${ov.height}px`}>
+        <svg class="sm-ov__edges" width={ov.width} height={ov.height} viewBox={`0 0 ${ov.width} ${ov.height}`} aria-hidden="true" focusable="false">
+          {ov.edges.map((e) => <path d={e.d} data-from={e.from} data-to={e.to} />)}
+        </svg>
+        {ov.nodes.map((o) => (
+          <a class="sm-onode" href={href(o.p)} data-p={o.p} style={`left:${o.x}px;top:${o.y}px`} title={nodeByPath[o.p].title}>
+            <span class="sm-rune" aria-hidden="true"><svg><use href={`#sm-sigil-${nodeByPath[o.p].tr}`} /></svg></span>
+            <span class="sm-onode__t">{nodeByPath[o.p].t}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+    <ul class="sm-ov__key" aria-label={T.keyAria}>
+      {tracks.map((tr) => (
+        <li><svg aria-hidden="true"><use href={`#sm-sigil-${tr.id}`} /></svg>{tr.title[locale]}</li>
+      ))}
+    </ul>
+  </section>
+
+  <h2 class="sm-listhead">{T.listHead}</h2>
 
   <div class="sm-board" data-sm-board>
     <svg class="sm-wires" data-sm-wires aria-hidden="true" focusable="false">
@@ -282,7 +330,7 @@ const plans = [
     height: 0;
     overflow: hidden;
   }
-  .sm:not([data-skin='grim']) :is(.sm-g, .sm-rune, .sm-orb) {
+  .sm:not([data-skin='grim']) :is(.sm-g, .sm-node .sm-rune, .sm-orb) {
     display: none;
   }
   .sm[data-skin='grim'] .sm-c {
@@ -489,10 +537,320 @@ const plans = [
     align-items: center;
     gap: 0.35rem;
   }
+  .sm-legend li[hidden] {
+    display: none;
+  }
   .sm-nojs {
     margin-top: 0.75rem !important;
     font-size: var(--sl-text-sm);
     color: var(--sl-color-gray-3);
+  }
+
+  /* ---------- Overview: the whole tree at once ---------- */
+  .sm-ov {
+    margin-top: 1.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    background-color: var(--sl-color-bg);
+    background-image: radial-gradient(var(--sl-color-gray-6) 1px, transparent 1.2px);
+    background-size: 18px 18px;
+  }
+  .sm-ov__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 0.9rem 0;
+  }
+  .sm-ov__hint {
+    flex: 1 1 24rem;
+    max-width: 62ch;
+    font-size: var(--sl-text-sm);
+    line-height: 1.45;
+    color: var(--sl-color-gray-3);
+  }
+  .sm-ov__full {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background: var(--sl-color-bg);
+    color: var(--sl-color-gray-2);
+    font: inherit;
+    font-size: var(--sl-text-sm);
+    cursor: pointer;
+  }
+  .sm-ov__full svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+  .sm-ov__full:hover,
+  .sm-ov__full:focus-visible {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
+  }
+  .sm-ov__scroll {
+    overflow: auto;
+    overscroll-behavior-x: contain;
+    padding: 0.25rem 0 0.5rem;
+  }
+  .sm-ov__canvas {
+    position: relative;
+    margin-inline: auto;
+  }
+  .sm-ov__edges {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+  .sm-ov__edges path {
+    fill: none;
+    stroke: var(--sl-color-gray-5);
+    stroke-width: 1.4;
+    transition: stroke 150ms, opacity 150ms;
+  }
+  .sm-ov__edges path.e-done {
+    stroke: color-mix(in srgb, var(--sl-color-accent) 55%, var(--sl-color-gray-5));
+  }
+  .sm.has-sel .sm-ov__edges path {
+    opacity: 0.35;
+  }
+  .sm.has-sel .sm-ov__edges path:is(.e-need, .e-dep, .e-anc) {
+    opacity: 1;
+  }
+  .sm-ov__edges path.e-anc {
+    stroke: color-mix(in srgb, var(--sl-color-accent) 60%, transparent);
+    stroke-width: 1.8;
+  }
+  .sm-ov__edges path.e-need {
+    stroke: var(--sl-color-accent);
+    stroke-width: 2.6;
+  }
+  .sm-ov__edges path.e-dep {
+    stroke: var(--sdp-signal);
+    stroke-width: 2.2;
+    stroke-dasharray: 6 4;
+  }
+  /* Links to topics outside the chosen plan fade to a dotted trace. */
+  .sm-ov__edges path.e-out:not(.e-need, .e-dep, .e-anc) {
+    stroke-dasharray: 1.5 4.5;
+    opacity: 0.6;
+  }
+  .sm-onode {
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 122px;
+    transform: translate(-50%, -17px);
+    color: var(--sl-color-white);
+    text-decoration: none;
+  }
+  .sm-onode .sm-rune {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 2px solid var(--sl-color-gray-4);
+    border-radius: 50%;
+    background: var(--sl-color-bg);
+    color: var(--sl-color-gray-3);
+    transition: box-shadow 150ms, border-color 150ms, background-color 150ms, transform 220ms ease;
+  }
+  .sm-onode .sm-rune svg {
+    transition: opacity 150ms;
+  }
+  .sm-onode .sm-rune svg {
+    width: 17px;
+    height: 17px;
+  }
+  /* Sizes match OV.labelW / lineH / maxLines in skill-map-layout.ts, which leaves room for them. */
+  .sm-onode__t {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 100%;
+    padding: 0 1px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--sl-color-bg) 88%, transparent);
+    font-size: 0.72rem;
+    line-height: 14px;
+    text-align: center;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+  .sm-onode.is-ready .sm-rune {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-accent);
+  }
+  .sm-onode.is-locked .sm-rune {
+    border-style: dashed;
+  }
+  .sm-onode.is-locked {
+    color: var(--sl-color-gray-2);
+  }
+  .sm-onode.is-opened .sm-rune {
+    border-color: var(--sl-color-accent);
+    background: linear-gradient(90deg, var(--sl-color-accent-low) 50%, var(--sl-color-bg) 50%);
+    color: var(--sl-color-accent);
+  }
+  .sm-onode.is-learned .sm-rune {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent);
+    color: var(--sl-color-black);
+  }
+  .sm-onode.is-gap .sm-rune {
+    border-color: var(--sdp-signal);
+    color: var(--sdp-signal);
+    background: var(--sdp-signal-low);
+  }
+  /* Not in the chosen plan: the socket folds into a small dot and the tree keeps its shape.
+     Pointing at it (or selecting it) unfolds it again. */
+  .sm-onode.is-out {
+    color: var(--sl-color-gray-3);
+  }
+  .sm-onode.is-out:not(.is-sel, :hover, :focus-visible) .sm-rune {
+    transform: scale(0.36);
+    border-color: var(--sl-color-gray-4);
+    background: var(--sl-color-gray-4);
+    box-shadow: none;
+  }
+  .sm-onode.is-out.is-learned:not(.is-sel, :hover, :focus-visible) .sm-rune {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent);
+  }
+  .sm-onode.is-out:not(.is-sel, :hover, :focus-visible) .sm-rune svg {
+    opacity: 0;
+  }
+  .sm.has-sel .sm-onode:not(.is-sel, .is-need, .is-anc, .is-dep) {
+    color: var(--sl-color-gray-3);
+  }
+  .sm-onode.is-need .sm-rune,
+  .sm-onode.is-anc .sm-rune {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--sl-color-accent) 35%, transparent);
+  }
+  .sm-onode.is-dep .sm-rune {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--sdp-signal) 35%, transparent);
+  }
+  .sm-onode.is-sel .sm-rune {
+    box-shadow: 0 0 0 3px var(--sl-color-bg), 0 0 0 5px var(--sl-color-accent);
+  }
+  .sm-onode.is-sel .sm-onode__t {
+    font-weight: 650;
+  }
+  .sm-onode.is-here .sm-rune::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--sl-color-bg);
+    border-radius: 50%;
+    background: var(--sdp-signal);
+  }
+  .sm-onode:hover .sm-rune {
+    border-color: var(--sl-color-gray-2);
+  }
+  .sm-onode:focus-visible {
+    outline: none;
+  }
+  .sm-onode:focus-visible .sm-rune {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 3px;
+  }
+  .sm-ov .sm-ov__key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    padding: 0.6rem 0.9rem 0.8rem;
+    border-top: 1px solid var(--sl-color-gray-6);
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .sm-ov__key li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .sm-ov__key svg {
+    width: 14px;
+    height: 14px;
+  }
+  /* The detail panel as a tooltip inside the overview. */
+  .sm .sm-ov__canvas > .sm-detail.is-pop {
+    position: absolute;
+    z-index: 3;
+    width: 19rem;
+    max-height: calc(100% - 8px);
+    overflow: auto;
+  }
+  .sm-d__close {
+    position: absolute;
+    top: 0.4rem;
+    inset-inline-end: 0.5rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    font: inherit;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .sm-d__close:hover,
+  .sm-d__close:focus-visible {
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-6);
+  }
+  .sm-detail .sm-d__crumb {
+    padding-inline-end: 2rem;
+  }
+  /* Full screen. */
+  .sm-ov.is-full {
+    position: fixed !important;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    border-radius: 0;
+  }
+  .sm-ov.is-full .sm-ov__scroll {
+    flex: 1;
+  }
+  :root.sm-noscroll {
+    overflow: hidden;
+  }
+  /* Overlay fallback: let the fixed overview rise above the site header and sidebar. */
+  :root.sm-noscroll :is(.main-pane, .sm, .sm > *) {
+    isolation: auto !important;
+    z-index: auto !important;
+  }
+  :root.sm-noscroll .sm-ov.is-full {
+    z-index: 2147483000 !important;
+  }
+  .sm .sm-listhead {
+    margin: 2rem 0 0.25rem;
+    font-size: var(--sl-text-h4);
+    font-weight: 650;
+    color: var(--sl-color-white);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sm-ov__edges path,
+    .sm-onode .sm-rune,
+    .sm-onode .sm-rune svg {
+      transition: none;
+    }
   }
 
   /* ---------- Board ---------- */
@@ -682,10 +1040,23 @@ const plans = [
   /* Dimming changes colours, never opacity: nodes stay opaque so wires pass behind them. */
   .sm-node.is-out {
     border-color: var(--sl-color-gray-6);
-    color: var(--sl-color-gray-4);
+    color: var(--sl-color-gray-3);
   }
-  .sm-node.is-out .sm-glyph {
-    opacity: 0.45;
+  /* Outside the chosen plan: the same folded dot as on the overview (learned ones keep their colour). */
+  .sm-node.is-out > .sm-glyph {
+    width: 0.45rem;
+    height: 0.45rem;
+    margin: 0.25rem;
+    border-style: solid;
+    border-color: var(--sl-color-gray-4);
+    background: var(--sl-color-gray-4);
+  }
+  .sm-node.is-out.is-learned > .sm-glyph {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent);
+  }
+  .sm-node.is-out > .sm-glyph::after {
+    display: none;
   }
   .sm-node.is-need {
     border-color: var(--sl-color-accent);
@@ -705,9 +1076,6 @@ const plans = [
   .sm.has-sel .sm-node:not(.is-sel, .is-need, .is-anc, .is-dep) {
     border-color: var(--sl-color-gray-6);
     color: var(--sl-color-gray-3);
-  }
-  .sm.has-sel .sm-node.is-out:not(.is-sel, .is-need, .is-anc, .is-dep) {
-    color: var(--sl-color-gray-4);
   }
   .sm.has-sel .sm-node:not(.is-sel, .is-need, .is-anc, .is-dep) .sm-glyph {
     opacity: 0.6;
@@ -964,6 +1332,15 @@ const plans = [
     const byPath = new Map(data.nodes.map((n) => [n.p, n]));
     const els = new Map<string, HTMLAnchorElement>();
     root.querySelectorAll<HTMLAnchorElement>('.sm-node').forEach((a) => els.set(a.dataset.p!, a));
+    // Overview: one socket per topic and one path per prerequisite link.
+    const oels = new Map<string, HTMLAnchorElement>();
+    root.querySelectorAll<HTMLAnchorElement>('.sm-onode').forEach((a) => oels.set(a.dataset.p!, a));
+    const oedges = [...root.querySelectorAll<SVGPathElement>('.sm-ov__edges path')];
+    const ovSection = root.querySelector<HTMLElement>('[data-sm-ov]')!;
+    const ovScroll = root.querySelector<HTMLElement>('[data-sm-ov-scroll]')!;
+    const ovCanvas = root.querySelector<HTMLElement>('[data-sm-ov-canvas]')!;
+    // Where the last selection came from decides where the panel opens.
+    let origin: 'ov' | 'list' = 'list';
     const board = root.querySelector<HTMLElement>('[data-sm-board]')!;
     const g = root.querySelector<SVGGElement>('[data-sm-g]')!;
     const detail = root.querySelector<HTMLElement>('[data-sm-detail]')!;
@@ -1026,6 +1403,7 @@ const plans = [
       const needs = n.needs.map((p) => byPath.get(p)!);
       const deps = n.deps.map((p) => byPath.get(p)!);
       detail.innerHTML = `
+        <button type="button" class="sm-d__close" data-close aria-label="${esc(t.close)}">×</button>
         <p class="sm-d__crumb">${data.stageOfTrack[n.tr] + 1} · ${esc(data.stages[data.stageOfTrack[n.tr]])} / ${esc(data.tracks[n.tr])}</p>
         <h3 class="sm-d__title">${esc(n.title)}</h3>
         <p class="sm-d__desc">${esc(n.d)}</p>
@@ -1041,7 +1419,25 @@ const plans = [
         <h4 class="sm-d__h sm-d__h--dep">${t.leads}</h4>
         ${deps.length ? `<ul class="sm-d__list">${deps.map((x) => `<li>${chip(x, st.get(x.p))}</li>`).join('')}</ul>` : `<p class="sm-d__none">${t.endLine}</p>`}`;
       detail.hidden = false;
-      // Narrow layout: show the panel right under the section that holds the node.
+      detail.style.left = detail.style.top = '';
+      detail.classList.remove('is-pop');
+      if (origin === 'ov') {
+        // Overview: a tooltip next to the socket when there is room, else right under the map.
+        if (ovScroll.clientWidth >= 560) {
+          if (detail.parentElement !== ovCanvas) ovCanvas.append(detail);
+          detail.classList.add('is-pop');
+          const a = oels.get(n.p)!;
+          const x = parseFloat(a.style.left);
+          const y = parseFloat(a.style.top);
+          const w = detail.offsetWidth;
+          const right = x + 34 + w <= ovCanvas.offsetWidth;
+          detail.style.left = `${right ? x + 34 : Math.max(4, x - 34 - w)}px`;
+          const h = detail.offsetHeight;
+          detail.style.top = `${Math.max(4, Math.min(y - 60, ovCanvas.offsetHeight - h - 4))}px`;
+        } else if (ovSection.nextElementSibling !== detail) ovSection.after(detail);
+        return;
+      }
+      // Lists: on narrow layouts show the panel right under the section that holds the node.
       if (!root.classList.contains('is-side')) {
         const track = els.get(n.p)!.closest('.sm-track')!;
         if (track.nextElementSibling !== detail) track.after(detail);
@@ -1070,6 +1466,13 @@ const plans = [
         if (n.p === selected) a.setAttribute('aria-current', 'true');
         else a.removeAttribute('aria-current');
         a.querySelector<HTMLElement>('.sm-node__here')!.hidden = progress.last !== n.p;
+        const o = oels.get(n.p);
+        if (o) {
+          o.className = a.className.replace('sm-node', 'sm-onode');
+          o.classList.toggle('is-here', progress.last === n.p);
+          if (n.p === selected) o.setAttribute('aria-current', 'true');
+          else o.removeAttribute('aria-current');
+        }
         if (!out) {
           total++;
           if (s === 'learned') nLearned++;
@@ -1120,6 +1523,17 @@ const plans = [
       root.querySelector<HTMLElement>('[data-sm-gaps]')!.innerHTML =
         shown.map((n) => chip(n, 'gap')).join('') + (gaps.length > shown.length ? `<span class="sm-chip sm-chip--more">+${gaps.length - shown.length} ${t.more}</span>` : '');
 
+      // Overview links: what the selected topic needs, what it unlocks, and the path behind it.
+      for (const e of oedges) {
+        const f = e.dataset.from!;
+        const to = e.dataset.to!;
+        e.classList.toggle('e-need', !!sel && to === sel.p);
+        e.classList.toggle('e-dep', !!sel && f === sel.p);
+        e.classList.toggle('e-anc', !!sel && to !== sel.p && anc.has(to) && anc.has(f));
+        e.classList.toggle('e-done', learned(f) && learned(to));
+        e.classList.toggle('e-out', !inPlan(byPath.get(f)!) || !inPlan(byPath.get(to)!));
+      }
+      root.querySelector<HTMLElement>('[data-sm-lout]')!.hidden = plan === 'all';
       renderDetail(st);
       requestAnimationFrame(drawWires);
     }
@@ -1181,7 +1595,12 @@ const plans = [
           /* ignore */
         }
       }
-      if (selected && opts.scroll) {
+      if (selected && opts.scroll && origin === 'ov') {
+        const o = oels.get(selected)!;
+        ovScroll.scrollTo({ left: Math.max(0, parseFloat(o.style.left) - ovScroll.clientWidth / 2), behavior: 'smooth' });
+        const r = ovSection.getBoundingClientRect();
+        if (r.top < 0 || r.top > innerHeight * 0.6) ovSection.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } else if (selected && opts.scroll) {
         const a = els.get(selected)!;
         const r = a.getBoundingClientRect();
         if (r.top < 80 || r.bottom > innerHeight - 40) a.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -1194,15 +1613,33 @@ const plans = [
 
     root.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
+      const onode = target.closest<HTMLAnchorElement>('.sm-onode');
+      if (onode && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+        e.preventDefault();
+        origin = 'ov';
+        select(onode.dataset.p === selected ? null : onode.dataset.p!, { scroll: false });
+        if (selected && detail.parentElement !== ovCanvas) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+      if (target.closest('[data-close]')) {
+        select(null);
+        return;
+      }
+      if (target.closest('[data-sm-full]')) {
+        toggleFull();
+        return;
+      }
       const node = target.closest<HTMLAnchorElement>('.sm-node');
       if (node && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
         e.preventDefault();
+        origin = 'list';
         select(node.dataset.p === selected ? null : node.dataset.p!, { scroll: false });
         if (!root.classList.contains('is-side') && selected) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         return;
       }
       const go = target.closest<HTMLElement>('[data-go]');
       if (go) {
+        origin = 'ov';
         select(go.dataset.go!, { scroll: true });
         return;
       }
@@ -1271,8 +1708,37 @@ const plans = [
         ioMsg.textContent = t.io.bad;
       }
     });
+    const fullBtn = root.querySelector<HTMLButtonElement>('[data-sm-full]')!;
+    // Full screen: the browser's own when allowed, else a fixed overlay above the page.
+    const setFull = (on: boolean) => {
+      ovSection.classList.toggle('is-full', on);
+      document.documentElement.classList.toggle('sm-noscroll', on && !document.fullscreenElement);
+      fullBtn.setAttribute('aria-pressed', String(on));
+      root.querySelector('[data-sm-full-label]')!.textContent = on ? fullBtn.dataset.off! : fullBtn.dataset.on!;
+      render();
+      fitOverview();
+    };
+    async function toggleFull(force?: boolean) {
+      const on = force ?? !ovSection.classList.contains('is-full');
+      if (on) {
+        try {
+          await ovSection.requestFullscreen();
+        } catch {
+          /* not allowed here (e.g. inside a frame): use the overlay */
+        }
+        setFull(true);
+      } else {
+        if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+        setFull(false);
+      }
+    }
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && ovSection.classList.contains('is-full')) setFull(false);
+    });
     root.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && selected) select(null);
+      if (e.key !== 'Escape') return;
+      if (selected) select(null);
+      else if (ovSection.classList.contains('is-full')) toggleFull(false);
     });
     const skins = [...root.querySelectorAll<HTMLInputElement>('input[name="sm-skin"]')];
     for (const r of skins) {
@@ -1298,6 +1764,14 @@ const plans = [
       });
     }
 
+    // Overview: shrink slightly to fit when it is only a little wider than its box; otherwise scroll.
+    const fitOverview = () => {
+      ovCanvas.style.zoom = '';
+      const f = ovScroll.clientWidth / ovCanvas.offsetWidth;
+      if (f < 1 && f >= 0.8) ovCanvas.style.zoom = String(Math.floor(f * 100) / 100);
+    };
+    new ResizeObserver(fitOverview).observe(ovScroll);
+
     // Layout mode: side panel when the map is wide enough.
     const setMode = () => {
       const side = root.clientWidth >= 880;
@@ -1313,13 +1787,13 @@ const plans = [
     // Initial selection: ?focus=path (or the older #focus=path), else where the reader is.
     const asked = new URLSearchParams(location.search).get('focus') ?? /#focus=([\w\-/]+\/)/.exec(location.hash)?.[1] ?? null;
     const m = asked && byPath.has(asked) ? asked : null;
-    // With nothing to go on, open the first suggested topic so the panel explains what to do.
-    const firstNext = data.nodes
-      .filter((n) => inPlan(n) && !learned(n.p) && n.needs.every(learned))
-      .sort((a, b) => a.ord - b.ord)[0]?.p;
-    const initial = m || progress.last || firstNext || null;
     root.classList.toggle('is-side', root.clientWidth >= 880);
-    select(initial, { hash: false, scroll: !!m });
+    // Open a topic only when the link asked for one; otherwise show the whole map, with
+    // "you are here" marked and the view scrolled to it.
+    origin = 'ov';
+    select(m, { hash: false, scroll: !!m });
+    const here = progress.last && oels.get(progress.last);
+    if (!m && here) ovScroll.scrollLeft = Math.max(0, parseFloat(here.style.left) - ovScroll.clientWidth / 2);
   }
 
   document.querySelectorAll<HTMLElement>('[data-sm]').forEach(init);

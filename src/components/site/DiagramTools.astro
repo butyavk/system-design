@@ -85,6 +85,14 @@
     applyZoom();
   }
 
+  // A diagram wider than the column scrolls sideways: flag it and make it reachable from the keyboard.
+  function syncScroll(wrap: HTMLElement, pre: HTMLElement) {
+    const on = pre.scrollWidth > pre.clientWidth + 4;
+    wrap.classList.toggle('is-scrollable', on);
+    if (on) pre.tabIndex = 0;
+    else pre.removeAttribute('tabindex');
+  }
+
   function enhance(pre: HTMLElement) {
     const svg = pre.querySelector<SVGSVGElement>(':scope > svg');
     if (!svg) return;
@@ -108,9 +116,9 @@
       more.addEventListener('click', () => openFull(pre));
       hint.append(`${T.hint} `, more);
       wrap.append(pre, btn, hint);
-      new ResizeObserver(() => wrap.classList.toggle('is-scrollable', pre.scrollWidth > pre.clientWidth + 4)).observe(pre);
+      new ResizeObserver(() => syncScroll(wrap, pre)).observe(pre);
     }
-    requestAnimationFrame(() => wrap.classList.toggle('is-scrollable', pre.scrollWidth > pre.clientWidth + 4));
+    requestAnimationFrame(() => syncScroll(wrap, pre));
   }
 
   function scan() {

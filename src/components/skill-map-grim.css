@@ -225,6 +225,10 @@
   background: var(--g-ember);
   box-shadow: 0 0 8px rgb(240 138 50 / 0.6);
 }
+.sm[data-skin='grim'] .sm-glyph.is-out {
+  --g: #6b5a45;
+  background: #4a3c2e;
+}
 .sm[data-skin='grim'] :is(.sm-glyph.is-gap, .is-gap > .sm-glyph) {
   --g: var(--g-blood);
   background: var(--g-blood);
@@ -377,11 +381,23 @@
   border-color: #6e2a22;
 }
 .sm[data-skin='grim'] .sm-node.is-out {
-  color: #7d705d;
+  color: #8f8068;
   border-color: #2a221b;
 }
-.sm[data-skin='grim'] .sm-node.is-out .sm-rune {
-  opacity: 0.5;
+/* Outside the chosen plan: the rune folds into a small dot, as on the overview. */
+.sm[data-skin='grim'] .sm-node.is-out:not(.is-sel) .sm-rune {
+  transform: scale(0.42);
+  border-color: #6b5a45;
+  background: #4a3c2e;
+  box-shadow: none;
+  animation: none;
+}
+.sm[data-skin='grim'] .sm-node.is-out.is-learned:not(.is-sel) .sm-rune {
+  border-color: var(--g-ember);
+  background: var(--g-ember);
+}
+.sm[data-skin='grim'] .sm-node.is-out:not(.is-sel) .sm-rune svg {
+  opacity: 0;
 }
 .sm[data-skin='grim'] .sm-node.is-need {
   border-color: var(--g-ember);
@@ -509,6 +525,109 @@
 .sm[data-skin='grim'] .sm-reset:focus-visible {
   border-color: var(--g-blood);
   color: var(--g-bone);
+}
+
+/* ---------- Overview tree ---------- */
+.sm[data-skin='grim'] .sm-ov {
+  border-color: #3a2e24;
+  border-radius: 2px;
+  background:
+    radial-gradient(80% 60% at 30% 40%, rgb(255 150 70 / 0.05), transparent 70%),
+    linear-gradient(180deg, rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.45));
+  background-size: auto;
+}
+.sm[data-skin='grim'] .sm-ov.is-full {
+  background-color: var(--g-abyss);
+}
+.sm[data-skin='grim'] .sm-ov__hint {
+  font-family: var(--g-serif);
+  font-size: 1.05rem;
+  font-style: italic;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-ov__full {
+  border-color: var(--g-iron);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #2a2119, #18120d);
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-ov__edges path {
+  stroke: #3d3229;
+  stroke-width: 1.6;
+}
+.sm[data-skin='grim'] .sm-ov__edges path.e-done {
+  stroke: #8a4a1c;
+}
+.sm[data-skin='grim'] .sm-ov__edges path.e-anc {
+  stroke: #a35a24;
+}
+.sm[data-skin='grim'] .sm-ov__edges path.e-need {
+  stroke: var(--g-ember);
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 4px rgb(240 138 50 / 0.9));
+}
+.sm[data-skin='grim'] .sm-ov__edges path.e-dep {
+  stroke: var(--g-arcane);
+  filter: drop-shadow(0 0 4px rgb(134 174 240 / 0.8));
+}
+.sm[data-skin='grim'] .sm-onode {
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-onode .sm-rune {
+  width: 36px;
+  height: 36px;
+}
+.sm[data-skin='grim'] .sm-onode__t {
+  background: transparent;
+  text-shadow: 0 0 4px #000, 0 0 2px #000, 0 0 8px #000;
+}
+.sm[data-skin='grim'] .sm-onode.is-locked,
+.sm[data-skin='grim'].has-sel .sm-onode:not(.is-sel, .is-need, .is-anc, .is-dep) {
+  color: #9a8b73;
+}
+.sm[data-skin='grim'] .sm-onode.is-out {
+  color: #8f8068;
+}
+.sm[data-skin='grim'] .sm-onode.is-out:not(.is-sel, :hover, :focus-visible) .sm-rune {
+  border-color: #6b5a45;
+  background: #4a3c2e;
+}
+.sm[data-skin='grim'] .sm-onode.is-out.is-learned:not(.is-sel, :hover, :focus-visible) .sm-rune {
+  border-color: var(--g-ember);
+  background: var(--g-ember);
+}
+.sm[data-skin='grim'] .sm-onode.is-need .sm-rune,
+.sm[data-skin='grim'] .sm-onode.is-anc .sm-rune {
+  box-shadow: 0 0 0 3px rgb(240 138 50 / 0.35), 0 0 14px rgb(240 138 50 / 0.5);
+}
+.sm[data-skin='grim'] .sm-onode.is-dep .sm-rune {
+  box-shadow: 0 0 0 3px rgb(134 174 240 / 0.3), 0 0 14px rgb(134 174 240 / 0.45);
+}
+.sm[data-skin='grim'] .sm-onode.is-sel .sm-rune {
+  box-shadow: 0 0 0 3px var(--g-abyss), 0 0 0 5px var(--g-gold), 0 0 22px rgb(217 181 106 / 0.5);
+}
+.sm[data-skin='grim'] .sm-onode.is-here .sm-rune::after {
+  border-color: var(--g-abyss);
+  background: var(--g-gold);
+  box-shadow: 0 0 8px rgb(217 181 106 / 0.8);
+}
+.sm[data-skin='grim'] .sm-onode:focus-visible .sm-rune {
+  outline-color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-ov__key {
+  border-top-color: #33291f;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-ov__key svg {
+  color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-listhead {
+  font-family: var(--g-serif);
+  font-variant-caps: small-caps;
+  color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-d__close {
+  color: var(--g-bone-dim);
 }
 
 @keyframes sm-ignite {

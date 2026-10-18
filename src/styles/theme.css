@@ -229,6 +229,10 @@
 .sl-markdown-content .sdp-diagram > pre.mermaid {
   margin: 0;
 }
+/* Until Mermaid draws it, the block holds the diagram source: don't let that scroll sideways. */
+.sl-markdown-content pre.mermaid:not([data-processed]) {
+  overflow: hidden;
+}
 .sl-markdown-content pre.mermaid > svg {
   min-width: calc(var(--sdp-natural, 0px) * 0.7);
   margin-inline: auto;
@@ -391,6 +395,14 @@ footer .sdp-attribution {
   border: solid var(--sl-color-bg);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+}
+/* Outside the chosen plan: the folded dot of the overview. */
+.sm-glyph.is-out {
+  --g: var(--sl-color-gray-4);
+  width: 0.45rem;
+  height: 0.45rem;
+  margin: 0.25rem;
+  background: var(--g);
 }
 .sm-glyph.is-gap,
 .is-gap > .sm-glyph {
