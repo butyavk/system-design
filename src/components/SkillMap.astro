@@ -39,7 +39,7 @@ const T = {
     nojs: 'Turn on JavaScript to see your progress and the connections between topics.',
     download: 'Download progress',
     load: 'Load progress',
-    skin: 'Look',
+    skin: 'Map look',
     classic: 'Classic',
     grim: 'Dark fantasy',
     nextGrim: 'Next quests',
@@ -70,7 +70,7 @@ const T = {
     nojs: 'Включите JavaScript, чтобы видеть прогресс и связи между темами.',
     download: 'Скачать прогресс',
     load: 'Загрузить прогресс',
-    skin: 'Вид',
+    skin: 'Вид карты',
     classic: 'Обычная',
     grim: 'Тёмное фэнтези',
     nextGrim: 'Следующие задания',
@@ -154,6 +154,20 @@ const plans = [
     ))}
   </svg>
 
+  <div class="sm-skinbar">
+    <span class="sm-skinbar__label" aria-hidden="true">{T.skin}</span>
+    <fieldset class="sm-plan sm-skin">
+      <legend class="sm-sr">{T.skin}</legend>
+      <label>
+        <input type="radio" name="sm-skin" value="classic" checked />
+        <span>{T.classic}</span>
+      </label>
+      <label>
+        <input type="radio" name="sm-skin" value="grim" />
+        <span>⚔ {T.grim}</span>
+      </label>
+    </fieldset>
+  </div>
   <section class="sm-top" aria-label={locale === 'ru' ? 'Ваш прогресс' : 'Your progress'}>
     <div class="sm-stat">
       <div class="sm-orb" aria-hidden="true"><span class="sm-orb__liquid"></span></div>
@@ -188,17 +202,6 @@ const plans = [
           <span>{label}</span>
         </label>
       ))}
-    </fieldset>
-    <fieldset class="sm-plan sm-skin">
-      <legend class="sm-sr">{T.skin}</legend>
-      <label>
-        <input type="radio" name="sm-skin" value="classic" checked />
-        <span>{T.classic}</span>
-      </label>
-      <label>
-        <input type="radio" name="sm-skin" value="grim" />
-        <span>{T.grim}</span>
-      </label>
     </fieldset>
     <ul class="sm-legend" aria-label={T.legend}>
       <li><span class="sm-glyph is-learned"></span>{T.lLearned}</li>
@@ -836,6 +839,21 @@ const plans = [
     font-size: var(--sl-text-xs);
     line-height: 1.5;
     color: var(--sl-color-gray-3);
+  }
+  .sm-skinbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .sm-skinbar__label {
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .sm[data-skin='grim'] .sm-skinbar__label {
+    color: var(--g-bone-dim);
   }
   .sm-io {
     display: flex;
