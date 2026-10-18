@@ -78,7 +78,24 @@
 npm install
 npm run dev        # http://localhost:4321/system-design/
 npm run build      # статический сайт в dist/
+npm run preview    # собранный сайт с поиском по тому же адресу
 ```
+
+### Правки текстов
+
+Тексты лежат в `src/content/docs/` (английский) и `src/content/docs/ru/` (русский).
+Перед правками прочитайте [CONTENT_GUIDE.md](CONTENT_GUIDE.md), после — запустите проверки:
+
+```bash
+npm run check:content     # синтаксис MDX, frontmatter, ссылки, пары страниц EN/RU
+npm run check:diagrams    # каждая диаграмма рендерится и не шире 800px (нужно: npx playwright install chromium)
+npm run build             # заодно проверяет граф карты навыков
+npm run check:links       # внутренние ссылки и якоря в dist/
+npm run flashcards        # пересобрать колоды Anki после правок src/data/flashcards.ts
+```
+
+Каждый push в `main` запускает те же проверки, затем собирает сайт и публикует его на GitHub Pages (`.github/workflows/deploy.yml`).
+Чтобы опубликовать свою копию, выберите **Settings → Pages → Source → GitHub Actions** и поменяйте `site`/`base` в `astro.config.mjs`.
 
 ### Занятия на локальной копии
 
@@ -97,19 +114,8 @@ npm run build      # статический сайт в dist/
 одним и тем же: если 4321 занят, сервер разработки возьмёт другой порт, а для браузера это
 другой сайт с пустым прогрессом.
 
-Тексты лежат в `src/content/docs/` (английский) и `src/content/docs/ru/` (русский).
-Перед правками прочитайте [CONTENT_GUIDE.md](CONTENT_GUIDE.md), после — запустите проверки:
-
-```bash
-npm run check:content     # синтаксис MDX, frontmatter, ссылки, пары страниц EN/RU
-npm run check:diagrams    # каждая диаграмма рендерится и не шире 800px (нужно: npx playwright install chromium)
-npm run build             # заодно проверяет граф карты навыков
-npm run check:links       # внутренние ссылки и якоря в dist/
-npm run flashcards        # пересобрать колоды Anki после правок src/data/flashcards.ts
-```
-
-Каждый push в `main` запускает те же проверки, затем собирает сайт и публикует его на GitHub Pages (`.github/workflows/deploy.yml`).
-Чтобы опубликовать свою копию, выберите **Settings → Pages → Source → GitHub Actions** и поменяйте `site`/`base` в `astro.config.mjs`.
+Поиск по сайту работает только в собранной копии: выполните `npm run build`, затем `npm run preview`.
+Она открывается по тому же адресу, поэтому прогресс у них общий.
 
 ## Авторы и лицензия
 

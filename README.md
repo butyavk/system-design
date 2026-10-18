@@ -76,7 +76,24 @@ copy that reloads as you edit.
 npm install
 npm run dev        # http://localhost:4321/system-design/
 npm run build      # static site in dist/
+npm run preview    # serve the built site, with search, at the same address
 ```
+
+### Editing the content
+
+Content lives in `src/content/docs/` (English) and `src/content/docs/ru/` (Russian).
+Read [CONTENT_GUIDE.md](CONTENT_GUIDE.md) before editing, then run the checks:
+
+```bash
+npm run check:content     # MDX syntax, frontmatter, links, EN/RU twins
+npm run check:diagrams    # every diagram renders and is at most 800px wide (needs: npx playwright install chromium)
+npm run build             # also validates the skill map graph
+npm run check:links       # internal links and anchors in dist/
+npm run flashcards        # re-export the Anki decks after editing src/data/flashcards.ts
+```
+
+Pushes to `main` run the same checks, then build and deploy to GitHub Pages (`.github/workflows/deploy.yml`).
+To publish your own copy, set **Settings → Pages → Source** to **GitHub Actions** and change `site`/`base` in `astro.config.mjs`.
 
 ### Studying from a local copy
 
@@ -96,19 +113,8 @@ with **Download progress** / **Load progress** on the skill map. Keep the port t
 4321 is busy, the dev server picks another port, and to the browser that is a different site
 with empty progress.
 
-Content lives in `src/content/docs/` (English) and `src/content/docs/ru/` (Russian).
-Read [CONTENT_GUIDE.md](CONTENT_GUIDE.md) before editing, then run the checks:
-
-```bash
-npm run check:content     # MDX syntax, frontmatter, links, EN/RU twins
-npm run check:diagrams    # every diagram renders and is at most 800px wide (needs: npx playwright install chromium)
-npm run build             # also validates the skill map graph
-npm run check:links       # internal links and anchors in dist/
-npm run flashcards        # re-export the Anki decks after editing src/data/flashcards.ts
-```
-
-Pushes to `main` run the same checks, then build and deploy to GitHub Pages (`.github/workflows/deploy.yml`).
-To publish your own copy, set **Settings → Pages → Source** to **GitHub Actions** and change `site`/`base` in `astro.config.mjs`.
+Site search works only in the built copy: run `npm run build`, then `npm run preview`. It opens at the
+same address, so it shares the same progress.
 
 ## Credits and license
 
