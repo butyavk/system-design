@@ -98,8 +98,8 @@ const C = {
     done: 'Everything in this plan is learned. Keep practising out loud.', more: 'more', here: 'You are here', none: 'none',
     cont: 'Continue reading', show: 'Show on the map', close: 'Close',
     route: {
-      h: 'Path here', left: 'Left to learn: {n}, about {time} of reading', done: 'Already learned: nothing left on this path.',
-      notIn: 'not in this plan', lessDay: 'under a day', note: 'Each plan’s duration spread over its topics by reading time.',
+      h: 'Path here', left: 'Left to learn: {n}, including this one. Careful reading: about {time}. Learning them with practice, at each plan’s pace:', done: 'Already learned: nothing left on this path.',
+      notIn: 'not in this plan', lessDay: 'under a day', note: 'A plan’s pace is its length (for example 3–6 weeks for the medium plan) spread over its topics by reading time.',
       topic: ['topic', 'topics'], day: ['day', 'days'], hr: 'h', mn: 'min',
     },
     io: { bad: 'This is not a progress file from this site.', replace: 'Replace the progress in this browser with the one from the file?', loaded: 'Progress loaded.', saved: 'Progress file saved.' },
@@ -113,8 +113,8 @@ const C = {
     done: 'Всё в этом плане изучено. Продолжайте тренироваться вслух.', more: 'ещё', here: 'Вы здесь', none: 'нет',
     cont: 'Продолжить чтение', show: 'Показать на карте', close: 'Закрыть',
     route: {
-      h: 'Путь сюда', left: 'Осталось изучить: {n}, около {time} чтения', done: 'Уже изучено: на этом пути ничего не осталось.',
-      notIn: 'не входит в план', lessDay: 'меньше дня', note: 'Срок плана, разложенный по его темам пропорционально времени чтения.',
+      h: 'Путь сюда', left: 'Осталось изучить: {n}, включая эту. Внимательное чтение — около {time}. Освоение с практикой, в темпе каждого плана:', done: 'Уже изучено: на этом пути ничего не осталось.',
+      notIn: 'не входит в план', lessDay: 'меньше дня', note: 'Темп плана — его срок (например, 3–6 недель у среднего), распределённый по темам пропорционально времени чтения.',
       topic: ['тема', 'темы', 'тем'], day: ['день', 'дня', 'дней'], hr: 'ч', mn: 'мин',
     },
     io: { bad: 'Это не файл прогресса с этого сайта.', replace: 'Заменить прогресс в этом браузере данными из файла?', loaded: 'Прогресс загружен.', saved: 'Файл с прогрессом сохранён.' },
@@ -1513,7 +1513,7 @@ const plans = timelines.map(({ id, name, duration }) => {
       if (!todo.length) return `<div class="sm-d__route">${h}<p class="sm-d__left">${esc(r.done)}</p></div>`;
       const minutes = todo.reduce((sum, x) => sum + x.min, 0);
       // Non-breaking spaces keep each number with its unit.
-      const time = minutes < 60 ? `${minutes}\u00a0${r.mn}` : `${Math.floor(minutes / 60)}\u00a0${r.hr}${minutes % 60 ? ` ${minutes % 60}\u00a0${r.mn}` : ''}`;
+      const time = minutes < 60 ? `${minutes}\u00a0${r.mn}` : `${Math.floor(minutes / 60)}\u00a0${r.hr}${minutes % 60 ? `\u00a0${minutes % 60}\u00a0${r.mn}` : ''}`;
       const left = r.left.replace('{n}', `${todo.length}\u00a0${plural(todo.length, r.topic)}`).replace('{time}', time);
       const days = (lo: number, hi: number) => {
         if (hi < 1) return r.lessDay;

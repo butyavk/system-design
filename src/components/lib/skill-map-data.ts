@@ -24,13 +24,21 @@ export interface MapNode {
 
 const cache = new Map<Locale, Promise<MapNode[]>>();
 
+// Time to read a page carefully, as you would to learn from it rather than skim it:
+// technical prose at about 150 words a minute (125 in Russian, whose words are longer),
+// code at about 15 lines a minute, and a minute for each diagram.
 function readingMinutes(body: string, locale: Locale): number {
-  const text = body
-    .replace(/^import .*$/gm, '')
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/<[^>]+>/g, ' ');
-  const words = text.split(/[\s ]+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
-  return Math.max(2, Math.round(words / (locale === 'ru' ? 180 : 220)));
+  const src = body.replace(/^import .*$/gm, '');
+  let codeLines = 0;
+  let diagrams = 0;
+  for (const m of src.matchAll(/```(\w*)[^\n]*\n([\s\S]*?)```/g)) {
+    if (m[1] === 'mermaid') diagrams++;
+    else codeLines += m[2].split('\n').filter((l) => l.trim()).length;
+  }
+  const text = src.replace(/```[\s\S]*?```/g, ' ').replace(/<[^>]+>/g, ' ');
+  const words = text.split(/[\s\u00a0]+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+  const minutes = words / (locale === 'ru' ? 125 : 150) + (codeLines * 4) / 60 + diagrams;
+  return Math.max(3, Math.round(minutes));
 }
 
 async function build(locale: Locale): Promise<MapNode[]> {
