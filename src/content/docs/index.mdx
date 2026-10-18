@@ -12,9 +12,6 @@ hero:
     - text: Skill map
       link: /system-design/start/skill-map/
       variant: secondary
-    - text: Latency numbers
-      link: /system-design/reference/latency-numbers/
-      variant: secondary
     - text: GitHub
       link: https://github.com/butyavk/system-design
       variant: minimal
@@ -23,10 +20,15 @@ hero:
 import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 import LatencyLadder from '~/components/LatencyLadder.astro';
 
-<LatencyLadder />
+This site takes [The System Design Primer](https://github.com/donnemartin/system-design-primer) by Donne Martin, one of the most popular open-source study guides on GitHub, and rebuilds it as a course you can study from page by page: 58 topics, 14 solved design problems and the numbers behind every estimate, in English and Russian.
 
-This site takes [The System Design Primer](https://github.com/donnemartin/system-design-primer) by Donne Martin, one of the most popular open-source study guides on GitHub, and rebuilds it as a course you can study from page by page.
+## Where to start
 
+<CardGrid>
+  <LinkCard title="Skill map" description="Every topic on one map: what each one needs first, what it leads to, what you have covered and what to read next." href="/start/skill-map/" />
+  <LinkCard title="Study plan" description="A checklist for the time you have: 1–2 weeks, 3–6 weeks or 2–3 months before the interview." href="/start/study-plan/" />
+  <LinkCard title="Interview framework" description="Seven steps and a time budget for answering any design question in 45 minutes." href="/start/interview-framework/" />
+</CardGrid>
 
 ## How to use this site
 
@@ -65,6 +67,12 @@ This site takes [The System Design Primer](https://github.com/donnemartin/system
   <LinkCard title="Real-world systems" description="Foundational papers, how large companies built their platforms, and blogs worth following." href="/real-world/foundational-papers/" />
   <LinkCard title="Numbers and reference" description="Latency numbers, powers of two and availability nines for quick estimates, plus flashcards with Anki export." href="/reference/latency-numbers/" />
 </CardGrid>
+
+## Numbers worth knowing
+
+Every estimate in a design interview leans on a few orders of magnitude. Here are nine of them on one scale, from a CPU cache to a request across the planet.
+
+<LatencyLadder />
 
 ## What's new compared to the original
 

@@ -1,0 +1,544 @@
+/*
+ * Skill map — "Dark fantasy" look.
+ * A charred-stone skill tree: sections are banners, topics are rune sockets that ignite when
+ * learned, prerequisites glow like embers, what a topic unlocks glows arcane blue, and the
+ * detail panel reads like an item tooltip. Applies only inside .sm[data-skin='grim'], always
+ * dark whatever the site theme; the classic look is untouched.
+ */
+
+.sm[data-skin='grim'] {
+  --g-abyss: #120e0b;
+  --g-stone: #1c1611;
+  --g-stone-hi: #2a2018;
+  --g-iron: #4d4136;
+  --g-iron-hi: #75644f;
+  --g-bone: #e6d8bb;
+  --g-bone-dim: #b3a284;
+  --g-gold: #d9b56a;
+  --g-gold-deep: #8f6b2c;
+  --g-ember: #f08a32;
+  --g-ember-hot: #ffc36e;
+  --g-blood: #e0574b;
+  --g-arcane: #86aef0;
+  --g-serif: 'Cormorant Variable', 'Cormorant', Georgia, 'Times New Roman', serif;
+
+  position: relative;
+  isolation: isolate;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  border: 1px solid #3a2e24;
+  border-radius: 0.35rem;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgb(255 170 90 / 0.07), transparent 60%),
+    radial-gradient(90% 70% at 50% 110%, rgb(120 20 10 / 0.18), transparent 70%),
+    var(--g-abyss);
+  box-shadow:
+    inset 0 0 0 4px var(--g-abyss),
+    inset 0 0 0 5px #5e4830,
+    inset 0 0 80px rgb(0 0 0 / 0.85),
+    0 24px 60px -30px rgb(0 0 0 / 0.9);
+  color: var(--g-bone);
+}
+
+/* Grain of the stone and gilded corners. */
+.sm[data-skin='grim']::before,
+.sm[data-skin='grim']::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+.sm[data-skin='grim']::before {
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.8 0 0 0 0 0.6 0 0 0 .09 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+.sm[data-skin='grim']::after {
+  --c: 30px;
+  inset: 9px;
+  border: 2px solid var(--g-gold);
+  opacity: 0.6;
+  -webkit-mask: conic-gradient(at var(--c) var(--c), #0000 75%, #000 0) 0 0 / calc(100% - var(--c)) calc(100% - var(--c));
+  mask: conic-gradient(at var(--c) var(--c), #0000 75%, #000 0) 0 0 / calc(100% - var(--c)) calc(100% - var(--c));
+}
+.sm[data-skin='grim'] > * {
+  position: relative;
+  z-index: 1;
+}
+.sm[data-skin='grim'] a {
+  color: var(--g-arcane);
+}
+
+/* ---------- Character sheet (summary) ---------- */
+.sm[data-skin='grim'] :is(.sm-stat, .sm-cell) {
+  border: 1px solid #3a2e24;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.025), rgb(0 0 0 / 0.25)), var(--g-stone);
+  box-shadow: inset 0 1px 0 rgb(255 220 160 / 0.06);
+}
+.sm[data-skin='grim'] .sm-k {
+  font-family: var(--g-serif);
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-variant-caps: small-caps;
+  color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-k__help {
+  font-family: var(--sl-font);
+  font-size: var(--sl-text-xs);
+  font-variant-caps: normal;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-here__title {
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-here__actions :is(a, button) {
+  color: var(--g-arcane);
+}
+
+/* The experience orb fills with embers as topics are learned. */
+.sm[data-skin='grim'] .sm-stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 0.85rem;
+}
+.sm[data-skin='grim'] .sm-orb {
+  grid-row: 1 / 3;
+  position: relative;
+  width: 4.4rem;
+  height: 4.4rem;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 3px solid #4b3824;
+  background: radial-gradient(circle at 50% 60%, #1c0d06, #070403 75%);
+  box-shadow:
+    0 0 0 1px #1a120b,
+    0 0 0 4px #2b2017,
+    inset 0 0 14px #000;
+}
+.sm[data-skin='grim'] .sm-orb__liquid {
+  position: absolute;
+  inset: auto 0 0;
+  height: calc(var(--sm-p, 0) * 100%);
+  min-height: 4%;
+  background:
+    radial-gradient(60% 18% at 50% 0%, rgb(255 230 170 / 0.75), transparent 70%),
+    linear-gradient(180deg, #ffb658 0%, #e0601e 45%, #8a250b 100%);
+  box-shadow: 0 0 18px rgb(240 138 50 / 0.6);
+  transition: height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sm[data-skin='grim'] .sm-orb::after {
+  content: '';
+  position: absolute;
+  inset: 8% 18% auto auto;
+  width: 34%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.35), transparent 70%);
+  transform: rotate(-25deg);
+}
+.sm[data-skin='grim'] .sm-stat__num {
+  align-self: end;
+  font-family: var(--g-serif);
+  font-size: 2.6rem;
+  font-weight: 700;
+  color: var(--g-ember-hot);
+  text-shadow: 0 0 14px rgb(240 138 50 / 0.45);
+}
+.sm[data-skin='grim'] .sm-stat__num span {
+  font-family: var(--g-serif);
+  font-size: 1.3rem;
+  color: var(--g-bone-dim);
+  text-shadow: none;
+}
+.sm[data-skin='grim'] .sm-stat__label {
+  align-self: start;
+  margin-top: 0.1rem !important;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-meter {
+  display: none;
+}
+
+.sm[data-skin='grim'] .sm-cell--gaps {
+  border-color: #6e2a22;
+  background: linear-gradient(180deg, rgb(140 30 20 / 0.22), rgb(40 8 5 / 0.35)), var(--g-stone);
+}
+.sm[data-skin='grim'] .sm-cell--gaps .sm-k {
+  color: #f08a7f;
+}
+
+/* Chips are small engraved plates. */
+.sm[data-skin='grim'] .sm-chip {
+  border: 1px solid var(--g-iron);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #2a2119, #18120d);
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-chip:hover,
+.sm[data-skin='grim'] .sm-chip:focus-visible {
+  border-color: var(--g-gold);
+  outline-color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-done {
+  color: var(--g-bone-dim);
+}
+
+/* ---------- Controls ---------- */
+.sm[data-skin='grim'] .sm-plan {
+  border-color: var(--g-iron);
+  border-radius: 3px;
+  background: rgb(0 0 0 / 0.3);
+}
+.sm[data-skin='grim'] .sm-plan span {
+  border-radius: 2px;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-plan input:checked + span {
+  background: linear-gradient(180deg, var(--g-gold), var(--g-gold-deep));
+  color: #1a120b;
+}
+.sm[data-skin='grim'] .sm-plan input:focus-visible + span {
+  outline-color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-legend {
+  color: var(--g-bone-dim);
+}
+
+/* Status marks (legend, chips, panel) take the ember / arcane / blood palette. */
+.sm[data-skin='grim'] .sm-glyph {
+  --g: var(--g-iron-hi);
+  background: var(--g-abyss);
+}
+.sm[data-skin='grim'] :is(.sm-glyph.is-ready, .is-ready > .sm-glyph) {
+  --g: var(--g-arcane);
+}
+.sm[data-skin='grim'] :is(.sm-glyph.is-opened, .is-opened > .sm-glyph) {
+  --g: var(--g-ember);
+  background: linear-gradient(90deg, var(--g-ember) 50%, var(--g-abyss) 50%);
+}
+.sm[data-skin='grim'] :is(.sm-glyph.is-learned, .is-learned > .sm-glyph) {
+  --g: var(--g-ember);
+  background: var(--g-ember);
+  box-shadow: 0 0 8px rgb(240 138 50 / 0.6);
+}
+.sm[data-skin='grim'] :is(.sm-glyph.is-gap, .is-gap > .sm-glyph) {
+  --g: var(--g-blood);
+  background: var(--g-blood);
+}
+.sm[data-skin='grim'] :is(.sm-glyph.is-learned, .is-learned > .sm-glyph, .sm-glyph.is-gap, .is-gap > .sm-glyph)::after {
+  border-color: var(--g-abyss);
+  color: var(--g-abyss);
+}
+
+/* ---------- Acts (stages) ---------- */
+.sm[data-skin='grim'] .sm-stage:not(:last-child)::after {
+  left: 1.15rem;
+  width: 2px;
+  background: linear-gradient(180deg, #5e4830, transparent);
+}
+.sm[data-skin='grim'] :is(.sm-stage__head, .sm-stage__out) {
+  background: transparent;
+  text-shadow: 0 0 6px #000, 0 0 2px #000;
+}
+.sm[data-skin='grim'] .sm-stage__n {
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 2px solid #6b5236;
+  background: radial-gradient(circle at 38% 30%, #3a2c1f, #140e0a 70%);
+  box-shadow: 0 0 0 3px #1a130e, inset 0 0 8px #000;
+  color: var(--g-gold);
+  font-family: var(--g-serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.sm[data-skin='grim'] .sm-stage.is-complete .sm-stage__n {
+  border-color: var(--g-ember);
+  background: radial-gradient(circle at 40% 32%, #ffc36e, #d3631f 55%, #4a1706 95%);
+  color: #2a0f04;
+  box-shadow: 0 0 0 3px #1a130e, 0 0 16px rgb(240 138 50 / 0.55);
+}
+.sm[data-skin='grim'] .sm .sm-stage__title,
+.sm[data-skin='grim'] .sm-stage__title {
+  font-family: var(--g-serif);
+  font-size: clamp(1.45rem, 1.1rem + 1vw, 1.9rem);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  font-variant-caps: small-caps;
+  color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-stage__count {
+  font-family: var(--g-serif);
+  font-size: 1.05rem;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-stage__out {
+  margin-inline-start: 3rem !important;
+  font-family: var(--g-serif);
+  font-size: 1.1rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-tracks {
+  margin-inline-start: 3rem;
+}
+
+/* ---------- Skill trees (sections) ---------- */
+.sm[data-skin='grim'] .sm-track {
+  padding: 0 0.7rem 0.8rem;
+  border: 1px solid #3a2e24;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.15), rgb(0 0 0 / 0.38));
+}
+.sm[data-skin='grim'] .sm .sm-track__title,
+.sm[data-skin='grim'] .sm-track__title {
+  margin: -1px -0.7rem 0.75rem !important;
+  padding: 0.45rem 1.1rem;
+  font-family: var(--g-serif);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-variant-caps: small-caps;
+  color: var(--g-gold);
+  background: linear-gradient(180deg, #4a1c14, #2a0f0a);
+  border-bottom: 1px solid #6b3a22;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 50%, 100% 100%, 0 100%, 9px 50%);
+}
+.sm[data-skin='grim'] .sm-track__count {
+  color: var(--g-bone-dim);
+}
+
+/* ---------- Topics: rune sockets ---------- */
+.sm[data-skin='grim'] .sm-node {
+  gap: 0.6rem;
+  padding: 0.3rem 0.55rem 0.3rem 0.3rem;
+  border: 1px solid #33291f;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #211a14, #16110d);
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-node:hover {
+  border-color: var(--g-iron-hi);
+}
+.sm[data-skin='grim'] .sm-node:focus-visible {
+  outline-color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-node > .sm-glyph {
+  display: none;
+}
+.sm[data-skin='grim'] .sm-rune {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 2px solid var(--g-iron);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #2b231c, #0d0a07 72%);
+  box-shadow: inset 0 0 7px #000, 0 0 0 1px #0d0a07;
+  color: var(--g-iron-hi);
+}
+.sm[data-skin='grim'] .sm-rune svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.sm[data-skin='grim'] .sm-node.is-locked {
+  color: #998a72;
+}
+.sm[data-skin='grim'] .is-ready .sm-rune {
+  border-color: var(--g-arcane);
+  color: #d6e4ff;
+  box-shadow: inset 0 0 7px #000, 0 0 9px rgb(134 174 240 / 0.4);
+}
+.sm[data-skin='grim'] .is-opened .sm-rune {
+  border-color: #c06e2c;
+  color: #f4b680;
+  background: radial-gradient(circle at 50% 70%, #6a3414, #1a0e07 70%);
+}
+.sm[data-skin='grim'] .is-learned .sm-rune {
+  border-color: var(--g-ember-hot);
+  color: #2a0f04;
+  background: radial-gradient(circle at 50% 38%, #ffd38a, #ee7a26 50%, #6d220a 95%);
+  box-shadow: 0 0 12px rgb(240 138 50 / 0.65), inset 0 0 4px rgb(80 20 0 / 0.6);
+  animation: sm-ignite 0.7s ease-out both;
+}
+.sm[data-skin='grim'] .is-gap .sm-rune {
+  border-color: var(--g-blood);
+  color: #ffc2bb;
+  background: radial-gradient(circle at 50% 40%, #5a1610, #160604 75%);
+  box-shadow: inset 0 0 7px #000, 0 0 10px rgb(224 87 75 / 0.5);
+}
+.sm[data-skin='grim'] .sm-node.is-gap {
+  border-color: #6e2a22;
+}
+.sm[data-skin='grim'] .sm-node.is-out {
+  color: #7d705d;
+  border-color: #2a221b;
+}
+.sm[data-skin='grim'] .sm-node.is-out .sm-rune {
+  opacity: 0.5;
+}
+.sm[data-skin='grim'] .sm-node.is-need {
+  border-color: var(--g-ember);
+}
+.sm[data-skin='grim'] .sm-node.is-anc:not(.is-need) {
+  border-color: #7a4a22;
+  border-style: dashed;
+}
+.sm[data-skin='grim'] .sm-node.is-dep {
+  border-color: var(--g-arcane);
+}
+.sm[data-skin='grim'] .sm-node.is-sel {
+  border-color: var(--g-gold);
+  background: linear-gradient(180deg, #33271b, #1e1711);
+  box-shadow: 0 0 0 1px var(--g-gold), 0 0 22px rgb(217 181 106 / 0.25);
+}
+.sm[data-skin='grim'].has-sel .sm-node:not(.is-sel, .is-need, .is-anc, .is-dep) {
+  border-color: #2a221b;
+  color: #8f8169;
+}
+.sm[data-skin='grim'] .sm-node__here {
+  background: linear-gradient(180deg, var(--g-gold), var(--g-gold-deep));
+  color: #1a120b;
+  border-radius: 2px;
+}
+
+/* ---------- Links between topics ---------- */
+.sm[data-skin='grim'] .sm-wires .w-need {
+  stroke: var(--g-ember);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 3px rgb(240 138 50 / 0.9));
+}
+.sm[data-skin='grim'] .sm-wires .w-dep {
+  stroke: var(--g-arcane);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  filter: drop-shadow(0 0 3px rgb(134 174 240 / 0.85));
+}
+.sm[data-skin='grim'] #sm-arrow-need path {
+  fill: var(--g-ember);
+}
+.sm[data-skin='grim'] #sm-arrow-dep path {
+  fill: var(--g-arcane);
+}
+
+/* ---------- Detail panel: an item tooltip ---------- */
+.sm[data-skin='grim'] .sm-detail {
+  border: 1px solid #6b5236;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1d1712, #110d0a);
+  box-shadow:
+    inset 0 0 0 3px #110d0a,
+    inset 0 0 0 4px #3a2e24,
+    0 24px 50px -24px #000;
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-d__crumb {
+  text-align: center;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-d__title {
+  text-align: center;
+  font-family: var(--g-serif);
+  font-size: 1.65rem;
+  font-weight: 700;
+  font-variant-caps: small-caps;
+  color: var(--g-gold);
+  text-shadow: 0 0 12px rgb(217 181 106 / 0.25);
+}
+.sm[data-skin='grim'] .sm-d__desc {
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-d__meta,
+.sm[data-skin='grim'] :is(.sm-d__none, .sm-d__path) {
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-d__status {
+  border: 1px solid #33291f;
+  border-radius: 2px;
+  background: rgb(0 0 0 / 0.35);
+}
+.sm[data-skin='grim'] .sm-d__h {
+  font-family: var(--g-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-variant-caps: small-caps;
+}
+.sm[data-skin='grim'] .sm-d__h--need {
+  color: var(--g-ember);
+}
+.sm[data-skin='grim'] .sm-d__h--dep {
+  color: var(--g-arcane);
+}
+.sm[data-skin='grim'] .sm-btn {
+  border: 1px solid #b38a45;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--g-gold), var(--g-gold-deep));
+  color: #1a120b;
+}
+.sm[data-skin='grim'] .sm-btn--ghost {
+  border-color: var(--g-iron-hi);
+  background: linear-gradient(180deg, #2c241c, #1a140f);
+  color: var(--g-bone);
+}
+.sm[data-skin='grim'] .sm-btn--ghost[aria-pressed='true'] {
+  border-color: var(--g-ember);
+  color: var(--g-ember-hot);
+}
+
+/* ---------- Footer ---------- */
+.sm[data-skin='grim'] .sm-foot {
+  border-top-color: #33291f;
+}
+.sm[data-skin='grim'] .sm-saved {
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-reset {
+  border-color: var(--g-iron);
+  border-radius: 2px;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-reset:hover,
+.sm[data-skin='grim'] .sm-reset:focus-visible {
+  border-color: var(--g-blood);
+  color: var(--g-bone);
+}
+
+@keyframes sm-ignite {
+  0% {
+    box-shadow: 0 0 0 rgb(240 138 50 / 0);
+    filter: brightness(0.6);
+  }
+  45% {
+    box-shadow: 0 0 22px rgb(255 195 110 / 0.95);
+    filter: brightness(1.35);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+@container (max-width: 44rem) {
+  .sm[data-skin='grim'] :is(.sm-tracks, .sm-stage__out) {
+    margin-inline-start: 0 !important;
+  }
+  .sm[data-skin='grim'] .sm-stat {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sm[data-skin='grim'] .is-learned .sm-rune {
+    animation: none;
+  }
+  .sm[data-skin='grim'] .sm-orb__liquid {
+    transition: none;
+  }
+}

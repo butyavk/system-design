@@ -23,6 +23,13 @@ rewritten and updated for 2026, and the whole thing is available in English and 
 | Case studies | 8 system design + 6 OOD | Same problems, recomputed estimates, fixed code (Python 3.12), "what's different in 2026" sections |
 | Links | Many dead | Every external link checked; dead ones replaced or removed |
 
+## Using the site
+
+Nothing to install: open https://butyavk.github.io/system-design/ in any browser. Progress on the
+[skill map](https://butyavk.github.io/system-design/start/skill-map/), in the study plan and in the
+flashcards is kept in your browser only (no account, nothing is sent anywhere); the map can
+download it to a file and load it on another device. Clone the repository only to edit the content.
+
 ## Sections
 
 1. **Start here** — introduction, study plan, skill map, interview framework, back-of-the-envelope estimation

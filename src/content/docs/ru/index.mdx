@@ -12,9 +12,6 @@ hero:
     - text: Карта навыков
       link: /system-design/ru/start/skill-map/
       variant: secondary
-    - text: Цифры задержек
-      link: /system-design/ru/reference/latency-numbers/
-      variant: secondary
     - text: GitHub
       link: https://github.com/butyavk/system-design
       variant: minimal
@@ -23,9 +20,15 @@ hero:
 import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 import LatencyLadder from '~/components/LatencyLadder.astro';
 
-<LatencyLadder />
+Этот сайт берёт за основу [The System Design Primer](https://github.com/donnemartin/system-design-primer) Донна Мартина — одно из самых популярных открытых пособий на GitHub — и превращает его в курс, который удобно проходить страница за страницей: 58 тем, 14 разобранных задач на проектирование и цифры, на которых держится любая прикидка, — на русском и английском.
 
-Этот сайт берёт за основу [The System Design Primer](https://github.com/donnemartin/system-design-primer) Донна Мартина — одно из самых популярных открытых пособий на GitHub — и превращает его в курс, который удобно проходить страница за страницей.
+## С чего начать
+
+<CardGrid>
+  <LinkCard title="Карта навыков" description="Все темы на одной карте: что нужно знать до каждой, к чему она ведёт, что уже пройдено и что читать дальше." href="/start/skill-map/" />
+  <LinkCard title="План подготовки" description="Чек-лист под ваш срок: 1–2 недели, 3–6 недель или 2–3 месяца до собеседования." href="/start/study-plan/" />
+  <LinkCard title="Схема собеседования" description="Семь шагов и бюджет времени, чтобы ответить на любую задачу по дизайну за 45 минут." href="/start/interview-framework/" />
+</CardGrid>
 
 
 ## Как пользоваться сайтом
@@ -65,6 +68,12 @@ import LatencyLadder from '~/components/LatencyLadder.astro';
   <LinkCard title="Реальные системы" description="Основополагающие статьи, архитектуры крупных компаний и инженерные блоги, за которыми стоит следить." href="/real-world/foundational-papers/" />
   <LinkCard title="Цифры и справочник" description="Задержки, степени двойки и «девятки» доступности для быстрых прикидок, а также карточки с экспортом в Anki." href="/reference/latency-numbers/" />
 </CardGrid>
+
+## Цифры, которые стоит знать
+
+Любая прикидка на собеседовании опирается на несколько порядков величин. Вот девять из них на одной шкале — от кэша процессора до запроса на другой конец планеты.
+
+<LatencyLadder />
 
 ## Что нового по сравнению с оригиналом
 

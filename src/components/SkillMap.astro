@@ -6,6 +6,8 @@
 import { stages, tracks } from '~/data/skill-map';
 import { mapNodes, pageHref } from './lib/skill-map-data';
 import type { Locale } from './lib/format';
+import '@fontsource-variable/cormorant';
+import './skill-map-grim.css';
 
 const locale: Locale = Astro.locals.starlightRoute?.locale === 'ru' ? 'ru' : 'en';
 const nodes = await mapNodes(locale);
@@ -35,6 +37,13 @@ const T = {
     lGap: 'skipped',
     saved: 'Progress is saved in this browser only and shared with the study plan. Pages you open are marked “opened”; mark a topic as learned at the end of its page or here.',
     nojs: 'Turn on JavaScript to see your progress and the connections between topics.',
+    download: 'Download progress',
+    load: 'Load progress',
+    skin: 'Look',
+    classic: 'Classic',
+    grim: 'Dark fantasy',
+    nextGrim: 'Next quests',
+    levelGrim: 'level',
   },
   ru: {
     learned: 'тем изучено',
@@ -59,6 +68,13 @@ const T = {
     lGap: 'пропущено',
     saved: 'Прогресс хранится только в этом браузере и общий с планом подготовки. Открытые страницы отмечаются как «открыто»; отметить тему изученной можно в конце её страницы или здесь.',
     nojs: 'Включите JavaScript, чтобы видеть прогресс и связи между темами.',
+    download: 'Скачать прогресс',
+    load: 'Загрузить прогресс',
+    skin: 'Вид',
+    classic: 'Обычная',
+    grim: 'Тёмное фэнтези',
+    nextGrim: 'Следующие задания',
+    levelGrim: 'уровень',
   },
 }[locale];
 
@@ -71,6 +87,8 @@ const C = {
     st: { learned: 'Learned', opened: 'Opened, not marked as learned', ready: 'Ready: every prerequisite is learned', locked: 'Prerequisites not learned yet', gap: 'Skipped: a topic you learned builds on it' },
     done: 'Everything in this plan is learned. Keep practising out loud.', more: 'more', here: 'You are here', none: 'none',
     cont: 'Continue reading', show: 'Show on the map',
+    io: { bad: 'This is not a progress file from this site.', replace: 'Replace the progress in this browser with the one from the file?', loaded: 'Progress loaded.', saved: 'Progress file saved.' },
+    grim: { before: 'Requires', leads: 'Unlocks', mark: 'Learn this skill', unmark: 'Learned — undo', open: 'Open the page' },
   },
   ru: {
     of: 'из', min: 'мин чтения', core: 'Во всех планах', medium: 'Средний и длинный планы', long: 'Только длинный план', noPlan: 'Не шаг плана',
@@ -79,6 +97,8 @@ const C = {
     st: { learned: 'Изучено', opened: 'Открыто, но не отмечено изученным', ready: 'Можно начинать: все нужные темы изучены', locked: 'Нужные темы ещё не изучены', gap: 'Пропущено: на эту тему опирается уже изученная' },
     done: 'Всё в этом плане изучено. Продолжайте тренироваться вслух.', more: 'ещё', here: 'Вы здесь', none: 'нет',
     cont: 'Продолжить чтение', show: 'Показать на карте',
+    io: { bad: 'Это не файл прогресса с этого сайта.', replace: 'Заменить прогресс в этом браузере данными из файла?', loaded: 'Прогресс загружен.', saved: 'Файл с прогрессом сохранён.' },
+    grim: { before: 'Требует', leads: 'Открывает', mark: 'Изучить навык', unmark: 'Изучено — отменить', open: 'Открыть страницу' },
   },
 }[locale];
 
@@ -91,6 +111,23 @@ const clientData = {
   stageOfTrack,
   t: C,
 };
+const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+// One sigil per section for the dark-fantasy look (24×24, stroked).
+const sigils: Record<string, string> = {
+  start: 'M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7M7 4a2 2 0 0 0-2 2v1h4V6a2 2 0 0 0-2-2zM7 20a2 2 0 0 1-2-2v-1h4v1a2 2 0 0 1-2 2zM10 9h6M10 13h6',
+  reference: 'M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9',
+  fundamentals: 'M12 4v16M8 20h8M5 7h14M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z',
+  traffic: 'M12 3v18M5 5h11l3 2.5-3 2.5H5zM19 12H8l-3 2.5L8 17h11z',
+  data: 'M5 6c0 1.7 3.1 3 7 3s7-1.3 7-3-3.1-3-7-3-7 1.3-7 3zM5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3',
+  caching: 'M13 2 4 14h7l-1 8 9-12h-7z',
+  async: 'M10 14a4 4 0 0 1 0-5.7l3-3a4 4 0 0 1 5.7 5.7l-1.5 1.5M14 10a4 4 0 0 1 0 5.7l-3 3a4 4 0 0 1-5.7-5.7l1.5-1.5',
+  communication: 'M3 10v4h3l7 5V5L6 10zM16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12',
+  architecture: 'M5 21V8l2-1V4h2v2h2V4h2v2h2V4h2v3l2 1v13zM10 21v-4a2 2 0 0 1 4 0v4',
+  reliability: 'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4',
+  practice: 'M4 3l9.5 9.5M20 3l-9.5 9.5M8 15l-3.5 3.5M16 15l3.5 3.5M6.5 13.5l4 4M17.5 13.5l-4 4M3 21l1.5-2.5M21 21l-1.5-2.5',
+  ood: 'M12 3 4 7v10l8 4 8-4V7zM4 7l8 4 8-4M12 11v10',
+  'real-world': 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6',
+};
 const plans = [
   ['all', T.all],
   ['short', T.short],
@@ -99,13 +136,29 @@ const plans = [
 ] as const;
 ---
 
-<div class="sm not-content" data-sm>
+<div class="sm not-content" data-sm data-skin="classic">
+  <script is:inline>
+    // Apply the saved look before first paint, so the map does not flash.
+    (function (root) {
+      try {
+        var q = new URLSearchParams(location.search).get('skin');
+        var v = q === 'grim' || q === 'classic' ? q : localStorage.getItem('sdp-map-skin');
+        if (v === 'grim') root.dataset.skin = 'grim';
+      } catch (e) {}
+    })(document.currentScript.parentElement);
+  </script>
   <script type="application/json" data-sm-json set:html={JSON.stringify(clientData)} />
+  <svg class="sm-sprite" aria-hidden="true" focusable="false" width="0" height="0">
+    {Object.entries(sigils).map(([id, d]) => (
+      <symbol id={`sm-sigil-${id}`} viewBox="0 0 24 24"><path d={d} fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></symbol>
+    ))}
+  </svg>
 
   <section class="sm-top" aria-label={locale === 'ru' ? 'Ваш прогресс' : 'Your progress'}>
     <div class="sm-stat">
+      <div class="sm-orb" aria-hidden="true"><span class="sm-orb__liquid"></span></div>
       <p class="sm-stat__num"><b data-sm-learned>0</b> <span>/ <span data-sm-total>{nodes.length}</span></span></p>
-      <p class="sm-stat__label">{T.learned}</p>
+      <p class="sm-stat__label"><span class="sm-c">{T.learned}</span><span class="sm-g">{T.levelGrim} · {T.learned}</span></p>
       <div class="sm-meter" aria-hidden="true"><span class="sm-meter__l" data-sm-ml></span><span class="sm-meter__o" data-sm-mo></span></div>
     </div>
     <div class="sm-cell">
@@ -115,7 +168,7 @@ const plans = [
       </div>
     </div>
     <div class="sm-cell">
-      <p class="sm-k">{T.next}</p>
+      <p class="sm-k"><span class="sm-c">{T.next}</span><span class="sm-g">{T.nextGrim}</span></p>
       <div class="sm-chips" data-sm-next>
         <a class="sm-chip" href={href('start/introduction/')}>{nodes[0].t}</a>
       </div>
@@ -135,6 +188,17 @@ const plans = [
           <span>{label}</span>
         </label>
       ))}
+    </fieldset>
+    <fieldset class="sm-plan sm-skin">
+      <legend class="sm-sr">{T.skin}</legend>
+      <label>
+        <input type="radio" name="sm-skin" value="classic" checked />
+        <span>{T.classic}</span>
+      </label>
+      <label>
+        <input type="radio" name="sm-skin" value="grim" />
+        <span>{T.grim}</span>
+      </label>
     </fieldset>
     <ul class="sm-legend" aria-label={T.legend}>
       <li><span class="sm-glyph is-learned"></span>{T.lLearned}</li>
@@ -158,7 +222,7 @@ const plans = [
       {stages.map((st, si) => (
         <li class="sm-stage" data-stage={si}>
           <header class="sm-stage__head">
-            <span class="sm-stage__n" aria-hidden="true">{si + 1}</span>
+            <span class="sm-stage__n" aria-hidden="true"><span class="sm-c">{si + 1}</span><span class="sm-g">{roman[si]}</span></span>
             <h2 class="sm-stage__title">{st.title[locale]}</h2>
             <span class="sm-stage__count" data-sm-stage-count></span>
           </header>
@@ -177,6 +241,7 @@ const plans = [
                       <li>
                         <a class="sm-node" href={href(n.p)} data-p={n.p} title={n.title !== n.t ? n.title : undefined}>
                           <span class="sm-glyph" aria-hidden="true"></span>
+                          <span class="sm-rune" aria-hidden="true"><svg><use href={`#sm-sigil-${n.tr}`} /></svg></span>
                           <span class="sm-node__t">{n.t}</span>
                           <span class="sm-node__here" hidden>{C.here}</span>
                         </a>
@@ -194,13 +259,31 @@ const plans = [
 
   <div class="sm-foot">
     <p class="sm-saved">{T.saved}</p>
-    <button type="button" class="sm-reset" data-sm-reset data-confirm={T.confirm}>{T.reset}</button>
+    <div class="sm-io">
+      <button type="button" class="sm-reset" data-sm-export>{T.download}</button>
+      <button type="button" class="sm-reset" data-sm-import>{T.load}</button>
+      <input type="file" accept="application/json,.json" data-sm-file hidden />
+      <button type="button" class="sm-reset" data-sm-reset data-confirm={T.confirm}>{T.reset}</button>
+      <p class="sm-io__msg" data-sm-io-msg aria-live="polite"></p>
+    </div>
   </div>
 </div>
 
 <style is:global>
   :root:has(.sm) {
     --sl-content-width: 74rem;
+  }
+  .sm-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+  .sm:not([data-skin='grim']) :is(.sm-g, .sm-rune, .sm-orb) {
+    display: none;
+  }
+  .sm[data-skin='grim'] .sm-c {
+    display: none;
   }
   .sm {
     --sm-gap: 1rem;
@@ -754,6 +837,19 @@ const plans = [
     line-height: 1.5;
     color: var(--sl-color-gray-3);
   }
+  .sm-io {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .sm-io__msg {
+    flex-basis: 100%;
+    min-height: 1.2em;
+    font-size: var(--sl-text-xs);
+    text-align: end;
+    color: var(--sl-color-gray-3);
+  }
   .sm-reset {
     padding: 0.3rem 0.75rem;
     border: 1px solid var(--sl-color-gray-5);
@@ -810,7 +906,11 @@ const plans = [
 </style>
 
 <script>
-  import { loadProgress, onProgressChange, saveProgress, setLearned, type Progress } from './lib/progress';
+  import { loadProgress, onProgressChange, saveProgress, setLearned, PROGRESS_KEY, type Progress } from './lib/progress';
+
+  // Everything a reader may want to carry to another browser: map and plan progress,
+  // flashcard boxes and the chosen views.
+  const PORTABLE = [PROGRESS_KEY, 'sdp-study-plan', 'sdp-map-plan', 'sdp-map-skin', 'sdp-flashcards-en', 'sdp-flashcards-ru'];
 
   type N = { p: string; t: string; title: string; d: string; tr: string; needs: string[]; deps: string[]; plans: string[]; ord: number; min: number; h: string };
   type Data = { nodes: N[]; tracks: Record<string, string>; stages: string[]; stageOfTrack: Record<string, number>; t: any };
@@ -892,7 +992,11 @@ const plans = [
       return t.long;
     }
 
+    // Labels for the detail panel: the dark-fantasy look renames a few of them.
+    const L = () => (root.dataset.skin === 'grim' ? { ...t, ...t.grim } : t);
+
     function renderDetail(st: Map<string, Status>) {
+      const t = L();
       if (!selected) {
         detail.hidden = true;
         return;
@@ -969,6 +1073,7 @@ const plans = [
       root.querySelector('[data-sm-learned]')!.textContent = String(nLearned);
       root.querySelector('[data-sm-total]')!.textContent = String(total);
       root.querySelector<HTMLElement>('[data-sm-ml]')!.style.width = `${total ? (nLearned / total) * 100 : 0}%`;
+      root.style.setProperty('--sm-p', String(total ? nLearned / total : 0));
       root.querySelector<HTMLElement>('[data-sm-mo]')!.style.width = `${total ? (nOpened / total) * 100 : 0}%`;
 
       // You are here.
@@ -1087,15 +1192,84 @@ const plans = [
         setLearned(selected, !learned(selected));
         return;
       }
+      if (target.closest('[data-sm-export]')) {
+        const dump: Record<string, unknown> = {};
+        for (const k of PORTABLE) {
+          try {
+            const v = localStorage.getItem(k);
+            if (v !== null) dump[k] = JSON.parse(v);
+          } catch {
+            /* skip unreadable keys */
+          }
+        }
+        dump[PROGRESS_KEY] = loadProgress();
+        const file = { app: 'system-design-primer', v: 1, exported: new Date().toISOString(), data: dump };
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(file, null, 1)], { type: 'application/json' }));
+        a.download = `system-design-progress-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        ioMsg.textContent = t.io.saved;
+        return;
+      }
+      if (target.closest('[data-sm-import]')) {
+        fileInput.click();
+        return;
+      }
       if (target.closest('[data-sm-reset]')) {
         const msg = (target.closest('[data-sm-reset]') as HTMLElement).dataset.confirm!;
         if (!window.confirm(msg)) return;
         saveProgress({ v: 1, learned: {}, visited: {}, activities: {}, migrated: true });
       }
     });
+    const fileInput = root.querySelector<HTMLInputElement>('[data-sm-file]')!;
+    const ioMsg = root.querySelector<HTMLElement>('[data-sm-io-msg]')!;
+    fileInput.addEventListener('change', async () => {
+      const f = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!f) return;
+      try {
+        const file = JSON.parse(await f.text());
+        const data = file?.data;
+        const prog = data?.[PROGRESS_KEY];
+        if (file?.app !== 'system-design-primer' || !prog || prog.v !== 1 || typeof prog.learned !== 'object') throw new Error('bad');
+        if (!window.confirm(t.io.replace)) return;
+        for (const k of PORTABLE) {
+          if (k === PROGRESS_KEY || !(k in data)) continue;
+          try {
+            localStorage.setItem(k, JSON.stringify(data[k]));
+          } catch {
+            /* storage unavailable */
+          }
+        }
+        if (data['sdp-map-skin'] === 'grim' || data['sdp-map-skin'] === 'classic') root.dataset.skin = data['sdp-map-skin'];
+        if (typeof data['sdp-map-plan'] === 'string' && radios.some((r) => r.value === data['sdp-map-plan'])) plan = data['sdp-map-plan'];
+        for (const r of [...radios, ...root.querySelectorAll<HTMLInputElement>('input[name="sm-skin"]')]) r.checked = r.value === plan || r.value === root.dataset.skin;
+        saveProgress({ v: 1, learned: prog.learned ?? {}, visited: prog.visited ?? {}, activities: prog.activities ?? {}, last: prog.last, migrated: true });
+        ioMsg.textContent = t.io.loaded;
+      } catch {
+        ioMsg.textContent = t.io.bad;
+      }
+    });
     root.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && selected) select(null);
     });
+    const skins = [...root.querySelectorAll<HTMLInputElement>('input[name="sm-skin"]')];
+    for (const r of skins) {
+      r.checked = r.value === (root.dataset.skin || 'classic');
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        root.dataset.skin = r.value;
+        try {
+          localStorage.setItem('sdp-map-skin', r.value);
+        } catch {
+          /* storage unavailable */
+        }
+        render();
+      });
+    }
     for (const r of radios) {
       r.checked = r.value === plan;
       r.addEventListener('change', () => {
