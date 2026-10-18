@@ -4,6 +4,7 @@
 // read next. Selecting a node draws its prerequisites and what it unlocks.
 // Server-rendered as plain links (works without JS); the script adds state and wiring.
 import { stages, tracks } from '~/data/skill-map';
+import { timelines } from '~/data/study-plan';
 import { mapNodes, pageHref } from './lib/skill-map-data';
 import { overviewLayout } from './lib/skill-map-layout';
 import type { Locale } from './lib/format';
@@ -24,9 +25,7 @@ const T = {
     gaps: 'Skipped',
     gapsHelp: 'Prerequisites of topics you have learned',
     plan: 'Show',
-    short: 'Short plan',
-    medium: 'Medium plan',
-    long: 'Long plan',
+    planWord: 'plan',
     reset: 'Reset progress',
     confirm: 'Clear all progress on the map and in the study plan?',
     legend: 'Legend',
@@ -61,9 +60,7 @@ const T = {
     gaps: 'Пропущено',
     gapsHelp: 'Темы, на которые опираются уже изученные',
     plan: 'Показать',
-    short: 'Короткий план',
-    medium: 'Средний план',
-    long: 'Длинный план',
+    planWord: 'план',
     reset: 'Сбросить прогресс',
     confirm: 'Удалить весь прогресс на карте и в плане подготовки?',
     legend: 'Обозначения',
@@ -147,9 +144,11 @@ const sigils: Record<string, string> = {
 // many topics it holds (topics that are not plan steps count in every plan).
 const topicsWord = (n: number) =>
   locale === 'ru' ? (n % 10 === 1 && n % 100 !== 11 ? 'тема' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'темы' : 'тем') : n === 1 ? 'topic' : 'topics';
-const plans = (['short', 'medium', 'long'] as const).map((id) => {
+// Names and durations come from the study plan, so both pages describe a plan the same way.
+const plans = timelines.map(({ id, name, duration }) => {
   const count = nodes.filter((n) => !n.plans.length || n.plans.includes(id)).length;
-  return { id, label: T[id], count, aria: `${T[id]}: ${count} ${topicsWord(count)}` };
+  const topics = `${count} ${topicsWord(count)}`;
+  return { id, name: name[locale], duration: duration[locale], topics, aria: `${name[locale]} ${T.planWord}: ${duration[locale]}, ${topics}` };
 });
 ---
 
@@ -211,13 +210,21 @@ const plans = (['short', 'medium', 'long'] as const).map((id) => {
   </section>
 
   <div class="sm-bar">
-    <fieldset class="sm-plan">
+    <fieldset class="sm-plan sm-plan--time">
       <legend class="sm-sr">{T.plan}</legend>
-      {plans.map(({ id, label, count, aria }) => (
+      {plans.map(({ id, name, duration, topics, aria }) => (
         <label>
           <input type="radio" name="sm-plan" value={id} checked={id === 'long'} aria-label={aria} />
           <span>
-            {label} <b class="sm-plan__n">{count}</b>
+            <span class="sm-plan__name">
+              {name}
+              <span class="sm-plan__word"> {T.planWord}</span>
+            </span>
+            <span class="sm-plan__meta">
+              <span>{duration}</span>
+              <span class="sm-plan__sep">, </span>
+              <span>{topics}</span>
+            </span>
           </span>
         </label>
       ))}
@@ -511,7 +518,7 @@ const plans = (['short', 'medium', 'long'] as const).map((id) => {
     margin: 0;
     cursor: pointer;
   }
-  .sm-plan span {
+  .sm-plan label > span {
     display: block;
     padding: 0.25rem 0.75rem;
     border-radius: 999px;
@@ -523,10 +530,28 @@ const plans = (['short', 'medium', 'long'] as const).map((id) => {
     color: var(--sl-color-black);
     font-weight: 600;
   }
-  .sm-plan .sm-plan__n {
-    margin-inline-start: 0.15rem;
+  /* Plan switch: name on top, duration and number of topics underneath. */
+  .sm-plan--time {
+    border-radius: 1rem;
+  }
+  .sm-plan--time label > span {
+    padding: 0.3rem 0.95rem 0.35rem;
+    border-radius: 0.8rem;
+    line-height: 1.3;
+    text-align: center;
+  }
+  .sm-plan__name,
+  .sm-plan__meta {
+    display: block;
+  }
+  .sm-plan__meta {
+    font-size: var(--sl-text-xs);
     font-weight: 400;
     font-variant-numeric: tabular-nums;
+    color: var(--sl-color-gray-3);
+  }
+  .sm-plan input:checked + span .sm-plan__meta {
+    color: inherit;
   }
   .sm-plan input:focus-visible + span {
     outline: 2px solid var(--sl-color-accent);
@@ -1288,12 +1313,19 @@ const plans = (['short', 'medium', 'long'] as const).map((id) => {
       width: 100%;
       border-radius: 1rem;
     }
-    .sm-plan span {
+    .sm-plan label > span {
       text-align: center;
     }
-    .sm-plan .sm-plan__n {
+    .sm-plan--time label > span {
+      padding-inline: 0.4rem;
+    }
+    /* Phones: "Short", then the duration and the number of topics on their own lines. */
+    .sm-plan__word,
+    .sm-plan__sep {
+      display: none;
+    }
+    .sm-plan__meta > span:not(.sm-plan__sep) {
       display: block;
-      margin: 0;
     }
   }
   @media (prefers-reduced-motion: reduce) {

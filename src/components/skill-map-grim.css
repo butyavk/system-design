@@ -193,9 +193,12 @@
   border-radius: 3px;
   background: rgb(0 0 0 / 0.3);
 }
-.sm[data-skin='grim'] .sm-plan span {
+.sm[data-skin='grim'] .sm-plan label > span {
   border-radius: 2px;
   color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-plan__meta {
+  color: #a6957a;
 }
 .sm[data-skin='grim'] .sm-plan input:checked + span {
   background: linear-gradient(180deg, var(--g-gold), var(--g-gold-deep));
