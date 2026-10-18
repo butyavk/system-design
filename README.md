@@ -1,4 +1,4 @@
-# System Design Primer: restructured, updated, bilingual
+# System Design Map
 
 **English** · [Русский](README.ru.md)
 

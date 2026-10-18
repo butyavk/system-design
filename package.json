@@ -1,7 +1,7 @@
 {
   "name": "system-design",
   "version": "1.0.0",
-  "description": "A restructured, updated and interactive System Design Primer (EN/RU).",
+  "description": "System Design Map: a restructured, updated and interactive edition of The System Design Primer (EN/RU).",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

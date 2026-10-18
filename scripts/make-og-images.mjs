@@ -15,12 +15,14 @@ const file = (p) => pathToFileURL(join(root, p)).href;
 
 const TEXT = {
   en: {
-    sub: 'System design from<br>the basics to the interview',
+    title: 'System Design Map',
+    sub: 'From the basics to the interview',
     facts: '58 topics, 14 solved problems<br>and a skill map',
     legendTop: 1379, // y of the rule above the legend in the README picture, to crop the legend off
   },
   ru: {
-    sub: 'Системный дизайн<br>от основ до собеседования',
+    title: 'Карта системного дизайна',
+    sub: 'От основ до собеседования',
     facts: '58 тем, 14 разобранных задач<br>и карта навыков',
     legendTop: 1443,
   },
@@ -54,7 +56,7 @@ const page = (lang) => `<!doctype html><html lang="${lang}"><head><meta charset=
 <div class="fade"></div>
 <div class="text">
   <img class="logo" src="${file('src/assets/logo.svg')}" alt="">
-  <h1>System Design Primer</h1>
+  <h1>${TEXT[lang].title}</h1>
   <div class="sub">${TEXT[lang].sub}</div>
   <div class="facts">${TEXT[lang].facts}</div>
 </div></body></html>`;

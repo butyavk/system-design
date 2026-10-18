@@ -9,8 +9,8 @@ export const onRequest = defineRouteMiddleware((context) => {
   const image = new URL(`${base}og/og-${lang}.jpg`, context.site).href;
   const alt =
     lang === 'ru'
-      ? 'System Design Primer: системный дизайн от основ до собеседования. 58 тем, 14 разобранных задач и карта навыков.'
-      : 'System Design Primer: system design from the basics to the interview. 58 topics, 14 solved problems and a skill map.';
+      ? 'Карта системного дизайна: от основ до собеседования. 58 тем, 14 разобранных задач и карта навыков.'
+      : 'System Design Map: from the basics to the interview. 58 topics, 14 solved problems and a skill map.';
 
   route.head.push(
     { tag: 'meta', attrs: { property: 'og:image', content: image } },

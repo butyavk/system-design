@@ -17,7 +17,6 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const SITE = 'https://butyavk.github.io/system-design'; // site + base from astro.config.mjs
-const DECK = 'System Design Primer';
 const root = new URL('../', import.meta.url);
 
 let data;
@@ -31,8 +30,8 @@ try {
 const { flashcards, cardHtml, inlineHtml } = data;
 
 const T = {
-  en: { more: 'Read more on the site' },
-  ru: { more: 'Подробнее на сайте' },
+  en: { more: 'Read more on the site', deck: 'System Design Map' },
+  ru: { more: 'Подробнее на сайте', deck: 'Карта системного дизайна' },
 };
 
 /** Quote every field (RFC 4180 style) so quotes inside HTML can never confuse the importer. */
@@ -46,7 +45,7 @@ function build(locale) {
     '#tags column:3',
     '#guid column:4',
     '#notetype:Basic',
-    `#deck:${DECK}`,
+    `#deck:${T[locale].deck}`,
   ];
   for (const c of flashcards) {
     const url = `${SITE}${locale === 'ru' ? '/ru' : ''}${c.link}`;

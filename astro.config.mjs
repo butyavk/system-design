@@ -31,11 +31,11 @@ export default defineConfig({
     mermaid({ theme: 'default', autoTheme: true, enableLog: false, mermaidConfig }),
     starlight({
       title: {
-        en: 'System Design Primer',
-        ru: 'System Design Primer',
+        en: 'System Design Map',
+        ru: 'Карта системного дизайна',
       },
       description:
-        'Learn how to design large-scale systems: a restructured, updated and interactive System Design Primer.',
+        'Learn how to design large-scale systems: a restructured, updated and interactive edition of The System Design Primer.',
       logo: { src: './src/assets/logo.svg', replacesTitle: false },
       favicon: '/favicon.svg',
       routeMiddleware: './src/route-data.ts',
