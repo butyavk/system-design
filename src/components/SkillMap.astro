@@ -97,8 +97,13 @@ const C = {
     st: { learned: 'Learned', opened: 'Opened, not marked as learned', ready: 'Ready: every prerequisite is learned', locked: 'Prerequisites not learned yet', gap: 'Skipped: a topic you learned builds on it' },
     done: 'Everything in this plan is learned. Keep practising out loud.', more: 'more', here: 'You are here', none: 'none',
     cont: 'Continue reading', show: 'Show on the map', close: 'Close',
+    route: {
+      h: 'Path here', left: 'Left to learn: {n}, about {time} of reading', done: 'Already learned: nothing left on this path.',
+      notIn: 'not in this plan', lessDay: 'under a day', note: 'Each plan’s duration spread over its topics by reading time.',
+      topic: ['topic', 'topics'], day: ['day', 'days'], hr: 'h', mn: 'min',
+    },
     io: { bad: 'This is not a progress file from this site.', replace: 'Replace the progress in this browser with the one from the file?', loaded: 'Progress loaded.', saved: 'Progress file saved.' },
-    grim: { before: 'Requires', leads: 'Unlocks', mark: 'Learn this skill', unmark: 'Learned — undo', open: 'Open the page' },
+    grim: { before: 'Requires', leads: 'Unlocks', mark: 'Learn this skill', unmark: 'Learned — undo', open: 'Open the page', routeH: 'The road here' },
   },
   ru: {
     of: 'из', min: 'мин чтения', core: 'Во всех планах', medium: 'Средний и длинный планы', long: 'Только длинный план', noPlan: 'Не шаг плана',
@@ -107,8 +112,13 @@ const C = {
     st: { learned: 'Изучено', opened: 'Открыто, но не отмечено изученным', ready: 'Можно начинать: все нужные темы изучены', locked: 'Нужные темы ещё не изучены', gap: 'Пропущено: на эту тему опирается уже изученная' },
     done: 'Всё в этом плане изучено. Продолжайте тренироваться вслух.', more: 'ещё', here: 'Вы здесь', none: 'нет',
     cont: 'Продолжить чтение', show: 'Показать на карте', close: 'Закрыть',
+    route: {
+      h: 'Путь сюда', left: 'Осталось изучить: {n}, около {time} чтения', done: 'Уже изучено: на этом пути ничего не осталось.',
+      notIn: 'не входит в план', lessDay: 'меньше дня', note: 'Срок плана, разложенный по его темам пропорционально времени чтения.',
+      topic: ['тема', 'темы', 'тем'], day: ['день', 'дня', 'дней'], hr: 'ч', mn: 'мин',
+    },
     io: { bad: 'Это не файл прогресса с этого сайта.', replace: 'Заменить прогресс в этом браузере данными из файла?', loaded: 'Прогресс загружен.', saved: 'Файл с прогрессом сохранён.' },
-    grim: { before: 'Требует', leads: 'Открывает', mark: 'Изучить навык', unmark: 'Изучено — отменить', open: 'Открыть страницу' },
+    grim: { before: 'Требует', leads: 'Открывает', mark: 'Изучить навык', unmark: 'Изучено — отменить', open: 'Открыть страницу', routeH: 'Дорога сюда' },
   },
 }[locale];
 
@@ -120,6 +130,7 @@ const clientData = {
   stages: stages.map((s) => s.title[locale]),
   stageOfTrack,
   t: C,
+  plans: timelines.map((tl) => ({ id: tl.id, name: `${tl.name[locale]} ${T.planWord}`, days: tl.days })),
 };
 const nodeByPath = Object.fromEntries(nodes.map((n) => [n.p, n]));
 const ov = overviewLayout((p) => nodeByPath[p].t);
@@ -248,6 +259,7 @@ const plans = timelines.map(({ id, name, duration }) => {
         <span data-sm-full-label>{T.full}</span>
       </button>
     </div>
+    <div class="sm-ov__body" data-sm-ov-body>
     <div class="sm-ov__scroll" data-sm-ov-scroll>
       <div class="sm-ov__canvas" data-sm-ov-canvas style={`width:${ov.width}px;height:${ov.height}px`}>
         <svg class="sm-ov__edges" width={ov.width} height={ov.height} viewBox={`0 0 ${ov.width} ${ov.height}`} aria-hidden="true" focusable="false">
@@ -260,6 +272,7 @@ const plans = timelines.map(({ id, name, duration }) => {
           </a>
         ))}
       </div>
+    </div>
     </div>
     <ul class="sm-ov__key" aria-label={T.keyAria}>
       {tracks.map((tr) => (
@@ -816,13 +829,24 @@ const plans = timelines.map(({ id, name, duration }) => {
     width: 14px;
     height: 14px;
   }
-  /* The detail panel as a tooltip inside the overview. */
-  .sm .sm-ov__canvas > .sm-detail.is-pop {
+  /* A topic picked on the overview: its card docks at the right edge and the map moves over
+     to make room, so the card never covers the tree. */
+  .sm-ov__body {
+    --sm-dock: 21rem;
+    position: relative;
+  }
+  .sm-ov__body.has-dock > .sm-ov__scroll {
+    margin-inline-end: var(--sm-dock);
+  }
+  .sm .sm-ov__body > .sm-detail.is-dock {
     position: absolute;
     z-index: 3;
-    width: 19rem;
-    max-height: calc(100% - 8px);
+    top: 0.25rem;
+    bottom: 0.5rem;
+    inset-inline-end: 0.6rem;
+    width: calc(var(--sm-dock) - 1.2rem);
     overflow: auto;
+    overscroll-behavior: contain;
   }
   .sm-d__close {
     position: absolute;
@@ -856,6 +880,12 @@ const plans = timelines.map(({ id, name, duration }) => {
     flex-direction: column;
     margin: 0;
     border-radius: 0;
+  }
+  .sm-ov.is-full .sm-ov__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
   }
   .sm-ov.is-full .sm-ov__scroll {
     flex: 1;
@@ -1222,6 +1252,39 @@ const plans = timelines.map(({ id, name, duration }) => {
   .sm-detail .sm-d__path {
     margin-top: 0.4rem;
   }
+  /* Path here: how much is left before this topic, in days at each plan's pace. */
+  .sm-detail .sm-d__left {
+    font-size: var(--sl-text-sm);
+  }
+  .sm-detail .sm-d__plans {
+    display: grid;
+    gap: 0.15rem;
+    margin-top: 0.4rem;
+    font-size: var(--sl-text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .sm-detail .sm-d__plans li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.4rem;
+    color: var(--sl-color-gray-2);
+  }
+  .sm-detail .sm-d__plans li.is-cur {
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-white);
+    font-weight: 600;
+  }
+  .sm-detail .sm-d__plans li.is-no span:last-child {
+    color: var(--sl-color-gray-3);
+    font-weight: 400;
+  }
+  .sm-detail .sm-d__note {
+    margin-top: 0.35rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
 
   /* ---------- Footer ---------- */
   .sm-foot {
@@ -1343,7 +1406,7 @@ const plans = timelines.map(({ id, name, duration }) => {
   const PORTABLE = [PROGRESS_KEY, 'sdp-study-plan', 'sdp-map-plan', 'sdp-map-skin', 'sdp-flashcards-en', 'sdp-flashcards-ru'];
 
   type N = { p: string; t: string; title: string; d: string; tr: string; needs: string[]; deps: string[]; plans: string[]; ord: number; min: number; h: string };
-  type Data = { nodes: N[]; tracks: Record<string, string>; stages: string[]; stageOfTrack: Record<string, number>; t: any };
+  type Data = { nodes: N[]; tracks: Record<string, string>; stages: string[]; stageOfTrack: Record<string, number>; t: any; plans: { id: string; name: string; days: [number, number] }[] };
   type Status = 'learned' | 'opened' | 'ready' | 'locked' | 'gap';
   const PLAN_KEY = 'sdp-map-plan';
 
@@ -1382,6 +1445,7 @@ const plans = timelines.map(({ id, name, duration }) => {
     const oedges = [...root.querySelectorAll<SVGPathElement>('.sm-ov__edges path')];
     const ovSection = root.querySelector<HTMLElement>('[data-sm-ov]')!;
     const ovScroll = root.querySelector<HTMLElement>('[data-sm-ov-scroll]')!;
+    const ovBody = root.querySelector<HTMLElement>('[data-sm-ov-body]')!;
     const ovCanvas = root.querySelector<HTMLElement>('[data-sm-ov-canvas]')!;
     // Where the last selection came from decides where the panel opens.
     let origin: 'ov' | 'list' = 'list';
@@ -1435,8 +1499,54 @@ const plans = timelines.map(({ id, name, duration }) => {
     // Labels for the detail panel: the dark-fantasy look renames a few of them.
     const L = () => (root.dataset.skin === 'grim' ? { ...t, ...t.grim } : t);
 
+    // Path to a topic: the topic and every prerequisite not learned yet, direct or indirect.
+    // Days follow each plan's pace: its duration spread over its topics by reading time.
+    const plural = (k: number, forms: string[]) =>
+      forms.length === 2
+        ? forms[k === 1 ? 0 : 1]
+        : forms[k % 10 === 1 && k % 100 !== 11 ? 0 : k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 10 || k % 100 >= 20) ? 1 : 2];
+    const planMinutes = new Map(data.plans.map((pl) => [pl.id, data.nodes.filter((x) => !x.plans.length || x.plans.includes(pl.id)).reduce((sum, x) => sum + x.min, 0)]));
+    function routeHtml(n: N, t: ReturnType<typeof L>, hx: string) {
+      const r = t.route;
+      const h = `<${hx} class="sm-d__h">${esc(t.routeH ?? r.h)}</${hx}>`;
+      const todo = [n.p, ...ancestors(n.p)].filter((p) => !learned(p)).map((p) => byPath.get(p)!);
+      if (!todo.length) return `<div class="sm-d__route">${h}<p class="sm-d__left">${esc(r.done)}</p></div>`;
+      const minutes = todo.reduce((sum, x) => sum + x.min, 0);
+      // Non-breaking spaces keep each number with its unit.
+      const time = minutes < 60 ? `${minutes}\u00a0${r.mn}` : `${Math.floor(minutes / 60)}\u00a0${r.hr}${minutes % 60 ? ` ${minutes % 60}\u00a0${r.mn}` : ''}`;
+      const left = r.left.replace('{n}', `${todo.length}\u00a0${plural(todo.length, r.topic)}`).replace('{time}', time);
+      const days = (lo: number, hi: number) => {
+        if (hi < 1) return r.lessDay;
+        const a = Math.max(1, Math.round(lo));
+        const b = Math.max(a, Math.round(hi));
+        return `≈\u00a0${a === b ? a : `${a}–${b}`}\u00a0${plural(b, r.day)}`;
+      };
+      const rows = data.plans
+        .map((pl) => {
+          const inside = !n.plans.length || n.plans.includes(pl.id);
+          const per = minutes / planMinutes.get(pl.id)!;
+          const value = inside ? days(pl.days[0] * per, pl.days[1] * per) : r.notIn;
+          return `<li class="${pl.id === plan ? 'is-cur' : ''}${inside ? '' : ' is-no'}"><span>${esc(pl.name)}</span><span>${esc(value)}</span></li>`;
+        })
+        .join('');
+      return `<div class="sm-d__route">${h}<p class="sm-d__left">${esc(left)}</p><ul class="sm-d__plans">${rows}</ul><p class="sm-d__note">${esc(r.note)}</p></div>`;
+    }
+
+    // Scroll the overview so a topic is in view (the docked card narrows the map).
+    function revealOnOverview(p: string) {
+      const a = oels.get(p);
+      if (!a) return;
+      const r = a.getBoundingClientRect();
+      const box = ovScroll.getBoundingClientRect();
+      const dx = r.left < box.left + 24 || r.right > box.right - 24 ? r.left + r.width / 2 - (box.left + box.width / 2) : 0;
+      const dy = r.top < box.top + 8 || r.bottom > box.bottom - 8 ? r.top + r.height / 2 - (box.top + box.height / 2) : 0;
+      if (dx || dy) ovScroll.scrollBy({ left: dx, top: dy, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
+
     function renderDetail(st: Map<string, Status>) {
       const t = L();
+      ovBody.classList.remove('has-dock');
+      detail.classList.remove('is-dock');
       if (!selected) {
         detail.hidden = true;
         return;
@@ -1447,10 +1557,13 @@ const plans = timelines.map(({ id, name, duration }) => {
       const ancLearned = anc.filter(learned).length;
       const needs = n.needs.map((p) => byPath.get(p)!);
       const deps = n.deps.map((p) => byPath.get(p)!);
+      // Heading levels follow where the card sits: beside the overview (under the page title)
+      // or among the stages of the list (under "By stage").
+      const [ht, hx] = origin === 'ov' ? ['h2', 'h3'] : ['h3', 'h4'];
       detail.innerHTML = `
         <button type="button" class="sm-d__close" data-close aria-label="${esc(t.close)}">×</button>
         <p class="sm-d__crumb">${data.stageOfTrack[n.tr] + 1} · ${esc(data.stages[data.stageOfTrack[n.tr]])} / ${esc(data.tracks[n.tr])}</p>
-        <h3 class="sm-d__title">${esc(n.title)}</h3>
+        <${ht} class="sm-d__title">${esc(n.title)}</${ht}>
         <p class="sm-d__desc">${esc(n.d)}</p>
         <p class="sm-d__meta">≈ ${n.min} ${t.min} · ${esc(planText(n))}</p>
         <p class="sm-d__status"><span class="sm-glyph is-${s}" aria-hidden="true"></span><span>${esc(t.st[s])}</span></p>
@@ -1458,27 +1571,20 @@ const plans = timelines.map(({ id, name, duration }) => {
           <a class="sm-btn" href="${esc(n.h)}">${t.open} →</a>
           <button type="button" class="sm-btn sm-btn--ghost" data-toggle aria-pressed="${learned(n.p)}">${learned(n.p) ? t.unmark : t.mark}</button>
         </div>
-        <h4 class="sm-d__h sm-d__h--need">${t.before}</h4>
+        ${routeHtml(n, t, hx)}
+        <${hx} class="sm-d__h sm-d__h--need">${t.before}</${hx}>
         ${needs.length ? `<ul class="sm-d__list">${needs.map((x) => `<li>${chip(x, st.get(x.p))}</li>`).join('')}</ul>` : `<p class="sm-d__none">${t.noNeeds}</p>`}
-        ${anc.length > needs.length ? `<p class="sm-d__path">${t.allBefore}: ${ancLearned} ${t.of} ${anc.length}</p>` : ''}
-        <h4 class="sm-d__h sm-d__h--dep">${t.leads}</h4>
+        ${anc.length > needs.length ? `<p class="sm-d__path">${t.allBefore}: ${ancLearned}\u00a0${t.of}\u00a0${anc.length}</p>` : ''}
+        <${hx} class="sm-d__h sm-d__h--dep">${t.leads}</${hx}>
         ${deps.length ? `<ul class="sm-d__list">${deps.map((x) => `<li>${chip(x, st.get(x.p))}</li>`).join('')}</ul>` : `<p class="sm-d__none">${t.endLine}</p>`}`;
       detail.hidden = false;
-      detail.style.left = detail.style.top = '';
-      detail.classList.remove('is-pop');
       if (origin === 'ov') {
-        // Overview: a tooltip next to the socket when there is room, else right under the map.
-        if (ovScroll.clientWidth >= 560) {
-          if (detail.parentElement !== ovCanvas) ovCanvas.append(detail);
-          detail.classList.add('is-pop');
-          const a = oels.get(n.p)!;
-          const x = parseFloat(a.style.left);
-          const y = parseFloat(a.style.top);
-          const w = detail.offsetWidth;
-          const right = x + 34 + w <= ovCanvas.offsetWidth;
-          detail.style.left = `${right ? x + 34 : Math.max(4, x - 34 - w)}px`;
-          const h = detail.offsetHeight;
-          detail.style.top = `${Math.max(4, Math.min(y - 60, ovCanvas.offsetHeight - h - 4))}px`;
+        // Overview: dock the card at the right edge when there is room, else show it under the map.
+        if (ovSection.clientWidth >= 640) {
+          if (detail.parentElement !== ovBody) ovBody.append(detail);
+          detail.classList.add('is-dock');
+          ovBody.classList.add('has-dock');
+          requestAnimationFrame(() => revealOnOverview(n.p));
         } else if (ovSection.nextElementSibling !== detail) ovSection.after(detail);
         return;
       }

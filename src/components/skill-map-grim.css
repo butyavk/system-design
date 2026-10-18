@@ -490,6 +490,18 @@
   text-transform: none;
   font-variant-caps: small-caps;
 }
+.sm[data-skin='grim'] .sm-d__plans li {
+  border-radius: 2px;
+  color: var(--g-bone-dim);
+}
+.sm[data-skin='grim'] .sm-d__plans li.is-cur {
+  background: rgb(217 181 106 / 0.14);
+  color: var(--g-gold);
+}
+.sm[data-skin='grim'] .sm-d__plans li.is-no span:last-child,
+.sm[data-skin='grim'] .sm-d__note {
+  color: #a6957a;
+}
 .sm[data-skin='grim'] .sm-d__h--need {
   color: var(--g-ember);
 }

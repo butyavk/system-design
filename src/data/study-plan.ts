@@ -25,23 +25,27 @@ export interface StudyPhase {
   steps: StudyStep[];
 }
 
-export const timelines: { id: Timeline; name: L; duration: L; summary: L }[] = [
+/** `days` is `duration` in calendar days (low, high); the skill map uses it to estimate paths. */
+export const timelines: { id: Timeline; name: L; duration: L; days: [number, number]; summary: L }[] = [
   {
     id: 'short',
     name: { en: 'Short', ru: 'Короткий' },
     duration: { en: '1–2 weeks', ru: '1–2 недели' },
+    days: [7, 14],
     summary: { en: 'Breadth first. Solve a few questions end to end.', ru: 'Сначала широта. Решить несколько задач от начала до конца.' },
   },
   {
     id: 'medium',
     name: { en: 'Medium', ru: 'Средний' },
     duration: { en: '3–6 weeks', ru: '3–6 недель' },
+    days: [21, 42],
     summary: { en: 'Breadth plus some depth. Solve many questions.', ru: 'Широта и немного глубины. Решить много задач.' },
   },
   {
     id: 'long',
     name: { en: 'Long', ru: 'Длинный' },
     duration: { en: '2–3 months', ru: '2–3 месяца' },
+    days: [60, 90],
     summary: { en: 'Breadth plus real depth. Solve most questions.', ru: 'Широта и настоящая глубина. Решить большинство задач.' },
   },
 ];
