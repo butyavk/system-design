@@ -24,7 +24,6 @@ const T = {
     gaps: 'Skipped',
     gapsHelp: 'Prerequisites of topics you have learned',
     plan: 'Show',
-    all: 'All topics',
     short: 'Short plan',
     medium: 'Medium plan',
     long: 'Long plan',
@@ -62,7 +61,6 @@ const T = {
     gaps: 'Пропущено',
     gapsHelp: 'Темы, на которые опираются уже изученные',
     plan: 'Показать',
-    all: 'Все темы',
     short: 'Короткий план',
     medium: 'Средний план',
     long: 'Длинный план',
@@ -145,12 +143,14 @@ const sigils: Record<string, string> = {
   ood: 'M12 3 4 7v10l8 4 8-4V7zM4 7l8 4 8-4M12 11v10',
   'real-world': 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6',
 };
-const plans = [
-  ['all', T.all],
-  ['short', T.short],
-  ['medium', T.medium],
-  ['long', T.long],
-] as const;
+// The long plan covers every topic, so it doubles as "show everything". Each option shows how
+// many topics it holds (topics that are not plan steps count in every plan).
+const topicsWord = (n: number) =>
+  locale === 'ru' ? (n % 10 === 1 && n % 100 !== 11 ? 'тема' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'темы' : 'тем') : n === 1 ? 'topic' : 'topics';
+const plans = (['short', 'medium', 'long'] as const).map((id) => {
+  const count = nodes.filter((n) => !n.plans.length || n.plans.includes(id)).length;
+  return { id, label: T[id], count, aria: `${T[id]}: ${count} ${topicsWord(count)}` };
+});
 ---
 
 <div class="sm not-content" data-sm data-skin="classic">
@@ -213,10 +213,12 @@ const plans = [
   <div class="sm-bar">
     <fieldset class="sm-plan">
       <legend class="sm-sr">{T.plan}</legend>
-      {plans.map(([id, label]) => (
+      {plans.map(({ id, label, count, aria }) => (
         <label>
-          <input type="radio" name="sm-plan" value={id} checked={id === 'all'} />
-          <span>{label}</span>
+          <input type="radio" name="sm-plan" value={id} checked={id === 'long'} aria-label={aria} />
+          <span>
+            {label} <b class="sm-plan__n">{count}</b>
+          </span>
         </label>
       ))}
     </fieldset>
@@ -520,6 +522,11 @@ const plans = [
     background: var(--sl-color-accent);
     color: var(--sl-color-black);
     font-weight: 600;
+  }
+  .sm-plan .sm-plan__n {
+    margin-inline-start: 0.15rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
   }
   .sm-plan input:focus-visible + span {
     outline: 2px solid var(--sl-color-accent);
@@ -1276,12 +1283,17 @@ const plans = [
     }
     .sm-plan {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
       width: 100%;
       border-radius: 1rem;
     }
     .sm-plan span {
       text-align: center;
+    }
+    .sm-plan .sm-plan__n {
+      display: block;
+      margin: 0;
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -1314,7 +1326,7 @@ const plans = [
     } catch {
       /* storage unavailable */
     }
-    return 'all';
+    return 'long';
   }
   function writePlan(v: string) {
     try {
@@ -1346,8 +1358,9 @@ const plans = [
     const detail = root.querySelector<HTMLElement>('[data-sm-detail]')!;
     const radios = [...root.querySelectorAll<HTMLInputElement>('input[name="sm-plan"]')];
 
+    // "all" was a separate option before; the long plan now covers every topic.
     let plan = readPlan();
-    if (!radios.some((r) => r.value === plan)) plan = 'all';
+    if (!radios.some((r) => r.value === plan)) plan = 'long';
     let progress: Progress = loadProgress();
     let selected: string | null = null;
 
@@ -1361,7 +1374,7 @@ const plans = [
       ancCache.set(p, out);
       return out;
     };
-    const inPlan = (n: N) => plan === 'all' || n.plans.length === 0 || n.plans.includes(plan);
+    const inPlan = (n: N) => n.plans.length === 0 || n.plans.includes(plan);
     const learned = (p: string) => !!progress.learned[p];
 
     function statuses(): Map<string, Status> {
@@ -1533,7 +1546,7 @@ const plans = [
         e.classList.toggle('e-done', learned(f) && learned(to));
         e.classList.toggle('e-out', !inPlan(byPath.get(f)!) || !inPlan(byPath.get(to)!));
       }
-      root.querySelector<HTMLElement>('[data-sm-lout]')!.hidden = plan === 'all';
+      root.querySelector<HTMLElement>('[data-sm-lout]')!.hidden = data.nodes.every(inPlan);
       renderDetail(st);
       requestAnimationFrame(drawWires);
     }
