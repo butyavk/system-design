@@ -79,7 +79,7 @@ Daniel Abadi's **PACELC** extends CAP: *if there is a Partition, choose Availabi
 
 | System (default configuration) | If partitioned | Else | Notes |
 |---|---|---|---|
-| Cassandra, Riak, original Dynamo | PA | EL | Low consistency levels by default; quorum levels move toward C |
+| Cassandra, Riak, original Dynamo | PA | EL | Cassandra defaults to `ONE`/`LOCAL_ONE`; Riak and Dynamo use sloppy quorums. Strict quorums move toward C |
 | DynamoDB, single Region | PC | EL | Writes need the leader and a quorum; default reads are eventually consistent. Strongly consistent reads → EC |
 | DynamoDB global tables, multi-Region eventual | PA | EL | Every Region accepts writes; last-writer-wins |
 | DynamoDB global tables, multi-Region strong | PC | EC | Writes wait for a second Region |
@@ -101,7 +101,7 @@ With `N` replicas, a write waits for `W` acknowledgements and a read queries `R`
 | 3 | 1 | 1 | No | Fastest and most available; reads may be stale |
 | 5 | 3 | 3 | Yes | Tolerates two failed replicas |
 
-Overlap alone is not full linearizability. Concurrent writes, partially failed writes and "sloppy" quorums (writing to substitute nodes during failures) can still produce anomalies. Systems add read repair, consensus (Raft, Paxos) or compare-and-set operations when they need the strict guarantee. The mechanics are covered in [replication](/data/replication/).
+Overlap alone is not full linearizability. Concurrent writes, partially failed writes and "sloppy" quorums (writing to substitute nodes during failures) can still produce anomalies. Systems add synchronous read repair, consensus (Raft, Paxos) or compare-and-set operations when they need the strict guarantee. The mechanics are covered in [replication](/data/replication/).
 
 ## Trade-offs
 
@@ -132,7 +132,7 @@ Overlap alone is not full linearizability. Concurrent writes, partially failed w
 
 - [Consistency patterns](/fundamentals/consistency-patterns/) — the models between "eventual" and "linearizable".
 - [Replication](/data/replication/) — leader-based, multi-leader and leaderless replication, and how quorums are implemented.
-- [Availability patterns](/fundamentals/availability-patterns/) — fail-over and redundancy, which CAP says nothing about.
+- [Availability patterns](/fundamentals/availability-patterns/) — failover and redundancy, which CAP says nothing about.
 - [NoSQL](/data/nosql/) — the stores that made tunable consistency mainstream.
 - [SQL or NoSQL](/data/sql-or-nosql/) — choosing a datastore with these trade-offs in mind.
 - [Consensus and coordination](/fundamentals/consensus-and-coordination/) — how CP systems actually agree: majority quorums, Raft and what a partition costs the minority side.

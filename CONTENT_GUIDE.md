@@ -19,6 +19,8 @@ for system design interviews. Every page should be:
 - **Scannable.** Short paragraphs, informative headings, tables for comparisons,
   a diagram where it shows a mechanism.
 - **Interview-oriented.** Every topic page ends with what an interviewer will probe.
+- **British spelling in English** (-ise, -our, -lled), except technical names spelled as in
+  their standards and products: *serializable*, *materialized view*, the `Authorization` header.
 
 ## 2. Files and frontmatter
 
@@ -35,7 +37,7 @@ for system design interviews. Every page should be:
 
 ```yaml
 ---
-title: CAP theorem and PACELC            # short, Title case in EN; sentence case in RU
+title: CAP theorem and PACELC            # short, sentence case in both languages
 description: One sentence, 120–160 chars, used for search and link previews.
 sidebar:
   order: 3                                # position inside the section (from pages.json order)
@@ -80,8 +82,9 @@ Russian headings/titles for the fixed blocks:
 `Trade-offs` → `Компромиссы`, `Further reading` → `Что почитать`,
 `Related topics` → `Связанные темы`.
 
-Length: topic pages ≈ 900–1,600 words (EN). Case studies ≈ 1,800–3,000.
-OOD pages ≈ 500–900 words plus code.
+Length (EN prose, without code): topic pages ≈ 1,500–2,500 words, rarely more than 3,500;
+case studies ≈ 2,000–3,500; OOD pages ≈ 800–1,100 plus code. Longer is fine when every
+section earns its place; split a page before it passes ~4,000 words.
 
 ## 4. Case study template (`practice/`)
 
@@ -147,11 +150,15 @@ Glossary (use consistently):
 | back pressure | обратное давление (backpressure) |
 | idempotency | идемпотентность |
 | retry / backoff | повторная попытка / экспоненциальная задержка (backoff) |
+| jitter (in retries) | случайный разброс (jitter) |
+| tenant | арендатор (tenant) |
 | rate limiting | ограничение частоты запросов (rate limiting) |
 | circuit breaker | предохранитель (circuit breaker) |
 | service discovery | обнаружение сервисов (service discovery) |
 | object storage | объектное хранилище |
 | back-of-the-envelope estimate | прикидочный расчёт («на салфетке») |
+| round trip (one exchange) | обмен туда и обратно |
+| RTT (its duration) | круговая задержка (RTT) при первом упоминании, дальше RTT |
 | use case | сценарий использования |
 | requirements | требования |
 | interview | собеседование |
@@ -185,8 +192,9 @@ the legacy "master–slave" name once, where readers may meet it in older materi
 - Prefer stable sources: official docs, RFCs, original papers, well-known books,
   engineering blogs of the companies that built the thing.
 - Many links in the original (highscalability.com, slideshare.net, old company blogs)
-  are dead or moved. Check every external link you add with WebFetch; if a classic
-  article is gone, use its `web.archive.org` copy or drop it.
+  are dead or moved. Open every external link you add (some sites block scripts, so a
+  403 from `curl` is not proof it is broken); if a classic article is gone, use its
+  `web.archive.org` copy or drop it.
 - Russian pages use the same links (they are mostly English sources); add a Russian
   source only if it is genuinely good.
 
@@ -211,7 +219,7 @@ flowchart LR
 - Always quote labels: `id["Label (with) symbols"]`. ASCII ids only (`app1`, `cache`).
   Never use `end` as an id. No HTML in labels; use `<br/>` only inside quoted labels.
 - Keep it under ~15 nodes; one idea per diagram. Translate labels in the Russian version.
-- Do not set colors or themes — the site switches light/dark automatically.
+- Do not set colours or themes — the site switches light/dark automatically.
 
 ## 10. Code
 

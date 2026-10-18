@@ -71,7 +71,7 @@ export const stages: Stage[] = [
     title: { en: 'Fundamentals', ru: 'Основы' },
     outcome: {
       en: 'You can name the trade-off behind a design choice: consistency, availability, latency.',
-      ru: 'Вы называете компромисс за проектным решением: согласованность, доступность, задержка.',
+      ru: 'Вы называете компромисс, стоящий за проектным решением: согласованность, доступность, задержка.',
     },
     tracks: ['fundamentals'],
   },

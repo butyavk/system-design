@@ -100,7 +100,7 @@ flowchart LR
 | System | Year and venue | Why it matters | Paper |
 |---|---|---|---|
 | **Kafka** (LinkedIn) | 2011, NetDB | A partitioned, append-only log on disk. Consumers pull data and track their own offsets, so messages become durable, replayable streams. | [microsoft.com (PDF)](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/09/Kafka.pdf) |
-| **The Log** (Jay Kreps, essay) | 2013 | Not a paper, but the clearest explanation of why an ordered log ties together databases, replication, data integration and stream processing. | [engineering.linkedin.com](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying) |
+| **The Log** (Jay Kreps, essay) | 2013 | Not a paper, but the clearest explanation of why an ordered log ties together databases, replication, data integration and stream processing. | [web.archive.org (archived copy)](https://web.archive.org/web/20260612105408/https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying) |
 
 ## Observability
 
@@ -119,7 +119,7 @@ flowchart LR
 
 | System | Year and venue | Why it matters | Paper |
 |---|---|---|---|
-| **Zanzibar** (Google) | 2019, USENIX ATC | A global authorization service built on relation tuples and Spanner. Many open-source permission systems copy its model. | [usenix.org](https://www.usenix.org/conference/atc19/presentation/pang) |
+| **Zanzibar** (Google) | 2019, USENIX ATC | A global authorisation service built on relation tuples and Spanner. Many open-source permission systems copy its model. | [usenix.org](https://www.usenix.org/conference/atc19/presentation/pang) |
 | **FoundationDB** (Apple) | 2021, SIGMOD | A transactional key-value store split into separate components, tested with deterministic simulation. It shows how to make a distributed database testable. | [foundationdb.org (PDF)](https://www.foundationdb.org/files/fdb-paper.pdf) |
 | **Metastable failures in the wild** (Penn State, UNH, Twitter) | 2022, OSDI | Studies 22 real incidents from 11 organisations in which a system stayed overloaded after the trigger was gone, because a feedback loop such as retries kept it there. Explains why load shedding and retry limits matter. | [usenix.org](https://www.usenix.org/conference/osdi22/presentation/huang-lexiang) |
 

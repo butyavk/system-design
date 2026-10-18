@@ -7,7 +7,7 @@ sidebar:
 import { Aside } from '@astrojs/starlight/components';
 import AvailabilityCalculator from '~/components/AvailabilityCalculator.astro';
 
-"Four nines" sounds like a quality badge, but it is a time budget: about 53 minutes a year, or 4 minutes 23 seconds a month, for every outage, failed deploy and slow fail-over combined. This page turns availability targets into downtime and shows how the availability of a whole system follows from its parts. The patterns that achieve it are covered in [availability patterns](/fundamentals/availability-patterns/).
+"Four nines" sounds like a quality badge, but it is a time budget: about 53 minutes a year, or 4 minutes 23 seconds a month, for every outage, failed deploy and slow failover combined. This page turns availability targets into downtime and shows how the availability of a whole system follows from its parts. The patterns that achieve it are covered in [availability patterns](/fundamentals/availability-patterns/).
 
 <Aside type="tip" title="TL;DR">
 - Each extra nine divides the downtime budget by ten: 99.9% ≈ 8 h 46 min a year, 99.99% ≈ 53 min, 99.999% ≈ 5 min.
@@ -33,7 +33,7 @@ Availability is the share of time, or of requests, in which a service works. The
 What each level means in practice:
 
 - **99.9%** allows one 40-minute incident a month. A human can be paged, investigate and roll back within that budget. This is a common target for internal services and many SaaS products.
-- **99.99%** allows about 4 minutes a month. By the time an on-call engineer has opened a laptop, the budget is gone. Detection, fail-over and rollback must be **automatic**, and deploys must be gradual.
+- **99.99%** allows about 4 minutes a month. By the time an on-call engineer has opened a laptop, the budget is gone. Detection, failover and rollback must be **automatic**, and deploys must be gradual.
 - **99.999%** allows 26 seconds a month. It needs redundancy across failure domains, no single global dependency, and changes that can never take the whole service down at once. Few products need it; telecom and payment cores are the classic examples.
 
 Two ways to count are in use. **Time-based**: the share of minutes in which the service was healthy. **Request-based**: successful requests divided by valid requests over a window. Request-based availability reflects what users actually saw and is the usual basis for an SLO. At 1 million requests a day, a 99.9% target allows about 30,000 failed requests a month.
@@ -80,7 +80,7 @@ The lesson is to find the **weakest series link** and make it redundant. Making 
 ### Where the formulas mislead
 
 - **Independence is an assumption.** Two replicas in one rack, behind one switch, running the same bad deploy or reading the same bad config fail together. Correlated failures are why real systems rarely reach the computed figure. Spread copies across zones, and roll changes out gradually.
-- **Fail-over is not free.** The parallel formula assumes the switch is instant. If promoting a replica takes 2 minutes and happens twice a month, that alone uses almost all of a four-nines monthly budget.
+- **Failover is not free.** The parallel formula assumes the switch is instant. If promoting a replica takes 2 minutes and happens twice a month, that alone uses almost all of a four-nines monthly budget.
 - **Quorums need more than one survivor.** A cluster that needs 2 of 3 nodes is down when any two fail: with 99.9% nodes it reaches about 99.9997%, not the 99.9999999% that "any one of three" would suggest.
 - **A dependency's SLA is not your availability.** If a managed database promises 99.95% and your code and deploys add their own failures, your service is below 99.95%. A common rule from Google SRE is that each critical dependency should be about ten times more reliable than the service built on it.
 
@@ -92,20 +92,20 @@ Availability can also be estimated from how often things break and how long they
 A = MTBF / (MTBF + MTTR)
 ```
 
-MTBF is the mean time between failures and MTTR the mean time to recovery. A component that fails once a month and takes 30 minutes to recover is about 99.93% available. Cutting recovery to 5 minutes, by automating detection and fail-over, raises it to 99.99% without making failures any rarer. That is why high-availability work focuses on **fast detection and recovery**: health checks, automatic fail-over, quick rollbacks and small blast radii.
+MTBF is the mean time between failures and MTTR the mean time to recovery. A component that fails once a month and takes 30 minutes to recover is about 99.93% available. Cutting recovery to 5 minutes, by automating detection and failover, raises it to 99.99% without making failures any rarer. That is why high-availability work focuses on **fast detection and recovery**: health checks, automatic failover, quick rollbacks and small blast radii.
 
 ## Trade-offs
 
 | Extra nine | What it costs |
 |---|---|
 | 99% → 99.9% | Redundant instances, health checks, basic on-call |
-| 99.9% → 99.99% | Multi-zone deployment, automated fail-over, gradual rollouts, error budgets |
+| 99.9% → 99.99% | Multi-zone deployment, automated failover, gradual rollouts, error budgets |
 | 99.99% → 99.999% | Multi-region or cell-based design, no global single points of failure, much more testing; often 10× the operational effort |
 
 Every extra nine costs roughly an order of magnitude more effort. Choose the target from what users need and what downtime costs the business, not from the highest number that sounds good.
 
 <Aside type="note" title="In the interview">
-Expect "what availability do you need?" early on, and "what happens when X fails?" later. Translate the target into minutes ("four nines is about four minutes a month, so fail-over must be automatic"), compute the series total of your critical path, and show where you added redundancy. Strong answers mention correlated failures, fail-over time and the difference between an SLA and an SLO. A common mistake is to multiply parallel copies as if they were in series, or to claim five nines for a design with one database primary.
+Expect "what availability do you need?" early on, and "what happens when X fails?" later. Translate the target into minutes ("four nines is about four minutes a month, so failover must be automatic"), compute the series total of your critical path, and show where you added redundancy. Strong answers mention correlated failures, failover time and the difference between an SLA and an SLO. A common mistake is to multiply parallel copies as if they were in series, or to claim five nines for a design with one database primary.
 </Aside>
 
 ## Further reading
@@ -116,7 +116,7 @@ Expect "what availability do you need?" early on, and "what happens when X fails
 
 ## Related topics
 
-- [Availability patterns](/fundamentals/availability-patterns/) — fail-over, replication, SLOs and multi-zone design that achieve these numbers.
+- [Availability patterns](/fundamentals/availability-patterns/) — failover, replication, SLOs and multi-zone design that achieve these numbers.
 - [Resilience patterns](/reliability/resilience-patterns/) — timeouts, retries and circuit breakers that stop one failure from spreading.
 - [Observability](/reliability/observability/) — measuring availability and alerting on error budgets.
 - [Latency numbers](/reference/latency-numbers/) — the other set of numbers every design needs.

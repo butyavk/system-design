@@ -311,7 +311,7 @@ export const latencyItems: LatencyItem[] = [
     value2012: 10 * US,
     classicLabel: 'Send 1K bytes over 1 Gbps network',
     note: {
-      en: 'Pure serialization: 8,192 bits ÷ line rate (82 ns at 100 GbE, 820 ns at 10 GbE). Classic row assumed 1 Gbps. NICs, kernels and switches add tens of µs on top.',
+      en: 'Pure serialisation: 8,192 bits ÷ line rate (82 ns at 100 GbE, 820 ns at 10 GbE). Classic row assumed 1 Gbps. NICs, kernels and switches add tens of µs on top.',
       ru: 'Только сериализация: 8192 бита ÷ скорость линии (82 нс при 100 GbE, 820 нс при 10 GbE). Классическая строка — для 1 Гбит/с. Сетевая карта, ядро ОС и коммутаторы добавляют ещё десятки микросекунд.',
     },
     sources: ['arith'],
@@ -355,7 +355,7 @@ export const latencyItems: LatencyItem[] = [
     high: 1.5 * MS,
     note: {
       en: 'Primary-key lookup: 19 µs over a Unix socket, 34 µs over localhost TCP, 0.42 ms over a LAN. The database work is tiny; the round trip dominates.',
-      ru: 'Поиск по первичному ключу: 19 мкс через Unix-сокет, 34 мкс через localhost TCP, 0,42 мс по локальной сети. Работа самой СУБД мизерна — всё решает сетевой круг.',
+      ru: 'Поиск по первичному ключу: 19 мкс через Unix-сокет, 34 мкс через localhost TCP, 0,42 мс по локальной сети. Работа самой СУБД мизерна — всё решает RTT.',
     },
     sources: ['cybertec-pg'],
   },
@@ -368,7 +368,7 @@ export const latencyItems: LatencyItem[] = [
     high: 500 * US,
     note: {
       en: 'The server needs well under 1 µs; you pay the network round trip. A Unix socket gets ~30 µs. Pipelining amortises the trip over many keys.',
-      ru: 'Серверу нужно намного меньше 1 мкс; платим за сетевой круг. Через Unix-сокет — ~30 мкс. Конвейеризация (pipelining) делит один круг на много ключей.',
+      ru: 'Серверу нужно намного меньше 1 мкс; платим за RTT. Через Unix-сокет — ~30 мкс. Конвейеризация (pipelining) делит один RTT на много ключей.',
     },
     sources: ['redis-latency', 'aws-az-affinity'],
   },
@@ -394,7 +394,7 @@ export const latencyItems: LatencyItem[] = [
     high: 2 * MS,
     note: {
       en: 'One extra round trip (TLS 1.2 needed two) plus ~0.3 ms of crypto on both ends with an ECDSA certificate, ~1 ms with RSA-2048. Across an ocean the round trip dominates: add ~80–150 ms. Resumption with 0-RTT removes it.',
-      ru: 'Один дополнительный сетевой круг (TLS 1.2 требовал двух) плюс ~0,3 мс криптографии на обеих сторонах с сертификатом ECDSA и ~1 мс с RSA-2048. Через океан доминирует круг: +80–150 мс. Возобновление сессии с 0-RTT убирает его.',
+      ru: 'Один дополнительный RTT (TLS 1.2 требовал двух) плюс ~0,3 мс криптографии на обеих сторонах с сертификатом ECDSA и ~1 мс с RSA-2048. Через океан доминирует RTT: +80–150 мс. Возобновление сессии с 0-RTT убирает его.',
     },
     sources: ['cloudflare-tls13', 'local'],
   },
@@ -407,7 +407,7 @@ export const latencyItems: LatencyItem[] = [
     high: 30 * MS,
     note: {
       en: 'Roughly one round trip to the recursive resolver: inside a cloud VPC that is a same-zone hop (under 1 ms), from home or mobile networks 5–30 ms. OS and browser caches answer in microseconds.',
-      ru: 'Примерно один сетевой круг до рекурсивного резолвера: внутри облачной VPC это переход в пределах зоны (меньше 1 мс), из домашних и мобильных сетей — 5–30 мс. Кэши ОС и браузера отвечают за микросекунды.',
+      ru: 'Примерно один RTT до рекурсивного резолвера: внутри облачной VPC это переход в пределах зоны (меньше 1 мс), из домашних и мобильных сетей — 5–30 мс. Кэши ОС и браузера отвечают за микросекунды.',
     },
     sources: ['oreilly-dns', 'google-dns'],
   },

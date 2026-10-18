@@ -44,7 +44,7 @@ A back-of-the-envelope estimate is a quick calculation, done with round numbers,
 | Seconds per month | ≈ 2.6 million | ≈ 2.5 × 10⁶ |
 | Seconds per year | ≈ 31.6 million | ≈ 3 × 10⁷ |
 | 1 million requests per day | 11.6/s | ≈ 12/s |
-| 100 million requests per day | 1,157/s | ≈ 1,000/s |
+| 100 million requests per day | 1,157/s | ≈ 1,200/s |
 | 1 billion requests per day | 11,574/s | ≈ 12,000/s |
 
 **Sizes**
@@ -69,7 +69,7 @@ Handy products: 1 KB × 1 million = 1 GB, 1 MB × 1 million = 1 TB, 1 GB × 1,00
 | Valkey or Redis node | 100,000+ operations/s (more with I/O threads); dataset limited by RAM |
 | Kafka-style broker | Hundreds of MB/s of writes |
 | Server memory | 256 GB – 2 TB |
-| Local NVMe | 1–30 TB per drive (QLC drives up to 245 TB), about a million random reads/s |
+| Local NVMe | 1–30 TB per drive (QLC drives up to about 250 TB), 1–3 million random reads/s |
 | Network port | 25–100 Gbit/s |
 
 These figures vary a lot with the workload, but they tell you whether you need one machine, ten or a thousand. For the time each operation takes, see [latency numbers](/reference/latency-numbers/).
@@ -102,7 +102,7 @@ Assumptions: 20 million daily users, each uploading a photo every other day; abo
 | Upload bandwidth | 120/s × 2 MB | ≈ 230 MB/s ≈ 2 Gbit/s |
 | View bandwidth | 6,000/s × 2 MB | ≈ 12 GB/s ≈ 90 Gbit/s; ≈ 370 Gbit/s at peak |
 | New data per day | 10 M × 2 MB | 20 TB |
-| Per year | 20 TB × 365 | ≈ 7 PB |
+| Per year | 20 TB × 365 | ≈ 7.3 PB |
 | 10 years, 3 copies | 7.3 PB × 10 × 3 | ≈ 220 PB |
 
 **What it means.** Request rates are modest, but **egress bandwidth and storage dominate**. Serving 90–370 Gbit/s from origin servers is impractical, so images go through a CDN, and the origin sees only cache misses. Hundreds of petabytes belong in object storage. Erasure coding (about 1.5× overhead instead of 3×) halves the raw capacity, and moving old photos to colder storage classes cuts the cost further. Metadata is a separate, much smaller problem: 3.7 billion rows a year at about 1 KB each is under 4 TB a year, a job for a sharded database or a managed key-value store.

@@ -140,8 +140,7 @@ retry: 5000
 - **Reconnection is built in.** The browser's `EventSource` reconnects automatically and sends `Last-Event-ID`, so the server can resume where the stream stopped.
 - **Plain HTTP:** works with existing auth cookies, proxies, HTTP/2 and HTTP/3. Under HTTP/1.1 browsers allow only six connections per domain, shared across tabs, so serve SSE over HTTP/2 or later.
 - **Text only** (UTF-8). Binary data must be encoded.
-- `EventSource` cannot set custom headers such as `Authorization`, so many clients read the stream with `fetch()` instead. LLM APIs commonly stream generated tokens
-this way.
+- `EventSource` cannot set custom headers such as `Authorization`, so many clients read the stream with `fetch()` instead. LLM APIs commonly stream generated tokens this way.
 
 ### WebSockets
 

@@ -118,7 +118,7 @@ Systems that need globally ordered timestamps treat uncertainty explicitly:
 
 - **TrueTime** (Spanner) returns an interval `[earliest, latest]`, backed by GPS receivers and atomic clocks. The 2012 paper reports about 1–7 ms of uncertainty. A transaction waits it out (**commit wait**) before its timestamp becomes visible, so commit order matches real time.
 - **Hybrid logical clocks** (HLC, 2014) pair physical time with a logical counter: close to wall-clock time, yet respecting causality. CockroachDB uses HLC with a 500 ms maximum clock offset by default; a node whose clock is off from at least half the others by 80% of that limit shuts itself down.
-- **Cloud clocks improved.** Amazon Time Sync reports error bounds typically under 100 µs over NTP and under 40 µs from the PTP hardware clock. The open-source ClockBound daemon exposes them as TrueTime-style intervals.
+- **Cloud clocks improved.** On supported EC2 instances, Amazon Time Sync reports error bounds typically under 100 µs over NTP and under 40 µs from the PTP hardware clock. The open-source ClockBound daemon exposes them as TrueTime-style intervals.
 
 ## Distributed locks and fencing tokens
 

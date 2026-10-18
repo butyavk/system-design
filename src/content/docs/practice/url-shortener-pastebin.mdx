@@ -40,6 +40,7 @@ Out of scope: accounts and login, editing pastes, custom aliases ("vanity URLs")
 ### Assumptions
 
 - 10 million users, 10 million new pastes per month, 100 million reads per month (10:1).
+- Peak traffic is about 10× the average, because a single viral link can spike reads.
 - Average paste is 1 KB of text. Metadata (key, object pointer, timestamps, status) is about 100 bytes.
 - For the shortener variant we also check a scale 100× larger: 1 billion new links and 10 billion redirects per month.
 
@@ -297,9 +298,9 @@ The status code a shortener returns decides who sees the next click.
 | `302 Found` | Temporary | Only with explicit freshness headers | Every click is seen | Counting, editable or revocable links |
 | `307 Temporary Redirect` | Like 302, method preserved | Same as 302 | Same as 302 | Non-GET flows |
 
-- A **301** is cacheable by default, so a browser may skip you on the next click. That saves load but loses clicks, and a takedown does not reach those browsers. Search engines treat a 301 as "credit the destination". Bitly documents that it returns 301.
+- A **301** is cacheable by default, so a browser may skip you on the next click. That saves load but loses clicks, and a takedown does not reach those browsers. Search engines treat a 301 as "credit the destination".
 - A **302** brings every click back to you: accurate counts, retargetable links and instant takedown of a phishing link, at the cost of serving every repeat visit.
-- An explicit `Cache-Control` overrides the default, so a middle ground is a 301 with a short `max-age`, or `Cache-Control: private, no-store` when every click matters.
+- An explicit `Cache-Control` overrides the default, so a middle ground is a 301 with a short `max-age`, or `Cache-Control: private, no-store` when every click matters. Bitly takes the middle ground: its links return a 301 with `Cache-Control: private, max-age=90`.
 
 ### Expiration
 

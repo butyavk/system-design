@@ -68,7 +68,7 @@ Notes that change design decisions:
 
 ## Consumer groups and offsets
 
-A **consumer group** is a set of instances that share the work of reading a topic. The group coordinator assigns each partition to exactly one member. With 12 partitions and 4 members, each member reads 3 partitions. A 13th member would sit idle. A different group (say, analytics) reads the same topic independently, with its own offsets.
+A **consumer group** is a set of instances that share the work of reading a topic. The group coordinator assigns each partition to exactly one member. With 12 partitions and 4 members, each member reads 3 partitions. With 12 members each reads one, and a 13th would sit idle. A different group (say, analytics) reads the same topic independently, with its own offsets.
 
 Each group stores its progress as committed offsets (Kafka keeps them in an internal topic). The commit point sets the delivery semantics:
 
@@ -153,7 +153,7 @@ Use a queue to distribute *work*. Use a log to distribute *facts*. Many systems 
 
 ## Further reading
 
-- [The Log: what every software engineer should know about real-time data's unifying abstraction](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying): Jay Kreps' essay that shaped Kafka.
+- [The Log: what every software engineer should know about real-time data's unifying abstraction](https://web.archive.org/web/20260612105408/https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying): Jay Kreps' essay that shaped Kafka (archived copy; the original page is gone).
 - [Kafka design: message delivery semantics](https://kafka.apache.org/43/design/design/): official explanation of idempotence, transactions and compaction.
 - [Exactly-once semantics are possible: here's how Kafka does it](https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/): the design and its limits.
 - [Pattern: transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html): Chris Richardson's pattern description.

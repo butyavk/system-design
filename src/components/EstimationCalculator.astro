@@ -318,7 +318,7 @@ const clientData = { locale, presets, t: { qps: T.qps, perSec: T.perSec, invalid
   .est-steps-list :global(li) { margin: 0.3rem 0 0; }
   .est-steps-list :global(b) { color: var(--sl-color-white); font-weight: 600; }
   .est-steps-list :global(code) {
-    font-size: var(--sl-text-xs);
+    font-size: 1em !important; /* theme.css shrinks inline code to 0.875em; here the text is already small */
     background: var(--sl-color-bg);
     padding: 0.05rem 0.3rem;
     border-radius: 0.25rem;

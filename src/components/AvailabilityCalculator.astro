@@ -17,7 +17,7 @@ const T = {
     targetTitle: 'Downtime budget',
     targetLabel: 'Availability, %',
     presets: 'Presets',
-    nines: (n: string) => `${n} nines`,
+    nines: (n: string) => `${n} ${n === '1' ? 'nine' : 'nines'}`,
     period: 'Period',
     allowed: 'Allowed downtime',
     year: 'Year',
@@ -48,8 +48,15 @@ const T = {
     targetTitle: 'Бюджет простоя',
     targetLabel: 'Доступность, %',
     presets: 'Типовые значения',
-    // 2–4 and fractions ("3,5 девятки") take «девятки»; 5 and more take «девяток».
-    nines: (n: string) => `${n} ${n.includes(',') || n === '2' || n === '3' || n === '4' ? 'девятки' : 'девяток'}`,
+    // "1 девятка", "2–4 девятки" and fractions ("3,5 девятки"), "5 девяток" (and so on, by the last digits).
+    nines: (n: string) => {
+      if (n.includes(',')) return `${n} девятки`;
+      const k = Number(n);
+      const m10 = k % 10;
+      const m100 = k % 100;
+      const w = m10 === 1 && m100 !== 11 ? 'девятка' : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? 'девятки' : 'девяток';
+      return `${n} ${w}`;
+    },
     period: 'Период',
     allowed: 'Допустимый простой',
     year: 'Год',

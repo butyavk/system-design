@@ -159,7 +159,7 @@ Mechanisms that keep replicas converging:
 - **Read repair.** When a read sees a stale replica, it writes the newer value back to it.
 - **Anti-entropy.** A background process compares replicas using **Merkle trees** (hashes of key ranges), so only differing ranges are transferred.
 - **Hinted handoff.** If a replica is down, another node stores the write with a "hint" and delivers it when the replica returns. Cassandra keeps hints for up to three hours by default.
-- **Sloppy quorums.** If the designated N nodes are unreachable, the write is accepted by any W healthy nodes. Writes stay available during partitions, but a read quorum may not overlap them until handoff completes. `R + W > N` then no longer guarantees fresh reads.
+- **Sloppy quorums.** If some of a key's N home nodes are unreachable, other healthy nodes accept the write, so W acknowledgements still arrive. Writes stay available during partitions, but a read quorum may not overlap them until handoff completes. `R + W > N` then no longer guarantees fresh reads.
 
 <Aside type="caution" title="Quorums are not linearizability">
 Even with `R + W > N`, readers can see anomalies. A write may succeed on fewer than W nodes, fail, and not be rolled back. Concurrent writes resolved by LWW can lose data. Clock skew can reorder updates. Use leaderless stores for availability and write throughput. Use consensus-based systems when you need compare-and-set semantics.

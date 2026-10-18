@@ -303,7 +303,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "About one round trip to the nearest follower plus an `fsync`: ≈ 1.2 ms in one zone, ≈ 2 ms across three zones, ≈ 81 ms with followers across an ocean.\nDon't implement Raft or Paxos. Prefer, in order: your database (unique constraint, transaction, conditional write), your platform (Kubernetes Leases), a coordination service with 3 or 5 voters. Many “exactly once” problems need idempotency, not a lock.",
-      ru: "Примерно один сетевой круг до ближайшего фолловера плюс `fsync`: ≈ 1,2 мс в одной зоне, ≈ 2 мс в трёх зонах, ≈ 81 мс с фолловерами за океаном.\nНе реализуйте Raft или Paxos сами. По порядку: ваша база данных (ограничение уникальности, транзакция, условная запись), платформа (Lease в Kubernetes), сервис координации с 3 или 5 голосующими. Многим задачам «ровно один раз» нужна идемпотентность, а не блокировка.",
+      ru: "Примерно один RTT до ближайшего фолловера плюс `fsync`: ≈ 1,2 мс в одной зоне, ≈ 2 мс в трёх зонах, ≈ 81 мс с фолловерами за океаном.\nНе реализуйте Raft или Paxos сами. По порядку: ваша база данных (ограничение уникальности, транзакция, условная запись), платформа (Lease в Kubernetes), сервис координации с 3 или 5 голосующими. Многим задачам «ровно один раз» нужна идемпотентность, а не блокировка.",
     },
   },
 
@@ -648,7 +648,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "- **Async**: no commit latency, but failover can lose the last transactions.\n- **Sync**: no loss if a sync replica is promoted, but every commit waits a round trip, and writes stall if the replica is unreachable.\n- **Semi-sync / quorum**: wait for the fastest *k* replicas.\nWatch out: MySQL semi-sync silently falls back to async after a 10-second timeout.",
-      ru: "- **Асинхронная**: фиксация без задержки, но при переключении на резерв можно потерять последние транзакции.\n- **Синхронная**: без потерь, если повышают синхронную реплику, но каждая фиксация ждёт сетевой круг, а при недоступной реплике запись встаёт.\n- **Полусинхронная / кворумная**: ждём самые быстрые *k* реплик.\nОсторожно: полусинхронная репликация MySQL после 10-секундного тайм-аута молча переходит в асинхронный режим.",
+      ru: "- **Асинхронная**: фиксация без задержки, но при переключении на резерв можно потерять последние транзакции.\n- **Синхронная**: без потерь, если повышают синхронную реплику, но каждая фиксация ждёт RTT, а при недоступной реплике запись встаёт.\n- **Полусинхронная / кворумная**: ждём самые быстрые *k* реплик.\nОсторожно: полусинхронная репликация MySQL после 10-секундного тайм-аута молча переходит в асинхронный режим.",
     },
   },
   {
@@ -773,7 +773,7 @@ export const flashcards: Flashcard[] = [
     section: 'data',
     link: '/data/denormalization-and-tuning/',
     front: {
-      en: "When does denormalization pay off, and what must you decide?",
+      en: "When does denormalisation pay off, and what must you decide?",
       ru: "Когда окупается денормализация и что нужно решить заранее?",
     },
     back: {
@@ -804,7 +804,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "**N+1**: 50 posts then each author is 51 queries, about 25 ms of round trips at 0.5 ms each; eager loading or a join makes it two (about 1 ms).\n**OFFSET**: `OFFSET 1000000` reads and discards a million rows, and pages shift on inserts. **Keyset** pagination (`WHERE (created_at, id) < ($1, $2)`) served page 50,001 in 0.18 ms instead of 226 ms.",
-      ru: "**N+1**: 50 постов, а потом автор каждого — это 51 запрос, около 25 мс сетевых кругов по 0,5 мс; жадная загрузка или join сводят их к двум (около 1 мс).\n**OFFSET**: `OFFSET 1000000` читает и выбрасывает миллион строк, а страницы сдвигаются при вставках. **Пагинация по ключу** (keyset, `WHERE (created_at, id) < ($1, $2)`) отдала страницу 50 001 за 0,18 мс вместо 226 мс.",
+      ru: "**N+1**: 50 постов, а потом автор каждого — это 51 запрос, около 25 мс на RTT по 0,5 мс; жадная загрузка или join сводят их к двум (около 1 мс).\n**OFFSET**: `OFFSET 1000000` читает и выбрасывает миллион строк, а страницы сдвигаются при вставках. **Пагинация по ключу** (keyset, `WHERE (created_at, id) < ($1, $2)`) отдала страницу 50 001 за 0,18 мс вместо 226 мс.",
     },
   },
   {
@@ -869,7 +869,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "SQL and ACID transactions with horizontal write scaling, automatic rebalancing and survival of node or zone failures without manual failover.\nPrice: every commit needs a consensus round trip, so writes take a few ms within a region and tens to hundreds across regions; cross-range transactions cost more; some features are missing; hot rows still serialise.",
-      ru: "SQL и ACID-транзакции с горизонтальным масштабированием записи, автоматической перебалансировкой и переживанием отказа узла или зоны без ручного переключения.\nЦена: каждая фиксация требует сетевого круга консенсуса, поэтому запись занимает несколько мс внутри региона и десятки–сотни мс между регионами; транзакции через диапазоны дороже; части возможностей нет; горячие строки всё равно выполняются последовательно.",
+      ru: "SQL и ACID-транзакции с горизонтальным масштабированием записи, автоматической перебалансировкой и переживанием отказа узла или зоны без ручного переключения.\nЦена: каждая фиксация требует RTT консенсуса, поэтому запись занимает несколько мс внутри региона и десятки–сотни мс между регионами; транзакции через диапазоны дороже; части возможностей нет; горячие строки всё равно выполняются последовательно.",
     },
   },
   {
@@ -1196,7 +1196,7 @@ export const flashcards: Flashcard[] = [
     link: '/communication/http/',
     front: {
       en: "How many round trips before the first response byte on a new HTTPS connection?",
-      ru: "Сколько сетевых кругов до первого байта ответа на новом HTTPS-соединении?",
+      ru: "Сколько RTT до первого байта ответа на новом HTTPS-соединении?",
     },
     back: {
       en: "- New TCP + TLS 1.2: 4 (400 ms at 100 ms RTT).\n- New TCP + TLS 1.3: 3.\n- New QUIC (HTTP/3): 2.\n- QUIC resumption with 0-RTT, or a reused warm connection: 1.\nSo reuse and pool connections. Accept 0-RTT early data only for safe, idempotent requests, because it can be replayed.",
@@ -1213,7 +1213,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "**TCP**: a one-round-trip handshake, then reliable, in-order bytes with flow control (protects the receiver) and congestion control (protects the network). One lost segment stalls everything behind it.\n**UDP**: an 8-byte header and nothing else — no connection, ordering, retransmission or congestion control. Used when late data is useless (voice, games), for DNS and DHCP, and for broadcast. You own congestion control and amplification protection.",
-      ru: "**TCP**: рукопожатие за один сетевой круг, затем надёжная упорядоченная доставка байтов с управлением потоком (защищает получателя) и управлением перегрузкой (защищает сеть). Один потерянный сегмент тормозит всё, что за ним.\n**UDP**: 8-байтовый заголовок и ничего больше — ни соединения, ни порядка, ни повторной передачи, ни управления перегрузкой. Применяется, когда опоздавшие данные бесполезны (голос, игры), для DNS и DHCP и для широковещания. Управление перегрузкой и защита от усиления — на вас.",
+      ru: "**TCP**: рукопожатие за один RTT, затем надёжная упорядоченная доставка байтов с управлением потоком (защищает получателя) и управлением перегрузкой (защищает сеть). Один потерянный сегмент тормозит всё, что за ним.\n**UDP**: 8-байтовый заголовок и ничего больше — ни соединения, ни порядка, ни повторной передачи, ни управления перегрузкой. Применяется, когда опоздавшие данные бесполезны (голос, игры), для DNS и DHCP и для широковещания. Управление перегрузкой и защита от усиления — на вас.",
     },
   },
   {
@@ -1226,7 +1226,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "- Handshake round trips, plus TLS.\n- **Slow start**: a new connection starts with 10 segments (about 14.6 KB), so a 1 MB response needs about 7 round trips, 0.7 s at 100 ms RTT.\n- TIME_WAIT: about 28,000 ephemeral ports run out at roughly 470 new connections/s to one backend.\n- 500 app instances × 20 database connections = 10,000 server connections.",
-      ru: "- Сетевые круги на рукопожатие плюс TLS.\n- **Медленный старт**: новое соединение начинает с 10 сегментов (около 14,6 КБ), поэтому ответ на 1 МБ требует примерно 7 сетевых кругов — 0,7 с при RTT 100 мс.\n- TIME_WAIT: около 28 000 эфемерных портов заканчиваются примерно на 470 новых соединениях в секунду к одному бэкенду.\n- 500 экземпляров приложения × 20 соединений с базой = 10 000 серверных соединений.",
+      ru: "- RTT на рукопожатие плюс TLS.\n- **Медленный старт**: новое соединение начинает с 10 сегментов (около 14,6 КБ), поэтому ответ на 1 МБ требует примерно 7 RTT — 0,7 с при RTT 100 мс.\n- TIME_WAIT: около 28 000 эфемерных портов заканчиваются примерно на 470 новых соединениях в секунду к одному бэкенду.\n- 500 экземпляров приложения × 20 соединений с базой = 10 000 серверных соединений.",
     },
   },
   {
@@ -1483,11 +1483,11 @@ export const flashcards: Flashcard[] = [
     section: 'reliability',
     link: '/reliability/security/',
     front: {
-      en: "Authentication vs authorization, and where do you check each?",
+      en: "Authentication vs authorisation, and where do you check each?",
       ru: "Аутентификация и авторизация: в чём разница и где проверять каждую?",
     },
     back: {
-      en: "**AuthN** proves *who* you are; **authZ** decides *what* you may do with this object. AuthZ failures, such as fetching `/invoices/1043` after being allowed only `/invoices/1042`, are far more common: broken access control is the top web risk.\nAuthenticate at the gateway, but check authorization in the service, on every request and every object. Store passwords only as slow salted hashes (Argon2id).",
+      en: "**AuthN** proves *who* you are; **authZ** decides *what* you may do with this object. AuthZ failures, such as fetching `/invoices/1043` after being allowed only `/invoices/1042`, are far more common: broken access control is the top web risk.\nAuthenticate at the gateway, but check authorisation in the service, on every request and every object. Store passwords only as slow salted hashes (Argon2id).",
       ru: "**Аутентификация** доказывает, *кто* вы; **авторизация** решает, *что* вам можно делать с этим объектом. Ошибки авторизации — например, получить `/invoices/1043`, имея доступ только к `/invoices/1042`, — встречаются гораздо чаще: нарушение контроля доступа — главный риск веб-приложений.\nАутентифицируйте на шлюзе, а авторизацию проверяйте в сервисе — на каждом запросе и для каждого объекта. Пароли храните только как медленные хеши с солью (Argon2id).",
     },
   },
@@ -1526,7 +1526,7 @@ export const flashcards: Flashcard[] = [
       ru: "Инъекции, XSS, CSRF, SSRF: главная защита от каждой атаки?",
     },
     back: {
-      en: "- **Injection**: parameterized queries; allowlists for identifiers.\n- **XSS**: context-aware output encoding, HTML sanitization, plus a Content Security Policy.\n- **CSRF**: `SameSite` cookies, rejecting cross-site requests via `Sec-Fetch-Site`, and never changing state on GET.\n- **SSRF** (webhooks, link previews): resolve the host, block private and link-local ranges, send traffic through an egress proxy.",
+      en: "- **Injection**: parameterised queries; allowlists for identifiers.\n- **XSS**: context-aware output encoding, HTML sanitisation, plus a Content Security Policy.\n- **CSRF**: `SameSite` cookies, rejecting cross-site requests via `Sec-Fetch-Site`, and never changing state on GET.\n- **SSRF** (webhooks, link previews): resolve the host, block private and link-local ranges, send traffic through an egress proxy.",
       ru: "- **Инъекции**: параметризованные запросы; списки разрешённых значений для идентификаторов.\n- **XSS**: кодирование вывода с учётом контекста, санитизация HTML и Content Security Policy.\n- **CSRF**: cookie с `SameSite`, отказ кросс-сайтовым запросам по `Sec-Fetch-Site` и никаких изменений состояния через GET.\n- **SSRF** (вебхуки, превью ссылок): разрешить имя хоста, блокировать приватные и link-local диапазоны, пускать трафик через исходящий прокси.",
     },
   },
@@ -1551,11 +1551,11 @@ export const flashcards: Flashcard[] = [
     link: '/reference/latency-numbers/',
     front: {
       en: "Random 4 KB read from NVMe vs a round trip inside an availability zone: which is faster?",
-      ru: "Случайное чтение 4 КБ с NVMe или сетевой круг внутри зоны доступности: что быстрее?",
+      ru: "Случайное чтение 4 КБ с NVMe или RTT внутри зоны доступности: что быстрее?",
     },
     back: {
       en: "The NVMe read: about **50 µs** at queue depth 1, against about **200 µs** for a same-zone round trip.\nIn 2012 a network round trip beat a disk seek by twenty times. Today a local NVMe read is cheaper than a network hop, so a remote cache earns its place when it saves a query, computation or a cross-region trip, not just a disk read.",
-      ru: "Чтение с NVMe: около **50 мкс** при глубине очереди 1 против примерно **200 мкс** на сетевой круг внутри зоны.\nВ 2012 году сетевой круг был в двадцать раз быстрее позиционирования головки диска. Сегодня локальное чтение с NVMe дешевле сетевого перехода, поэтому удалённый кэш оправдан, когда экономит запрос, вычисление или межрегиональный круг, а не просто чтение с диска.",
+      ru: "Чтение с NVMe: около **50 мкс** при глубине очереди 1 против примерно **200 мкс** на RTT внутри зоны.\nВ 2012 году RTT был в двадцать раз быстрее позиционирования головки диска. Сегодня локальное чтение с NVMe дешевле сетевого перехода, поэтому удалённый кэш оправдан, когда экономит запрос, вычисление или межрегиональный RTT, а не просто чтение с диска.",
     },
   },
   {
@@ -1568,7 +1568,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "- Within a zone: ~200 µs (about 5,000 sequential trips per second)\n- Between zones: ~1 ms (~1,000/s)\n- US East ↔ Western Europe: ~80 ms (~12/s)\n- California ↔ Netherlands: ~145 ms (~7/s)\n- Other side of the world: ~280 ms (3–4/s)\nLight in fibre covers about 200 km per ms, so sequential cross-region calls are the most expensive part of most requests.",
-      ru: "- Внутри зоны: ~200 мкс (около 5000 последовательных кругов в секунду)\n- Между зонами: ~1 мс (~1000/с)\n- Восток США ↔ Западная Европа: ~80 мс (~12/с)\n- Калифорния ↔ Нидерланды: ~145 мс (~7/с)\n- Другая сторона планеты: ~280 мс (3–4/с)\nСвет в оптоволокне проходит около 200 км за мс, поэтому последовательные межрегиональные вызовы — самая дорогая часть большинства запросов.",
+      ru: "- Внутри зоны: ~200 мкс (около 5000 последовательных RTT в секунду)\n- Между зонами: ~1 мс (~1000/с)\n- Восток США ↔ Западная Европа: ~80 мс (~12/с)\n- Калифорния ↔ Нидерланды: ~145 мс (~7/с)\n- Другая сторона планеты: ~280 мс (3–4/с)\nСвет в оптоволокне проходит около 200 км за мс, поэтому последовательные межрегиональные вызовы — самая дорогая часть большинства запросов.",
     },
   },
   {
@@ -1580,8 +1580,8 @@ export const flashcards: Flashcard[] = [
       ru: "Насколько быстры жёсткие диски, NVMe и облачные блочные тома?",
     },
     back: {
-      en: "- HDD random read (seek + rotation): ~**10 ms**, so only about 100 random IOPS per drive; 1 MB sequential ~5 ms.\n- NVMe: 1 MB sequential ~100 µs (7 GB/s on PCIe 4, 14 GB/s on PCIe 5), ten times the 2012 SSD.\n- Network-attached cloud block volume I/O: ~**1 ms**, ten times a local NVMe drive, because every I/O crosses the network.",
-      ru: "- Случайное чтение с HDD (позиционирование + оборот): ~**10 мс**, поэтому всего около 100 случайных IOPS на диск; 1 МБ последовательно — ~5 мс.\n- NVMe: 1 МБ последовательно — ~100 мкс (7 ГБ/с на PCIe 4, 14 ГБ/с на PCIe 5), в десять раз быстрее SSD 2012 года.\n- Ввод-вывод облачного блочного тома по сети: ~**1 мс**, в десять раз медленнее локального NVMe: каждый запрос идёт по сети.",
+      en: "- HDD random read (seek + rotation): ~**10 ms**, so only about 100 random IOPS per drive; 1 MB sequential ~5 ms.\n- NVMe: 1 MB sequential ~100 µs (7 GB/s on PCIe 4, 14 GB/s on PCIe 5), 7–14 times the 2012 SSD.\n- Network-attached cloud block volume I/O: ~**1 ms**, ten times a local NVMe drive, because every I/O crosses the network.",
+      ru: "- Случайное чтение с HDD (позиционирование + оборот): ~**10 мс**, поэтому всего около 100 случайных IOPS на диск; 1 МБ последовательно — ~5 мс.\n- NVMe: 1 МБ последовательно — ~100 мкс (7 ГБ/с на PCIe 4, 14 ГБ/с на PCIe 5), в 7–14 раз быстрее SSD 2012 года.\n- Ввод-вывод облачного блочного тома по сети: ~**1 мс**, в десять раз медленнее локального NVMe: каждый запрос идёт по сети.",
     },
   },
   {
@@ -1594,7 +1594,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "- Redis/Valkey GET in the same zone: ~**250 µs**; the server needs well under 1 µs, the rest is the network.\n- Indexed PostgreSQL query over the network: ~**500 µs** (19 µs over a Unix socket).\n- TLS 1.3 handshake within a region: ~**1 ms**.\n- Object storage first byte: ~**30 ms** median, with a tail to 200 ms.\nAll of them are dominated by the round trip, so fewer round trips beat faster servers.",
-      ru: "- GET в Redis/Valkey в той же зоне: ~**250 мкс**; серверу нужно намного меньше 1 мкс, остальное — сеть.\n- Запрос к PostgreSQL по индексу через сеть: ~**500 мкс** (19 мкс через Unix-сокет).\n- Рукопожатие TLS 1.3 в пределах региона: ~**1 мс**.\n- Первый байт из объектного хранилища: медиана ~**30 мс**, хвост до 200 мс.\nВсё это определяется сетевым кругом, поэтому меньше кругов лучше, чем более быстрые серверы.",
+      ru: "- GET в Redis/Valkey в той же зоне: ~**250 мкс**; серверу нужно намного меньше 1 мкс, остальное — сеть.\n- Запрос к PostgreSQL по индексу через сеть: ~**500 мкс** (19 мкс через Unix-сокет).\n- Рукопожатие TLS 1.3 в пределах региона: ~**1 мс**.\n- Первый байт из объектного хранилища: медиана ~**30 мс**, хвост до 200 мс.\nВо всём этом доминирует RTT, поэтому меньше RTT лучше, чем более быстрые серверы.",
     },
   },
   {
@@ -1607,7 +1607,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "Resolver cache hit: ~**10 ms**, roughly one round trip to the resolver (under 1 ms inside a cloud VPC, 5–30 ms from home or mobile networks).\nCache miss with full recursion: ~**100 ms**, about 130 ms on average when servers answer, 300–400 ms with timeouts and retries. OS and browser caches answer in microseconds.",
-      ru: "Попадание в кэш резолвера: ~**10 мс**, примерно один сетевой круг до резолвера (меньше 1 мс внутри облачной VPC, 5–30 мс из домашних и мобильных сетей).\nПромах с полной рекурсией: ~**100 мс** — в среднем около 130 мс, если серверы отвечают, и 300–400 мс с тайм-аутами и повторами. Кэши ОС и браузера отвечают за микросекунды.",
+      ru: "Попадание в кэш резолвера: ~**10 мс**, примерно один RTT до резолвера (меньше 1 мс внутри облачной VPC, 5–30 мс из домашних и мобильных сетей).\nПромах с полной рекурсией: ~**100 мс** — в среднем около 130 мс, если серверы отвечают, и 300–400 мс с тайм-аутами и повторами. Кэши ОС и браузера отвечают за микросекунды.",
     },
   },
   {
@@ -1671,8 +1671,8 @@ export const flashcards: Flashcard[] = [
       ru: "Переведите 1 млн, 100 млн и 1 млрд запросов в сутки в запросы в секунду.",
     },
     back: {
-      en: "A day is 86,400 s ≈ 10⁵ s.\n- 1 million/day ≈ **12/s**\n- 100 million/day ≈ **1,000/s**\n- 1 billion/day ≈ **12,000/s**\nThen find the peak: typically 2–3× the daily average, up to 10× for launches. Size servers for the peak and storage for the average.",
-      ru: "Сутки — 86 400 с ≈ 10⁵ с.\n- 1 млн в сутки ≈ **12/с**\n- 100 млн в сутки ≈ **1000/с**\n- 1 млрд в сутки ≈ **12 000/с**\nЗатем найдите пик: обычно 2–3× от среднего за сутки, до 10× на запусках. Серверы считают по пику, хранилище — по среднему.",
+      en: "A day is 86,400 s ≈ 10⁵ s.\n- 1 million/day ≈ **12/s**\n- 100 million/day ≈ **1,200/s**\n- 1 billion/day ≈ **12,000/s**\nThen find the peak: typically 2–3× the daily average, up to 10× for launches. Size servers for the peak and storage for the average.",
+      ru: "Сутки — 86 400 с ≈ 10⁵ с.\n- 1 млн в сутки ≈ **12/с**\n- 100 млн в сутки ≈ **1200/с**\n- 1 млрд в сутки ≈ **12 000/с**\nЗатем найдите пик: обычно 2–3× от среднего за сутки, до 10× на запусках. Серверы считают по пику, хранилище — по среднему.",
     },
   },
   {
@@ -1884,7 +1884,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "**Bidirectional BFS**, always expanding the smaller frontier. With 50 friends each, a path of length 4 touches about 5,000 nodes instead of about 6 million.\nAdjacency lists live in memory on person servers sharded by user ID. Fetch each BFS level with one batched call per shard, in parallel, so round trips equal the depth (about 4), not the number of friends.",
-      ru: "**Двунаправленный BFS**, всегда расширяющий меньший фронт. При 50 друзьях путь длины 4 затрагивает около 5000 вершин вместо примерно 6 млн.\nСписки смежности лежат в памяти person-серверов, шардированных по ID пользователя. Каждый уровень BFS загружается одним пакетным вызовом на шард, параллельно, так что сетевых кругов столько, какова глубина (около 4), а не сколько друзей.",
+      ru: "**Двунаправленный BFS**, всегда расширяющий меньший фронт. При 50 друзьях путь длины 4 затрагивает около 5000 вершин вместо примерно 6 млн.\nСписки смежности лежат в памяти person-серверов, шардированных по ID пользователя. Каждый уровень BFS загружается одним пакетным вызовом на шард, параллельно, так что число RTT равно глубине (около 4), а не числу друзей.",
     },
   },
   {
@@ -1923,7 +1923,7 @@ export const flashcards: Flashcard[] = [
     },
     back: {
       en: "Store only a consented token, encrypted in a vault — never the bank password. A scheduler and provider webhooks feed a job queue; sync workers pull incremental changes **by cursor** and **upsert** on a unique provider transaction ID, saving the cursor in the same transaction.\nA circuit breaker per institution keeps a 6-hour bank outage contained; money is integer cents, never floats.",
-      ru: "Храним только токен согласия, зашифрованный в хранилище секретов, — никогда не пароль от банка. Планировщик и вебхуки провайдера кладут задания в очередь; воркеры забирают изменения **по курсору** и делают **upsert** по уникальному ID транзакции провайдера, сохраняя курсор в той же транзакции.\nПредохранитель на каждый банк локализует его 6-часовой простой; деньги — целые копейки, никогда не float.",
+      ru: "Храним только токен согласия, зашифрованный в хранилище секретов, — никогда не пароль от банка. Планировщик и вебхуки провайдера кладут задания в очередь; воркеры забирают изменения **по курсору** и делают **upsert** по уникальному ID транзакции провайдера, сохраняя курсор в той же транзакции.\nПредохранитель на каждый банк локализует его 6-часовой простой; деньги — целые числа в минимальных единицах (центах, копейках), никогда не float.",
     },
   },
   {

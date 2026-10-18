@@ -61,7 +61,7 @@ The write succeeded and nothing is broken. The user still sees their change "dis
 
 ## The wider spectrum
 
-From strongest to weakest:
+Roughly from strongest to weakest (the order is partial: causal consistency and bounded staleness, for example, are not directly comparable):
 
 | Model | Guarantee | Where it matters | Typical implementation |
 |---|---|---|---|
@@ -152,5 +152,5 @@ When several replicas accept writes independently (multi-leader, offline-first a
 - [Replication](/data/replication/) — the replication schemes that produce each model.
 - [Cache strategies](/caching/cache-strategies/) — caches are replicas too, with their own staleness.
 - [Event streaming](/async/event-streaming/) — ordered logs as a way to get consistent derived views.
-- [Availability patterns](/fundamentals/availability-patterns/) — what consistency you keep during fail-over.
+- [Availability patterns](/fundamentals/availability-patterns/) — what consistency you keep during failover.
 - [Consensus and coordination](/fundamentals/consensus-and-coordination/) — the consensus logs that make linearizable writes and reads possible.

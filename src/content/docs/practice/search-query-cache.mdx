@@ -72,9 +72,9 @@ How big must the hot set be? Under a Zipf distribution with about 1 billion dist
 an ideal cache holding the top 1 M queries catches about 68 % of requests, the top 10 M about
 78 % and the top 100 M about 89 %. Each tenfold increase in memory adds only about 10
 percentage points, so **100 M entries (about 110–140 GB compressed, including overhead) is a
-sensible target.** Real LRU does worse than this ideal. Che's approximation, checked against a
-simulation, puts the loss at about 4–8 percentage points, the gap shrinking as the cache grows,
-because one-off queries keep pushing out useful entries.
+sensible target.** Real LRU does worse than this ideal, because one-off queries keep pushing
+out useful entries. Che's approximation, checked against a simulation, puts the loss at about
+4–8 percentage points, and the gap shrinks as the cache grows.
 
 ## Step 2 — High-level design
 
@@ -83,13 +83,13 @@ flowchart TB
   client["Client"] --> web["Web server / API gateway"]
   web --> qapi["Query API"]
   qapi --> cache["Memory cache"]
-  qapi --> index["Reverse index service"]
+  qapi --> index["Inverted index service"]
   qapi --> docs["Document service"]
 ```
 
 1. The **Query API** normalises the query and builds the cache key.
 2. On a **hit**, it returns the cached results.
-3. On a **miss**, it calls the **reverse index service**, which finds and ranks matching documents. The **document service** supplies titles and snippets. The API then stores the page in the cache (**cache-aside**) and returns it.
+3. On a **miss**, it calls the **inverted index service**, which finds and ranks matching documents. The **document service** supplies titles and snippets. The API then stores the page in the cache (**cache-aside**) and returns it.
 
 ## Step 3 — Core components
 
@@ -327,7 +327,7 @@ flowchart TD
   q1 & q2 --> ring["Consistent hashing /<br/>hash slots"]
   ring --> shards["Cache shards 1..N<br/>(primary + replica each)"]
   q1 & q2 --> coal["Miss path: coalescing<br/>+ rate limit"]
-  coal --> index["Reverse index<br/>service"]
+  coal --> index["Inverted index<br/>service"]
   coal --> docs["Document<br/>service"]
 ```
 

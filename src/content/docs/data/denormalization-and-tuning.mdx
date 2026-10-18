@@ -1,24 +1,24 @@
 ---
-title: Denormalization and SQL tuning
-description: "Trading write cost for read speed with denormalization and materialized views, then tuning: EXPLAIN, indexes, N+1, keyset pagination, pooling, myths."
+title: Denormalisation and SQL tuning
+description: "Trading write cost for read speed with denormalisation and materialized views, then tuning: EXPLAIN, indexes, N+1, keyset pagination, pooling, myths."
 sidebar:
   order: 4
 ---
 import { Aside } from '@astrojs/starlight/components';
 
-Before adding replicas or shards, get the most out of the database you have. Two levers usually give the biggest wins for the least architecture. **Denormalization** stores data in the shape the reads need. **Tuning** makes each query do less work. Both are measurable, reversible and cheap compared with distributing data. Both are also easy to get wrong when advice is followed from memory instead of from a query plan.
+Before adding replicas or shards, get the most out of the database you have. Two levers usually give the biggest wins for the least architecture. **Denormalisation** stores data in the shape the reads need. **Tuning** makes each query do less work. Both are measurable, reversible and cheap compared with distributing data. Both are also easy to get wrong when advice is followed from memory instead of from a query plan.
 
 <Aside type="tip" title="TL;DR">
 - Measure first: find the queries that consume the most total time (`pg_stat_statements`, the slow query log), then read their plans with `EXPLAIN ANALYZE`.
 - The right **composite index** often turns a full-table scan into a few page reads. Every index also slows writes and uses memory, so add indexes for real queries only.
 - Kill **N+1 queries**, page with **keysets** instead of `OFFSET`, and put a **connection pooler** in front of PostgreSQL.
-- **Denormalize** when reads vastly outnumber writes and joins are the bottleneck. Decide who keeps the copies in sync: a transaction, a trigger, a materialized view or an event stream.
+- **Denormalise** when reads vastly outnumber writes and joins are the bottleneck. Decide who keeps the copies in sync: a transaction, a trigger, a materialized view or an event stream.
 - Much classic advice is outdated: `CHAR` is not faster than `VARCHAR` in PostgreSQL, `VARCHAR(255)` is a habit rather than an optimisation, and MySQL's query cache no longer exists.
 </Aside>
 
-## Denormalization
+## Denormalisation
 
-A normalised schema stores each fact once, which keeps writes simple and correct. Reads then reassemble the facts with joins. Denormalization stores some facts **more than once**, or stores **precomputed results**, so that hot reads skip the joins or aggregates.
+A normalised schema stores each fact once, which keeps writes simple and correct. Reads then reassemble the facts with joins. Denormalisation stores some facts **more than once**, or stores **precomputed results**, so that hot reads skip the joins or aggregates.
 
 Why it pays off: many user-facing systems read far more than they write. Feeds, product pages and dashboards commonly see 100 reads per write or more. Suppose a join costs 2 ms per read and keeping a copy costs 1 ms per write. At 10,000 reads/s and 100 writes/s, removing the join saves 20 seconds of database time every second, while the extra write work costs 0.1 seconds. The arithmetic flips for write-heavy tables.
 
@@ -78,7 +78,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY daily_revenue;   -- e.g. every 5 minutes 
 
 PostgreSQL's built-in refresh always recomputes the whole query; the `pg_ivm` extension adds incremental maintenance for simpler views. Oracle and SQL Server (indexed views) can maintain some views incrementally. At larger scale, the same idea becomes a stream processor or a CDC pipeline maintaining read models. See [event streaming](/async/event-streaming/).
 
-**Costs of denormalization:** more storage, slower and more complex writes, and the permanent risk of copies drifting apart. Under a heavy write load, a denormalised schema can be slower overall than the normalised one. Denormalize specific hot paths, not the whole schema.
+**Costs of denormalisation:** more storage, slower and more complex writes, and the permanent risk of copies drifting apart. Under a heavy write load, a denormalised schema can be slower overall than the normalised one. Denormalise specific hot paths, not the whole schema.
 
 ## SQL tuning
 
@@ -89,15 +89,15 @@ PostgreSQL's built-in refresh always recomputes the whole query; the `pg_ivm` ex
 
 ### 2. Read the plan
 
-`EXPLAIN` shows the plan the optimizer chose. `EXPLAIN ANALYZE` runs the query and adds real row counts and timings. MySQL has had `EXPLAIN ANALYZE` since 8.0.18. In PostgreSQL, add `BUFFERS` to see pages touched (version 18 includes buffer counts automatically). Because `ANALYZE` executes the statement, wrap writes in `BEGIN; ... ROLLBACK;`.
+`EXPLAIN` shows the plan the optimiser chose. `EXPLAIN ANALYZE` runs the query and adds real row counts and timings. MySQL has had `EXPLAIN ANALYZE` since 8.0.18. In PostgreSQL, add `BUFFERS` to see pages touched (version 18 includes buffer counts automatically). Because `ANALYZE` executes the statement, wrap writes in `BEGIN; ... ROLLBACK;`.
 
 What to look for:
 
 - **Sequential scans on large tables** where you expected an index.
-- **Estimated vs actual rows** differing by 10× or more. The optimizer is working from bad statistics: run `ANALYZE`, or raise the statistics target for skewed columns.
+- **Estimated vs actual rows** differing by 10× or more. The optimiser is working from bad statistics: run `ANALYZE`, or raise the statistics target for skewed columns.
 - **Sorts and hashes spilling to disk**, and nested loops with a very large outer side.
 
-Here is a real example on a 2-million-row `orders` table (PostgreSQL 16, cost columns removed for brevity). The query fetches one customer's 20 newest orders:
+Here is a real example on a 2-million-row `orders` table (PostgreSQL 16, cost columns removed for brevity). The query fetches one customer's 20 newest orders (this customer has only 16):
 
 ```text
 -- Before: no suitable index
@@ -214,7 +214,7 @@ Size the server-side pool near the number of cores times a small factor, not by 
 
 | Technique | Gains | Costs |
 |---|---|---|
-| Denormalized columns and counters | Join-free, cheap hot reads | Write amplification, drift, lock contention on hot rows |
+| Denormalised columns and counters | Join-free, cheap hot reads | Write amplification, drift, lock contention on hot rows |
 | Materialized views | Precomputed aggregates with no app code | Stale between refreshes; full recompute in PostgreSQL |
 | More indexes | Faster selective reads, index-only scans | Slower writes, more memory and disk, more `VACUUM` work |
 | Table partitioning | Pruning, instant retention, smaller indexes per partition | Planning overhead; key constraints must include the partition key |
@@ -224,7 +224,7 @@ Size the server-side pool near the number of cores times a small factor, not by 
 - When asked "the database is slow", start with measurement: which query, how often, what plan. Do not jump to sharding or NoSQL.
 - Design an index for a given query out loud: equality columns first, then range or sort, consider covering. Mention the write cost.
 - Know N+1 and keyset pagination; both come up in API design questions.
-- If you denormalize, say who keeps the copies in sync and what happens when they drift.
+- If you denormalise, say who keeps the copies in sync and what happens when they drift.
 - Bonus points for knowing that the MySQL query cache was removed in 8.0 and that `CHAR` is not faster in PostgreSQL.
 </Aside>
 
@@ -243,5 +243,5 @@ Size the server-side pool near the number of cores times a small factor, not by 
 - [Partitioning and sharding](/data/partitioning-and-sharding/) — the next step when one tuned server is not enough.
 - [Replication](/data/replication/) — read replicas for read-heavy workloads.
 - [Caching layers](/caching/caching-layers/) — taking repeated reads off the database entirely.
-- [Event streaming](/async/event-streaming/) — CDC pipelines that maintain denormalized read models.
-- [NoSQL databases](/data/nosql/) — stores designed around denormalized, query-shaped data.
+- [Event streaming](/async/event-streaming/) — CDC pipelines that maintain denormalised read models.
+- [NoSQL databases](/data/nosql/) — stores designed around denormalised, query-shaped data.

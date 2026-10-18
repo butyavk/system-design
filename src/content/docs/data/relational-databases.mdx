@@ -22,7 +22,7 @@ Data lives in **tables** (relations) made of **rows** (tuples) with typed **colu
 
 Two properties make the model durable after 50 years:
 
-- **Declarative queries.** SQL says *what* you want. The optimizer picks *how*: which index, which join algorithm, which order. When the data grows, the plan can change without touching application code.
+- **Declarative queries.** SQL says *what* you want. The optimiser picks *how*: which index, which join algorithm, which order. When the data grows, the plan can change without touching application code.
 - **Constraints in one place.** `NOT NULL`, `UNIQUE`, `CHECK` and foreign keys are enforced by the database for every client. An application bug cannot slip past them.
 
 The line between relational and document stores has blurred. PostgreSQL's `jsonb` columns can be indexed, and many document databases now offer multi-document transactions. The deciding questions are about access patterns and guarantees, not labels. See [SQL or NoSQL](/data/sql-or-nosql/).
@@ -44,7 +44,7 @@ Two practical notes. First, the "C" belongs mostly to the application: the datab
 - **Prefer atomic statements to read-modify-write.** `UPDATE accounts SET balance = balance - 10 WHERE id = 1 AND balance >= 10` cannot lose an update. Reading the balance into the application, subtracting there and writing it back can.
 - **Lock explicitly when you must.** `SELECT ... FOR UPDATE` locks the rows you read, so a concurrent writer waits.
 - **Use optimistic concurrency for long edits.** Add a `version` column and write `UPDATE ... SET version = version + 1 WHERE id = ? AND version = ?`. If zero rows changed, someone else won, so reload and retry.
-- **Retry on serialization failures and deadlocks.** At stricter levels the database aborts a transaction instead of corrupting data (SQLSTATE `40001`). Make transactions safe to re-run.
+- **Retry on serialisation failures and deadlocks.** At stricter levels the database aborts a transaction instead of corrupting data (SQLSTATE `40001`). Make transactions safe to re-run.
 
 ## Isolation levels and their anomalies
 
@@ -172,7 +172,7 @@ flowchart TD
 
 Each step costs more complexity than the one before it, so climb only when measurements say the current step is exhausted:
 
-- **Query and schema tuning, denormalisation:** often a 10× to 1000× win for one query, at almost no architectural cost. See [Denormalization and SQL tuning](/data/denormalization-and-tuning/).
+- **Query and schema tuning, denormalisation:** often a 10× to 1000× win for one query, at almost no architectural cost. See [Denormalisation and SQL tuning](/data/denormalization-and-tuning/).
 - **Caching:** takes repeated reads off the database. See [Caching layers](/caching/caching-layers/).
 - **Read replicas:** scale reads and add failover targets, but bring replication lag. See [Replication](/data/replication/).
 - **Federation and sharding:** scale writes and storage beyond one node, at the cost of cross-shard queries and transactions. See [Partitioning and sharding](/data/partitioning-and-sharding/).
@@ -206,7 +206,7 @@ Each step costs more complexity than the one before it, so climb only when measu
 
 - [Replication](/data/replication/) — the first step beyond one node, and where durability meets availability.
 - [Partitioning and sharding](/data/partitioning-and-sharding/) — scaling writes and storage horizontally.
-- [Denormalization and SQL tuning](/data/denormalization-and-tuning/) — getting the most out of one database first.
+- [Denormalisation and SQL tuning](/data/denormalization-and-tuning/) — getting the most out of one database first.
 - [SQL or NoSQL](/data/sql-or-nosql/) — choosing a data model for a workload.
 - [Consistency patterns](/fundamentals/consistency-patterns/) — consistency across replicas, as opposed to the "C" in ACID.
 - [CAP theorem and PACELC](/fundamentals/cap-theorem/) — why distributed databases must trade consistency against availability.

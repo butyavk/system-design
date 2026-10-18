@@ -1,6 +1,6 @@
 ---
 title: Availability patterns
-description: "Fail-over (active-passive, active-active), availability in nines, components in series and in parallel, SLOs and error budgets, multi-AZ, health checks."
+description: "Failover (active-passive, active-active), availability in nines, components in series and in parallel, SLOs and error budgets, multi-AZ, health checks."
 sidebar:
   order: 5
 ---
@@ -9,14 +9,14 @@ import { Aside } from '@astrojs/starlight/components';
 Availability is the fraction of time, or of requests, for which a system does its job. Every component eventually fails, so high availability comes from **redundancy** plus a fast, reliable way to **switch to the redundant copy**. Then you measure the result against a target the business agreed to. This page covers the patterns, the arithmetic and the operating practices.
 
 <Aside type="tip" title="TL;DR">
-- Two building blocks: **fail-over** (a standby takes over, or all copies serve at once) and **replication** (keep the standby's data current).
+- Two building blocks: **failover** (a standby takes over, or all copies serve at once) and **replication** (keep the standby's data current).
 - Components **in series multiply** availabilities, so each dependency lowers the total. Redundant components **in parallel multiply failure probabilities**, which raises the total, but only if failures are independent.
 - Each extra nine cuts allowed downtime tenfold: 99.9% is about 8.8 hours a year, 99.99% is about 53 minutes.
 - Set an **SLO**, treat the gap to 100% as an **error budget**, and spend it on releases. Stop when it is gone.
 - Spread across **Availability Zones** by default. Go multi-Region only when the requirement justifies the cost and the consistency trade-offs.
 </Aside>
 
-## Fail-over
+## Failover
 
 ### Active-passive
 
@@ -26,7 +26,7 @@ One node serves traffic. A standby receives replicated data and watches the acti
 flowchart TB
   clients["Clients"] --> vip["Virtual IP or DNS name"]
   vip --> active["Active node"]
-  vip -.->|"after fail-over"| passive["Passive standby"]
+  vip -.->|"after failover"| passive["Passive standby"]
   active -->|"replication"| passive
   active -.-|"heartbeats"| passive
 ```
@@ -57,18 +57,18 @@ flowchart TB
 
 For stateless tiers, active-active is the default: there is nothing to replicate. For stateful tiers it means multi-leader or leaderless writes, so you must decide how concurrent writes to the same data are resolved. See [consistency patterns](/fundamentals/consistency-patterns/).
 
-### Downsides of fail-over
+### Downsides of failover
 
 - **Lost writes.** With asynchronous replication, writes acknowledged by the old primary but not yet copied are lost or must be reconciled later.
 - **Split brain.** If the standby wrongly decides the active node is dead, for example during a network partition, both may accept writes. Prevent it with a quorum or witness that decides who leads, leases that expire, and **fencing** that cuts off the old leader's access to storage.
-- **Detection is a trade-off.** Short timeouts cause false fail-overs and flapping. Long timeouts mean longer outages. Detection time is roughly check interval × failure threshold: 10 s × 3 = 30 s before fail-over even starts.
+- **Detection is a trade-off.** Short timeouts cause false failovers and flapping. Long timeouts mean longer outages. Detection time is roughly check interval × failure threshold: 10 s × 3 = 30 s before failover even starts.
 - **Clients must follow.** DNS changes take effect only after cached TTLs expire, connection pools hold dead connections, and some clients cache IP addresses forever.
 - **Idle or reserved capacity.** A passive node does no useful work. Active-active nodes need headroom: two nodes must each run below 50% so that one can carry the full load.
-- **Fail-over paths rot.** A path used once a year often fails when needed. Exercise it regularly (game days, planned switchovers).
+- **Failover paths rot.** A path used once a year often fails when needed. Exercise it regularly (game days, planned switchovers).
 
 ## Replication
 
-Fail-over is only as good as the standby's copy of the data. Leader-follower (primary-replica), multi-leader and leaderless replication each trade data-loss risk, write latency and complexity differently. The legacy names "master-slave" and "master-master" appear in older material. Details are on the [replication](/data/replication/) page.
+Failover is only as good as the standby's copy of the data. Leader-follower (primary-replica), multi-leader and leaderless replication each trade data-loss risk, write latency and complexity differently. The legacy names "master-slave" and "master-master" appear in older material. Details are on the [replication](/data/replication/) page.
 
 ## Availability in numbers
 
@@ -82,7 +82,7 @@ Availability is usually written as a number of nines. The table uses a 365.25-da
 | 99.99% ("four nines") | 52 min 36 s | 4 min 23 s | 1 min 0.5 s | 8.6 s |
 | 99.999% ("five nines") | 5 min 16 s | 26 s | 6 s | 0.9 s |
 
-At four nines, a single fail-over that takes two minutes uses almost half of a month's budget. A human cannot be paged and respond within that budget, so higher nines require **automated** detection and recovery. The [availability calculator](/reference/availability-numbers/) converts between targets and downtime.
+At four nines, a single failover that takes two minutes uses almost half of a month's budget. A human cannot be paged and respond within that budget, so higher nines require **automated** detection and recovery. The [availability calculator](/reference/availability-numbers/) converts between targets and downtime.
 
 Availability can be measured by time ("minutes in which the service was healthy") or by requests ("successful requests ÷ valid requests"). Request-based measurement reflects what users experienced and is the usual choice for SLOs.
 
@@ -140,7 +140,7 @@ An **Availability Zone** (AZ) is one or more data centres with independent power
 
 ## Health checks
 
-Fail-over and load balancing depend on knowing which instances are healthy.
+Failover and load balancing depend on knowing which instances are healthy.
 
 - **Liveness**: is the process up and responding? On failure, restart it. In Kubernetes a failed liveness probe restarts the container.
 - **Readiness**: can it serve traffic right now (warmed up, connected to its dependencies)? On failure, remove it from rotation but do not restart it. In Kubernetes a failed readiness probe removes the pod from service endpoints.
@@ -154,16 +154,16 @@ Availability is not all-or-nothing. A system that loses part of its function sho
 - **Serve stale data** from cache when the source of truth is down, and mark it as possibly outdated.
 - **Turn off non-critical features** with feature flags: recommendations, personalisation, search suggestions. Keep checkout and login running.
 - **Shed load** before overload spreads. Reject low-priority requests early with `429` or `503`, so high-priority ones still succeed. See [rate limiting](/reliability/rate-limiting/).
-- **Fall back to read-only mode** when writes are impossible, for example during a database fail-over.
+- **Fall back to read-only mode** when writes are impossible, for example during a database failover.
 - **Bound every dependency** with timeouts and circuit breakers so that one slow service does not tie up all threads. See [resilience patterns](/reliability/resilience-patterns/).
 
 ## Trade-offs
 
 | Pattern | Gains | Costs |
 |---|---|---|
-| Active-passive (hot) | Simple model, one writer, fast fail-over | Idle capacity, split-brain risk, data loss with async replication |
+| Active-passive (hot) | Simple model, one writer, fast failover | Idle capacity, split-brain risk, data loss with async replication |
 | Active-passive (cold) | Cheapest | Hours of downtime, data loss since last backup |
-| Active-active | No fail-over step, all capacity used | Must keep headroom; write conflicts for stateful data |
+| Active-active | No failover step, all capacity used | Must keep headroom; write conflicts for stateful data |
 | Multi-AZ | Survives data-centre loss with little latency cost | Cross-AZ traffic charges, roughly 50% extra capacity for static stability |
 | Multi-Region | Survives Region loss, serves users closer | Cost, complexity, consistency vs latency trade-offs, harder testing |
 | Graceful degradation | Partial service instead of outage | Product decisions about what to drop, more code paths to test |
@@ -172,8 +172,8 @@ Availability is not all-or-nothing. A system that loses part of its function sho
 - Turn "highly available" into numbers: ask for the SLO, then derive the downtime budget and whether a human can respond in time.
 - Walk the request path and multiply availabilities. Name the weakest series component and make it redundant.
 - When you add a standby, state RPO and RTO and how split brain is prevented (quorum, leases, fencing).
-- Expect "what happens if an AZ or Region goes down?" Explain capacity headroom (static stability), DNS or global load-balancer fail-over, and replication lag.
-- Common mistakes: assuming replicas fail independently, deep health checks that take down the whole fleet, and promising five nines with a manual fail-over.
+- Expect "what happens if an AZ or Region goes down?" Explain capacity headroom (static stability), DNS or global load-balancer failover, and replication lag.
+- Common mistakes: assuming replicas fail independently, deep health checks that take down the whole fleet, and promising five nines with a manual failover.
 </Aside>
 
 ## Further reading
@@ -190,6 +190,6 @@ Availability is not all-or-nothing. A system that loses part of its function sho
 - [Availability numbers](/reference/availability-numbers/) — calculator for nines, downtime and composed availability.
 - [Replication](/data/replication/) — how the standby's data stays current.
 - [Load balancers](/traffic/load-balancers/) — health checks and active-active traffic distribution.
-- [DNS](/traffic/dns/) — DNS-based fail-over and the TTL caveat.
+- [DNS](/traffic/dns/) — DNS-based failover and the TTL caveat.
 - [Resilience patterns](/reliability/resilience-patterns/) — timeouts, retries and circuit breakers that keep partial failures partial.
 - [Observability](/reliability/observability/) — measuring SLIs and alerting on burn rate.

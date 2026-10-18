@@ -32,21 +32,21 @@ export const timelines: { id: Timeline; name: L; duration: L; days: [number, num
     name: { en: 'Short', ru: 'Короткий' },
     duration: { en: '1–2 weeks', ru: '1–2 недели' },
     days: [7, 14],
-    summary: { en: 'Breadth first. Solve a few questions end to end.', ru: 'Сначала широта. Решить несколько задач от начала до конца.' },
+    summary: { en: 'Breadth across the core topics. Solve a few questions end to end.', ru: 'Обзор основных тем. Решить несколько задач от начала до конца.' },
   },
   {
     id: 'medium',
     name: { en: 'Medium', ru: 'Средний' },
     duration: { en: '3–6 weeks', ru: '3–6 недель' },
     days: [21, 42],
-    summary: { en: 'Breadth plus some depth. Solve many questions.', ru: 'Широта и немного глубины. Решить много задач.' },
+    summary: { en: 'Breadth plus some depth. Solve many questions.', ru: 'Обзор и немного глубины. Решить много задач.' },
   },
   {
     id: 'long',
     name: { en: 'Long', ru: 'Длинный' },
     duration: { en: '2–3 months', ru: '2–3 месяца' },
     days: [60, 90],
-    summary: { en: 'Breadth plus real depth. Solve most questions.', ru: 'Широта и настоящая глубина. Решить большинство задач.' },
+    summary: { en: 'Every topic, with real depth. Solve most questions.', ru: 'Все темы и настоящая глубина. Решить большинство задач.' },
   },
 ];
 
@@ -108,7 +108,7 @@ export const studyPhases: StudyPhase[] = [
       { id: 'rdbms', path: 'data/relational-databases/', timelines: ALL, task: { en: 'Relational databases', ru: 'Реляционные базы данных' } },
       { id: 'replication', path: 'data/replication/', timelines: ALL, task: { en: 'Replication', ru: 'Репликация' } },
       { id: 'sharding', path: 'data/partitioning-and-sharding/', timelines: ALL, task: { en: 'Partitioning and sharding', ru: 'Партиционирование и шардирование' } },
-      { id: 'denorm', path: 'data/denormalization-and-tuning/', timelines: ML, task: { en: 'Denormalization and SQL tuning', ru: 'Денормализация и настройка SQL' } },
+      { id: 'denorm', path: 'data/denormalization-and-tuning/', timelines: ML, task: { en: 'Denormalisation and SQL tuning', ru: 'Денормализация и настройка SQL' } },
       { id: 'nosql', path: 'data/nosql/', timelines: ALL, task: { en: 'NoSQL families', ru: 'Семейства NoSQL' } },
       { id: 'sql-nosql', path: 'data/sql-or-nosql/', timelines: ALL, task: { en: 'Choosing SQL or NoSQL', ru: 'Выбор между SQL и NoSQL' } },
       { id: 'objstore', path: 'data/object-storage/', timelines: ML, task: { en: 'Object storage', ru: 'Объектное хранилище' } },

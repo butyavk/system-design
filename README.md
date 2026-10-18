@@ -22,16 +22,19 @@ flashcards. It runs in the browser; there is nothing to install.
 
    | Plan | Time | What it covers |
    |---|---|---|
-   | Short | 1–2 weeks | Breadth across the topics, a few practice questions solved end to end |
+   | Short | 1–2 weeks | Breadth across the core topics, a few practice questions solved end to end |
    | Medium | 3–6 weeks | Breadth plus some depth, many practice questions |
-   | Long | 2–3 months | Breadth plus real depth and most of the practice questions |
+   | Long | 2–3 months | Every topic, real depth and most of the practice questions |
 
-2. **Follow the [skill map](https://butyavk.github.io/system-design/start/skill-map/).** Each topic
-   sits to the right of the topics it builds on. The map shows what you have learned, what is
-   ready to start, what you skipped and what to read next. Choose your plan above the map and
-   the topics outside it fold away.
-3. **Mark topics as learned** at the end of each page. Progress stays in your browser: no
-   account, nothing is sent anywhere. The map can save it to a file and load it on another device.
+2. **Follow the [skill map](https://butyavk.github.io/system-design/start/skill-map/).** In its
+   overview tree each topic sits to the right of the topics it builds on; **Full screen** opens the
+   tree over the whole window. The map shows what you have learned, what is ready to start, what
+   you skipped and what to read next. Choose your plan above the map and the topics outside it
+   fold into small dots. Select a topic and its card docks at the right of the map, with **Path
+   here**: the topics left on the way and roughly how many days they take in each plan.
+3. **Mark topics as learned** at the end of each page, which also lists what to read first and
+   what the topic leads to. Progress stays in your browser: no account, nothing is sent anywhere.
+   **Download progress** under the map saves it to a file; **Load progress** brings it to another device.
 4. **Practise out loud and on a timer** from the first week. The practice sections have
    8 system design case studies and 6 object-oriented design problems.
 
@@ -52,11 +55,11 @@ Six stages; each one builds on the previous ones.
 
 | | Original | This site |
 |---|---|---|
-| Format | One long README | 61 pages in 13 sections, sidebar, full-text search, dark mode |
+| Format | One long README | 61 pages: 13 sections plus About, sidebar, full-text search, dark mode |
 | Languages | English (+ community translations) | English and Russian, kept in sync page by page |
 | Currency | Mostly 2017–2019 | Updated: HTTP/3, Kafka-style logs, distributed SQL, Valkey/Redis 8, SLOs, edge compute, OWASP Top 10:2025… |
 | New topics | — | Object storage, event streaming, rate limiting, resilience patterns, observability, API styles, service meshes, consistent hashing, consensus and coordination, LLM-powered systems |
-| Navigation | Table of contents | A skill map of every topic with its prerequisites, your progress, skipped topics and what to read next, shared with a 1–12-week study plan |
+| Navigation | Table of contents | A skill map of every topic with its prerequisites, your progress, skipped topics and what to read next, shared with a study plan for 1–2 weeks, 3–6 weeks or 2–3 months |
 | Numbers | Static 2012 latency table | 2026 latency numbers with sources, interactive explorer, availability and estimation calculators |
 | Flashcards | Anki decks to download | 150 on-site flashcards with spaced repetition, plus Anki decks in English and Russian exported from the same cards |
 | Diagrams | PNG images | Mermaid diagrams that follow the light/dark theme, stay readable on phones and open full-screen with zoom |

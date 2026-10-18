@@ -1,6 +1,6 @@
 ---
 title: Caching layers
-description: Why caching works and what it costs, where caches sit from browser to database, query vs object caching, cache keys, hit-ratio math, and Redis vs Valkey vs Memcached.
+description: Why caching works and what it costs, caches from browser to database, query vs object caching, cache keys, hit-ratio math, and Redis vs Valkey vs Memcached.
 sidebar:
   order: 1
 ---
@@ -44,7 +44,7 @@ flowchart TB
   db --> disk["OS page cache and disk"]
 ```
 
-Each layer is closer to the user (and cheaper per hit) than the one below it, but holds less specific, less controllable data.
+Each layer is closer to the user (and cheaper per hit) than the one below it, but harder to control and to invalidate.
 
 | Layer | What it caches | Controlled by | Typical hit latency | Watch out for |
 |---|---|---|---|---|
@@ -131,7 +131,7 @@ Two lessons. First, the last few percent matter most: going from 90% to 99% redu
 
 ## Redis vs Valkey vs Memcached
 
-**The licensing story.** Redis was BSD-licensed up to version 7.2. In March 2024 Redis Ltd. moved new versions to a dual source-available licence (RSALv2 or SSPLv1), which cloud providers could not offer as a managed service without an agreement. Within weeks the Linux Foundation launched **Valkey**, a fork of Redis 7.2.4 under the BSD licence, backed by AWS, Google Cloud, Oracle, Ericsson and others. In May 2025, **Redis 8** added the OSI-approved **AGPLv3** as a third licence option and folded the former Redis Stack modules (JSON, time series, probabilistic structures, the query engine) and a new vector set type into the core. Valkey continued independently: Valkey 9.0 (October 2025) added atomic slot migration, per-field hash expiration and numbered databases in cluster mode, and Valkey 9.1 (May 2026) added per-database ACLs for isolating tenants and lower per-key memory overhead. Managed offerings now include ElastiCache and Memorystore for Valkey alongside Redis Cloud.
+**The licensing story.** Redis was BSD-licensed up to version 7.2. In March 2024 Redis Ltd. moved new versions to a dual source-available licence (RSALv2 or SSPLv1), which cloud providers could not offer as a managed service without an agreement. About a week later the Linux Foundation launched **Valkey**, a fork of Redis 7.2.4 under the BSD licence, backed by AWS, Google Cloud, Oracle, Ericsson and others. In May 2025, **Redis 8** added the OSI-approved **AGPLv3** as a third licence option and folded the former Redis Stack modules (JSON, time series, probabilistic structures, the query engine) and a new vector set type into the core. Valkey continued independently: Valkey 9.0 (October 2025) added atomic slot migration, per-field hash expiration and numbered databases in cluster mode, and Valkey 9.1 (May 2026) added per-database ACLs for isolating tenants and lower per-key memory overhead. Managed offerings now include ElastiCache and Memorystore for Valkey alongside Redis Cloud.
 
 | | Redis 8.x | Valkey 9.x | Memcached |
 |---|---|---|---|

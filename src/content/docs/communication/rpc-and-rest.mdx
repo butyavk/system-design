@@ -1,6 +1,6 @@
 ---
 title: RPC and REST
-description: RPC vs REST for API design — stubs and marshalling, gRPC and Protocol Buffers, Thrift, Avro, REST constraints, HATEOAS, versioning, pagination and idempotency.
+description: RPC vs REST for API design — stubs, marshalling, gRPC and Protocol Buffers, Thrift, Avro, REST constraints, HATEOAS, versioning, pagination, idempotency.
 sidebar:
   order: 3
 ---
@@ -99,7 +99,7 @@ message OrderEvent {
 
 What a designer should know about it:
 
-- **Encoding.** Protocol Buffers write field *numbers*, not names, in a compact binary format. The `Order` above encodes to 22 bytes, against 93 bytes for the equivalent compact JSON. Adding fields is backward compatible; renumbering or reusing a number is not — hence `reserved`.
+- **Encoding.** Protocol Buffers write field *numbers*, not names, in a compact binary format. Filled with `ord_981`, `STATUS_PLACED`, 4999 cents and a timestamp, the `Order` above encodes to 22 bytes; the same values as compact JSON take about 100. Adding fields is backward compatible; renumbering or reusing a number is not — hence `reserved`.
 - **Transport.** Every call is an HTTP/2 POST to `/package.Service/Method` with `content-type: application/grpc`; the result status travels in HTTP trailers (`grpc-status`). Many calls share one connection.
 - **Four call shapes:** unary, server streaming, client streaming and bidirectional streaming. Streaming suits feeds, uploads and long-running watches without inventing a separate push channel.
 - **Deadlines and cancellation** propagate across hops: if the caller gives up after 300 ms, downstream services can stop work too.

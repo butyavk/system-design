@@ -68,6 +68,7 @@ Why both structures? A dict alone finds a key in `O(1)` but cannot tell which ke
 ```python title="lru_cache.py"
 from collections.abc import Hashable
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(eq=False, slots=True)
@@ -85,16 +86,18 @@ class DoublyLinkedList[K, V]:
     """
 
     def __init__(self) -> None:
-        self._head: Node = Node(None, None)
-        self._tail: Node = Node(None, None)
+        self._head: Node[Any, Any] = Node(None, None)
+        self._tail: Node[Any, Any] = Node(None, None)
         self._head.next, self._tail.prev = self._tail, self._head
 
     def push_front(self, node: Node[K, V]) -> None:
         first = self._head.next
+        assert first is not None  # the tail sentinel is always there
         node.prev, node.next = self._head, first
         self._head.next = first.prev = node
 
     def unlink(self, node: Node[K, V]) -> None:
+        assert node.prev is not None and node.next is not None  # node must be in the list
         node.prev.next, node.next.prev = node.next, node.prev
         node.prev = node.next = None
 
@@ -104,7 +107,7 @@ class DoublyLinkedList[K, V]:
 
     def pop_back(self) -> Node[K, V]:
         last = self._tail.prev
-        if last is self._head:
+        if last is None or last is self._head:
             raise IndexError("pop from empty list")
         self.unlink(last)
         return last
@@ -193,7 +196,7 @@ def search(query: str) -> tuple[str, ...]:
 |---|---|---|
 | `get` (hit or miss) | `O(1)` | Dict lookup and pointer updates |
 | `put` (new, update, evict) | `O(1)` | At most one eviction per insert |
-| Memory | `O(capacity)` | Two pointers and a key copy per entry |
+| Memory | `O(capacity)` | Two pointers and a second key reference per entry |
 
 - **Per-entry overhead.** Each node costs two pointers plus a second reference to the key. For small values this can exceed the size of the data.
 - **LRU is not always the best policy.** A single large scan (a batch job reading every key once) flushes the whole hot set. LFU, 2Q, ARC or W-TinyLFU (used by Caffeine) resist scans better. See [cache strategies](/caching/cache-strategies/).

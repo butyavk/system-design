@@ -119,7 +119,7 @@ The same pattern works for extracting a module from a modular monolith, or for m
 Serverless fits event-driven glue (react to an upload, a queue message, a webhook), spiky or low-traffic workloads, and scheduled jobs. Watch for:
 
 - **Cold starts** on infrequently used functions (mitigated by provisioned concurrency or isolate-based runtimes);
-- **Execution limits**: a standard Lambda invocation still stops at 15 minutes. Since late 2025, durable functions checkpoint a workflow across many invocations for up to a year, and since September 2026 Lambda Managed Instances allow 90 minutes for asynchronous runs;
+- **Execution limits**: a standard Lambda invocation still stops at 15 minutes. Since late 2025, durable functions checkpoint a workflow across many invocations for up to a year, and since September 2026 Lambda Managed Instances allow 90 minutes for asynchronous and most queue- or stream-triggered invocations;
 - **Cost at high steady load**, where always-on containers are often cheaper;
 - **Downstream pressure**: thousands of concurrent functions can exhaust database connections;
 - **Fragmentation**: hundreds of tiny functions are a distributed system that is hard to reason about.

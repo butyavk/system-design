@@ -22,24 +22,26 @@ const T = {
     progress: 'Progress',
     of: 'of',
     steps: 'steps done',
+    stepsOne: 'steps done',
     reset: 'Reset progress',
     confirm: 'Clear all ticks for this timeline? They are cleared on the skill map too.',
     aim: 'Aim',
     saved: 'Progress is saved in this browser only and shared with the',
     map: 'skill map.',
-    done: 'All done — now keep practising out loud.',
+    done: 'All done. Now keep practising out loud.',
   },
   ru: {
     choose: 'Сколько у вас времени?',
     progress: 'Прогресс',
     of: 'из',
     steps: 'шагов выполнено',
+    stepsOne: 'шага выполнено',
     reset: 'Сбросить прогресс',
     confirm: 'Снять все отметки для этого плана? На карте навыков они тоже снимутся.',
     aim: 'Цель',
-    saved: 'Прогресс сохраняется только в этом браузере и общий с',
-    map: 'картой навыков.',
-    done: 'Всё пройдено — теперь продолжайте тренироваться вслух.',
+    saved: 'Прогресс хранится только в этом браузере и виден также на',
+    map: 'карте навыков.',
+    done: 'Всё пройдено. Теперь продолжайте тренироваться вслух.',
   },
 }[locale];
 
@@ -55,7 +57,13 @@ for (const ph of studyPhases)
 const mapHref = href('start/skill-map/');
 
 const countFor = (tl: Timeline) => studyPhases.reduce((n, p) => n + p.steps.filter((s) => s.timelines.includes(tl)).length, 0);
-const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.done } };
+// "30 шагов", "21 шаг", "23 шага"; after «из» the genitive: "из 21 шага", "из 30 шагов".
+const stepWord = (n: number) =>
+  locale === 'ru'
+    ? n % 10 === 1 && n % 100 !== 11 ? 'шаг' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'шага' : 'шагов'
+    : n === 1 ? 'step' : 'steps';
+const stepsDone = (total: number) => (total % 10 === 1 && total % 100 !== 11 ? T.stepsOne : T.steps);
+const clientData = { t: { of: T.of, steps: T.steps, stepsOne: T.stepsOne, confirm: T.confirm, done: T.done } };
 ---
 
 <div class="sp not-content" id={uid} data-sp data-timeline={initial}>
@@ -73,7 +81,7 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
             </span>
             <span class="sp-option-sum">{tl.summary[locale]}</span>
             <span class="sp-option-count">
-              {countFor(tl.id)} {locale === 'ru' ? 'шагов' : 'steps'}
+              {countFor(tl.id)} {stepWord(countFor(tl.id))}
             </span>
           </span>
         </label>
@@ -84,7 +92,7 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
   <div class="sp-progress">
     <div class="sp-progress-head">
       <span class="sp-progress-label" id={`${uid}-pl`}>{T.progress}</span>
-      <span class="sp-progress-text" aria-live="polite" data-sp-text>0 {T.of} {countFor(initial)} {T.steps}</span>
+      <span class="sp-progress-text" aria-live="polite" data-sp-text>0 {T.of} {countFor(initial)} {stepsDone(countFor(initial))}</span>
     </div>
     <div class="sp-bar" role="progressbar" aria-labelledby={`${uid}-pl`} aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-sp-bar>
       <span class="sp-bar-fill" data-sp-fill></span>
@@ -382,7 +390,7 @@ const clientData = { t: { of: T.of, steps: T.steps, confirm: T.confirm, done: T.
       fill.style.width = `${pct}%`;
       bar.setAttribute('aria-valuenow', String(pct));
       bar.setAttribute('aria-valuetext', `${pct}%`);
-      text.textContent = ticked === total && total > 0 ? `${ticked} ${t.of} ${total} — ${t.done}` : `${ticked} ${t.of} ${total} ${t.steps}`;
+      text.textContent = ticked === total && total > 0 ? `${ticked} ${t.of} ${total} — ${t.done}` : `${ticked} ${t.of} ${total} ${total % 10 === 1 && total % 100 !== 11 ? t.stepsOne : t.steps}`;
     }
 
     for (const r of radios) {

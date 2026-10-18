@@ -1,6 +1,6 @@
 ---
 title: Object storage
-description: Block vs file vs object storage, S3-style semantics and consistency, durability vs availability, presigned URLs, multipart uploads, lifecycle rules and data lakes.
+description: Block vs file vs object storage, S3 semantics and consistency, durability vs availability, presigned URLs, multipart uploads, lifecycle rules and data lakes.
 sidebar:
   order: 7
   badge:
@@ -27,7 +27,7 @@ Object storage — Amazon S3, Google Cloud Storage, Azure Blob Storage, Cloudfla
 | Interface | Disk device (SCSI, NVMe); a file system on top | POSIX via NFS or SMB | HTTP API (`PUT`, `GET`, `DELETE`, `LIST`) |
 | Updates | In place, any byte range | In place, with locks | Replace the whole object |
 | Shared access | One host at a time (usually) | Many hosts | Any number of clients over the network |
-| Latency | Tens of µs (local NVMe) to ~1 ms (network volume) | Around a millisecond | ~10–200 ms to first byte (S3 median ~30 ms) |
+| Latency | Tens of µs (local NVMe) to ~1 ms (network volume) | Around a millisecond | ~10–200 ms to first byte (S3 median: tens of ms) |
 | Scale | Up to tens of TiB per volume | Up to petabytes per file system | Effectively unlimited |
 | Typical cost | Highest | Middle | Lowest per GB |
 | Examples | Amazon EBS, Persistent Disk, local NVMe | Amazon EFS, Filestore, Azure Files | S3, GCS, Azure Blob, R2, Ceph RGW |

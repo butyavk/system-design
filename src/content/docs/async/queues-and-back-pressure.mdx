@@ -48,7 +48,7 @@ That third step is what makes queues reliable, and it is also why duplicates hap
 
 ## Task queues and schedulers
 
-A **task queue** is a message queue plus a worker framework. You call a function asynchronously, and the framework handles serialization, delayed retries, rate limits, results and periodic schedules. Examples: **Celery** in Python (stable brokers: RabbitMQ, Redis, SQS), **Sidekiq** in Ruby and **BullMQ** in Node.js (both on Redis).
+A **task queue** is a message queue plus a worker framework. You call a function asynchronously, and the framework handles serialisation, delayed retries, rate limits, results and periodic schedules. Examples: **Celery** in Python (stable brokers: RabbitMQ, Redis, SQS), **Sidekiq** in Ruby and **BullMQ** in Node.js (both on Redis).
 
 Check the acknowledgement mode. By default Celery acknowledges a task just *before* running it, so a crash mid-task loses it. `acks_late` acknowledges afterwards, so a crash runs the task again. Use it for idempotent tasks only.
 
@@ -71,7 +71,7 @@ Current facts worth knowing:
 - **SQS** standard queues offer nearly unlimited throughput with at-least-once delivery and best-effort order. FIFO queues keep order within a *message group* and drop producer retries that reuse a deduplication ID within 5 minutes. By default they handle 300 API calls/s per action, or 3,000 messages/s in batches of 10, and high-throughput mode goes much higher. Messages can be up to 1 MiB (since 2025) and are kept for up to 14 days. **Fair queues** (2025) tackle noisy neighbours: give messages on a standard queue a message group ID per tenant, and SQS stops one tenant's backlog from delaying everyone else's messages.
 - **Redis Streams** (`XADD`, `XREADGROUP`, `XACK`) keep unacknowledged entries in a pending list, unlike pub/sub, which drops messages when nobody is subscribed. The weak point is durability: with `appendfsync everysec` a crash can lose about a second of writes, and a failover can lose writes the replica had not yet received.
 
-If several independent consumers need the same events, you need replay, or volumes reach hundreds of MB/s, use a **log** such as Kafka. See [event streaming](/async/event-streaming/). Since Kafka 4.2, *share groups* also give Kafka queue-style consumption, with per-record acknowledgement.
+If several independent consumers need the same events, you need replay, or volumes reach hundreds of MB/s, use a **log** such as Kafka. See [event streaming](/async/event-streaming/). *Share groups*, production-ready since Kafka 4.2, also give Kafka queue-style consumption, with per-record acknowledgement.
 
 ## Delivery guarantees in practice
 

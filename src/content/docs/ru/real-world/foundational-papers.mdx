@@ -92,7 +92,7 @@ flowchart LR
 |---|---|---|---|
 | **Paxos Made Simple** (Лесли Лэмпорт) | 2001 | Алгоритм консенсуса, изложенный простым языком. На этой идее держатся все реплицируемые логи и сервисы выбора лидера. | [lamport.azurewebsites.net (PDF)](https://lamport.azurewebsites.net/pubs/paxos-simple.pdf) |
 | **Chubby** (Google) | 2006, OSDI | Сервис крупнозернистых блокировок и хранения небольших файлов поверх Paxos. Объясняет, почему командам проще правильно использовать сервис блокировок, чем библиотеку консенсуса. | [research.google](https://research.google/pubs/the-chubby-lock-service-for-loosely-coupled-distributed-systems/) |
-| **ZooKeeper** (Yahoo!) | 2010, USENIX ATC | Простые неблокирующие примитивы (znode, watch, последовательные узлы), из которых клиенты собирают блокировки, выбор лидера, членство в группе и конфигурацию. | [usenix.org](https://www.usenix.org/conference/usenix-atc-10/zookeeper-wait-free-coordination-internet-scale-systems) |
+| **ZooKeeper** (Yahoo!) | 2010, USENIX ATC | Простые примитивы без ожидания (wait-free) — znode, watch и последовательные узлы. Из них клиенты собирают блокировки, выбор лидера, членство в группе и конфигурацию. | [usenix.org](https://www.usenix.org/conference/usenix-atc-10/zookeeper-wait-free-coordination-internet-scale-systems) |
 | **Raft** (Stanford) | 2014, USENIX ATC | Консенсус, спроектированный так, чтобы его было легко понять: сильный лидер, репликация лога и безопасная смена состава кластера. Используется в etcd, Consul и большинстве распределённых SQL-баз. | [usenix.org](https://www.usenix.org/conference/atc14/technical-sessions/presentation/ongaro) · [raft.github.io](https://raft.github.io/) |
 
 ## Сообщения и логи
@@ -100,7 +100,7 @@ flowchart LR
 | Система | Год и конференция | Чем важна | Статья |
 |---|---|---|---|
 | **Kafka** (LinkedIn) | 2011, NetDB | Разбитый на партиции лог на диске, в который только дописывают. Потребители сами забирают данные и хранят свои смещения, поэтому сообщения становятся надёжными потоками, которые можно перечитать. | [microsoft.com (PDF)](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/09/Kafka.pdf) |
-| **The Log** (Джей Крепс, эссе) | 2013 | Не научная статья, но самое понятное объяснение того, почему упорядоченный лог связывает базы данных, репликацию, интеграцию данных и потоковую обработку. | [engineering.linkedin.com](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying) |
+| **The Log** (Джей Крепс, эссе) | 2013 | Не научная статья, но самое понятное объяснение того, почему упорядоченный лог связывает базы данных, репликацию, интеграцию данных и потоковую обработку. | [web.archive.org (архивная копия)](https://web.archive.org/web/20260612105408/https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying) |
 
 ## Наблюдаемость
 

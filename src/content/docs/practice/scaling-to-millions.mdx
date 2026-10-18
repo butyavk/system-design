@@ -302,8 +302,8 @@ class ShardMap:
         return int.from_bytes(digest[:8]) % LOGICAL_SHARDS
 
     def host_for(self, user_id: int) -> str:
-        per_host = LOGICAL_SHARDS // len(self.hosts)  # 480 / 32 = 15 logical shards per host
-        return self.hosts[self.logical_shard(user_id) // per_host]
+        # Each host gets a contiguous range of logical shards: 480 / 32 = 15 per host.
+        return self.hosts[self.logical_shard(user_id) * len(self.hosts) // LOGICAL_SHARDS]
 
 
 shards = ShardMap(hosts=tuple(f"pg-{i:02d}" for i in range(32)))
@@ -313,7 +313,7 @@ bigger = ShardMap(hosts=tuple(f"pg-{i:02d}" for i in range(48)))
 print(bigger.logical_shard(42), bigger.host_for(42))   # 458 pg-45
 ```
 
-- **Denormalize and tune** the queries that now cross shards. Move data that does not need relations or transactions — sessions, counters, activity feeds — to a **NoSQL** store such as DynamoDB.
+- **Denormalise and tune** the queries that now cross shards. Move data that does not need relations or transactions — sessions, counters, activity feeds — to a **NoSQL** store such as DynamoDB.
 - Or buy the partitioning: distributed SQL (Spanner, Aurora DSQL, CockroachDB, YugabyteDB) or a sharding layer (Vitess, Citus, Aurora PostgreSQL Limitless Database).
 
 **Cost.** Cross-shard queries and transactions become hard or impossible, unique IDs need a scheme that works without a central counter, rebalancing is a project, and schema changes run N times.

@@ -97,7 +97,7 @@ Serving engines such as **vLLM**, **SGLang** and **TensorRT-LLM** are built arou
 - **Paged KV cache** — vLLM's PagedAttention stores the cache in fixed-size blocks, like virtual-memory pages, so little memory is wasted and sequences can share blocks.
 - **Prefix caching** — the KV cache of a shared prefix, such as a long system prompt, is computed once and reused.
 - **Chunked prefill** — long prompts are processed in pieces so they do not stall other requests' decode steps.
-- **Quantization** of weights (FP8, INT8, 4-bit schemes such as GPTQ and AWQ) and of the KV cache trades a little quality for memory and speed; measure the loss on your own evals.
+- **Quantisation** of weights (FP8, INT8, 4-bit schemes such as GPTQ and AWQ) and of the KV cache trades a little quality for memory and speed; measure the loss on your own evals.
 - **Speculative decoding**, **tensor and expert parallelism**, and an **OpenAI-compatible HTTP API**, so a model gateway can switch between managed and self-hosted backends.
 
 **Sizing a fleet.** Benchmark one replica with your real prompt and answer lengths. Suppose one two-GPU replica sustains 2,500 output tokens/s within the latency target (an assumption). The 52K tokens/s peak above then needs 21 replicas, 42 GPUs, plus headroom for failures. Autoscale on queue depth and KV-cache utilisation rather than CPU, and keep warm spares: loading tens of gigabytes of weights takes minutes.

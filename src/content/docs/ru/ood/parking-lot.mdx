@@ -156,8 +156,8 @@ class Level:
             # Наилучшее совпадение: самое маленькое подходящее место бережёт большие для автобусов.
             candidates = (s for row in self.rows for s in row if s.fits(vehicle))
             best = min(candidates, key=lambda s: s.size, default=None)
-            return [best] if best else None
-        for row in self.rows:  # многоместным машинам нужен ряд соседних мест
+            return [best] if best is not None else None
+        for row in self.rows:  # многоместным машинам нужен непрерывный участок соседних мест
             run: list[ParkingSpot] = []
             for spot in row:
                 if not spot.fits(vehicle):
@@ -221,11 +221,12 @@ if __name__ == "__main__":
     assert t_car and t_car.spots[0].size is Size.COMPACT        # наилучшее совпадение, а не большое место
     t_bus = lot.park(Bus("BUS-1"))
     assert t_bus and [s.number for s in t_bus.spots] == [3, 4, 5, 6, 7]
-    assert lot.park(Bus("BUS-2")).level.floor == 1              # на этаже 0 не осталось пяти мест подряд
+    t_bus2 = lot.park(Bus("BUS-2"))
+    assert t_bus2 and t_bus2.level.floor == 1                   # на этаже 0 не осталось пяти мест подряд
     assert lot.park(Bus("BUS-3")) is None
     lot.park(Motorcycle("MOTO-1"))
     lot.leave("BUS-1")
-    assert lot.park(Bus("BUS-3")) is not None                     # освобождённый ряд снова занят
+    assert lot.park(Bus("BUS-3")) is not None                     # освобождённый участок снова занят
     assert lot.free_spots() == 16 - 1 - 5 - 5 - 1
     print("ok")
 ```

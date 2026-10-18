@@ -14,9 +14,9 @@ and operations. Interviewers increasingly expect this layer in every design, not
 
 <Aside type="tip" title="TL;DR">
 - Encrypt everything in transit (TLS 1.3 at the edge, mTLS between services) and at rest (KMS-managed keys with envelope encryption).
-- Authentication proves *who*; authorization decides *what*. Check authorization on every request, for every object — broken access control is the top web risk.
+- Authentication proves *who*; authorisation decides *what*. Check authorisation on every request, for every object — broken access control is the top web risk.
 - Prefer short-lived credentials everywhere: sessions or short JWTs for users, workload identities instead of static keys for services, a secrets manager for what remains.
-- Treat all input as hostile: parameterized queries, context-aware output encoding, CSRF defences, allowlists for outbound URLs.
+- Treat all input as hostile: parameterised queries, context-aware output encoding, CSRF defences, allowlists for outbound URLs.
 - Assume breach: least privilege, zero-trust networking, audit logs you can trust, and collect less personal data in the first place.
 </Aside>
 
@@ -25,7 +25,7 @@ and operations. Interviewers increasingly expect this layer in every design, not
 Before choosing controls, draw where data crosses from less trusted to more trusted zones: the
 public internet to your edge, the edge to internal services, services to data stores, your CI
 system to production, your system to third parties. Each crossing needs answers to the same
-questions: is the channel encrypted, is the caller authenticated, is the action authorized, is the
+questions: is the channel encrypted, is the caller authenticated, is the action authorised, is the
 input validated, and is it logged?
 
 ```mermaid
@@ -77,13 +77,13 @@ sequenceDiagram
 Why it is the standard: bulk data never travels to the KMS, each KMS call is authorised and audited,
 rotating the root key does not require re-encrypting terabytes, and destroying a key makes every
 record encrypted under it unreadable. For especially sensitive fields (card numbers, national IDs),
-add **field-level encryption** or **tokenization** in the application, so database administrators,
+add **field-level encryption** or **tokenisation** in the application, so database administrators,
 backups and analytics copies only ever see ciphertext or tokens.
 
-## Authentication and authorization
+## Authentication and authorisation
 
 **Authentication (authN)** establishes identity: a password plus a second factor, a passkey, a
-client certificate, a signed token. **Authorization (authZ)** decides whether that identity may
+client certificate, a signed token. **Authorisation (authZ)** decides whether that identity may
 perform this action on this object. They fail differently: authN failures let strangers in;
 authZ failures let legitimate users read each other's data — and are far more common.
 
@@ -155,7 +155,7 @@ Grant every human, service and job the minimum permissions it needs, for the sho
 - **Relationship-based access** (ReBAC), popularised by Google's Zanzibar paper, answers "can user X view document Y?" from a graph of relationships — the model behind sharing in collaborative apps.
 
 Whatever the model, enforce it **server-side on every object access**. The top API vulnerability
-is fetching `/invoices/1043` after being authorized only to see `/invoices/1042`.
+is fetching `/invoices/1043` after being authorised only to see `/invoices/1042`.
 
 ## Secrets management
 
@@ -170,7 +170,7 @@ committed config files.
 ## Input handling: injection, XSS, CSRF, SSRF
 
 **Injection.** Never build queries, shell commands or LDAP filters by concatenating input. With
-parameterized queries the driver sends values separately from the statement, so input cannot change
+parameterised queries the driver sends values separately from the statement, so input cannot change
 its structure:
 
 ```python title="param_query.py"
@@ -197,7 +197,7 @@ Identifiers that cannot be parameters (sort columns, table names) go through an 
 
 **Cross-site scripting (XSS).** Encode output for the context it lands in (HTML body, attribute,
 JavaScript, URL); modern template engines and frameworks do this by default, so the danger is in
-bypasses such as raw-HTML helpers. Sanitize user-authored HTML with a maintained library, and add a
+bypasses such as raw-HTML helpers. Sanitise user-authored HTML with a maintained library, and add a
 Content Security Policy as a second layer.
 
 **Cross-site request forgery (CSRF).** A malicious page makes the victim's browser send a
@@ -220,15 +220,15 @@ is 2025. Read it as a list of design responsibilities:
 | A02 Security Misconfiguration | Hardened defaults as code; no debug endpoints or default credentials |
 | A03 Software Supply Chain Failures | Pinned dependencies, SBOMs, signed builds |
 | A04 Cryptographic Failures | TLS everywhere, KMS-managed keys, no home-grown crypto |
-| A05 Injection | Parameterized queries, context-aware encoding |
+| A05 Injection | Parameterised queries, context-aware encoding |
 | A06 Insecure Design | Threat modelling at design time, abuse cases, rate limits |
 | A07 Authentication Failures | MFA or passkeys, breached-password checks, login throttling |
-| A08 Software or Data Integrity Failures | Verify signatures on updates, artifacts and deserialized data |
+| A08 Software or Data Integrity Failures | Verify signatures on updates, artifacts and deserialised data |
 | A09 Security Logging and Alerting Failures | Audit logs with alerts that someone acts on |
 | A10 Mishandling of Exceptional Conditions | Fail closed, no stack traces to clients, handle partial failure |
 
 For APIs specifically, OWASP keeps a separate API Security Top 10 (2023 edition), led by broken
-object-level authorization.
+object-level authorisation.
 
 ## DDoS and abuse protection
 
@@ -245,11 +245,11 @@ single origin absorbs that, so protection is layered:
 
 The old model trusted anything inside the corporate network or VPC. Zero trust (NIST SP 800-207;
 Google's BeyondCorp) removes network location as a source of trust: every request is authenticated
-and authorized based on the identity of the user *and* the workload or device, regardless of where
+and authorised based on the identity of the user *and* the workload or device, regardless of where
 it comes from.
 
 In practice: employees reach internal tools through an identity-aware proxy instead of a VPN;
-services authenticate each other with mTLS workload identities and are authorized per call;
+services authenticate each other with mTLS workload identities and are authorised per call;
 network segmentation still exists, but as defence in depth, not the main control; and credentials
 are short-lived so a stolen one expires quickly.
 
@@ -272,7 +272,7 @@ security-relevant events: logins, permission changes, data exports, admin action
 - Write them to an **append-only**, tamper-evident store in a separate account that application admins cannot modify; cloud audit trails (for example of KMS and IAM calls) belong there too.
 - Keep them structured, with a request ID linking them to application traces (see [observability](/reliability/observability/)).
 - Never log secrets, tokens, passwords or full personal data.
-- Alert on the events that matter (privilege escalation, mass export, repeated authorization failures); a log nobody watches is A09 on the list above.
+- Alert on the events that matter (privilege escalation, mass export, repeated authorisation failures); a log nobody watches is A09 on the list above.
 
 ## Privacy and data minimisation
 
@@ -294,22 +294,22 @@ requirements that shape architecture:
 | Credential stuffing, phishing | MFA or passkeys, breached-password checks, login rate limits |
 | Stolen session or token | Short lifetimes, `HttpOnly` cookies, refresh-token rotation, revocation |
 | Accessing other users' objects | Per-object authZ checks, deny by default, tests for IDOR |
-| SQL or command injection | Parameterized queries, allowlists, least-privilege DB roles |
-| XSS | Context-aware output encoding, HTML sanitization, CSP |
+| SQL or command injection | Parameterised queries, allowlists, least-privilege DB roles |
+| XSS | Context-aware output encoding, HTML sanitisation, CSP |
 | CSRF | SameSite cookies, Fetch Metadata checks, CSRF tokens |
 | SSRF | Egress allowlists, block private ranges, egress proxy |
 | Leaked secrets | Secrets manager, workload identity, scanning, fast rotation |
 | DDoS, scraping, abuse | CDN and scrubbing, WAF, rate limiting, cost quotas |
 | Compromised dependency or build | Lockfiles, SBOM, signed artifacts, isolated CI |
 | Insider misuse | Least privilege, just-in-time access, audit logs with alerts |
-| Personal data breach | Data minimisation, field-level encryption or tokenization, retention TTLs |
+| Personal data breach | Data minimisation, field-level encryption or tokenisation, retention TTLs |
 
 <Aside type="note" title="In the interview">
 - Mention security briefly in every design: TLS, authN at the gateway, authZ in services, encryption at rest, rate limits, audit logs. Thirty seconds is enough unless asked for more.
 - Expect "sessions or JWTs?" — explain revocation and where each fits. Expect "how do services authenticate each other?" — mTLS or signed short-lived tokens, not shared API keys.
 - For sensitive data, describe envelope encryption and who can call the KMS.
 - For user-supplied URLs or webhooks, raise SSRF yourself — it signals real-world experience.
-- Common mistakes: trusting the internal network, checking authorization only at the gateway, long-lived tokens with no revocation, and forgetting backups and logs when asked to delete user data.
+- Common mistakes: trusting the internal network, checking authorisation only at the gateway, long-lived tokens with no revocation, and forgetting backups and logs when asked to delete user data.
 </Aside>
 
 ## Further reading

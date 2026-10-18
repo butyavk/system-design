@@ -10,7 +10,7 @@ A "Best Sellers in Books" list looks like a simple `ORDER BY units DESC LIMIT 10
 
 <Aside type="tip" title="TL;DR">
 - Sales events land in a durable log and in object storage; nothing on the checkout path waits for ranking.
-- An aggregation job counts units per `(category, product)` over a sliding 7-day window: an hourly batch job (MapReduce/Spark) in the classic design, a streaming job (Flink, Kafka Streams) that keeps hourly panes today.
+- An aggregation job counts units per `(category, product)` over a sliding 7-day window: an hourly batch job (MapReduce/Spark) in the classic design; today, a streaming job (Flink, Kafka Streams) that keeps hourly panes.
 - Top-N per category is a bounded heap per key, not a global sort. Approximate sketches (Count-Min, Space-Saving) are for unbounded key spaces, not for 25 million product–category pairs.
 - The read side is tiny (top 100 × 1,000 categories ≈ 1.6 MB): publish versioned snapshots to a key-value store, cache them in memory and at the CDN.
 </Aside>
@@ -152,7 +152,7 @@ FROM (
          ROW_NUMBER() OVER (PARTITION BY category_id
                             ORDER BY SUM(units) DESC, product_id) AS rnk
   FROM sales_hourly
-  WHERE hour_start >= :window_start
+  WHERE hour_start >= :window_start AND hour_start < :window_end
   GROUP BY category_id, product_id
 ) AS ranked
 WHERE rnk <= :top_n;

@@ -180,7 +180,7 @@ The average case assumes the hash spreads keys evenly. Then the expected chain l
 <Aside type="note" title="In the interview">
 - State the collision strategy and the missing-key behaviour before writing code.
 - Interviewers almost always ask "what happens when it fills up?". Have the load factor, doubling and amortised-cost argument ready.
-- Common mistakes: forgetting to rehash on resize (copying buckets in order), not updating an existing key (adding a duplicate entry), and not adjusting `size` on overwrite or delete.
+- Common mistakes: forgetting to rehash on resize (copying buckets in order), not updating an existing key (adding a duplicate entry), and getting `size` wrong (counting an overwrite as a new key, or not decrementing on delete).
 - Know the worst case and how real implementations defend against it: randomised hashing or tree-ified buckets.
 </Aside>
 
