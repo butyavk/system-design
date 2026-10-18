@@ -3,3 +3,5 @@ dist/
 .astro/
 .DS_Store
 *.log
+# Progress files downloaded from the skill map (personal; the repository is public)
+progress/

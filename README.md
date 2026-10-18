@@ -68,13 +68,33 @@ Six stages; each one builds on the previous ones.
 
 ## Edit or run locally
 
-You only need this to change the content. Requires Node.js 22.12+.
+Requires Node.js 22.12+. The site is built with [Astro](https://astro.build/) and its
+documentation theme [Starlight](https://starlight.astro.build/); `npm run dev` starts a local
+copy that reloads as you edit.
 
 ```bash
 npm install
 npm run dev        # http://localhost:4321/system-design/
 npm run build      # static site in dist/
 ```
+
+### Studying from a local copy
+
+The published site is the simplest way to study. A local copy is worth it when you:
+
+- **study without internet** (on a plane, on the road): the local copy works offline;
+- **edit the material while you learn** (your own examples, notes, fixes): you work in the
+  project anyway and see each change at once;
+- **want to keep your progress next to the project**: download the progress file from the
+  skill map into the `progress/` folder of your clone. Git ignores that folder, because the
+  repository is public and a committed file would be visible to everyone. For a history of
+  your progress in git, use a separate private repository.
+
+Progress is not written to the project files. Locally it also lives in the browser, under the
+address `localhost:4321`, so it is separate from your progress on the published site: move it
+with **Download progress** / **Load progress** on the skill map. Keep the port the same: if
+4321 is busy, the dev server picks another port, and to the browser that is a different site
+with empty progress.
 
 Content lives in `src/content/docs/` (English) and `src/content/docs/ru/` (Russian).
 Read [CONTENT_GUIDE.md](CONTENT_GUIDE.md) before editing, then run the checks:
